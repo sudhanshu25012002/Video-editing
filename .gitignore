@@ -3,3 +3,4 @@ node_modules/
 remotion/node_modules/
 *.mp4
 projects/*/build/
+projects/*/build-v/

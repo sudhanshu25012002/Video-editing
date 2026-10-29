@@ -1,0 +1,379 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fee System Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  #world { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; }
+  #space { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; perspective: 1700px; perspective-origin: 540px 820px; }
+  #space3d { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .shape { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
+  .anchor { position: absolute; left: 100%; top: 50%; width: 1px; height: 1px; }
+  .mask { position: absolute; overflow: hidden; }
+  .mask > span { display: inline-block; white-space: nowrap; }
+  .txt { font-weight: 800; letter-spacing: -0.035em; white-space: nowrap; }
+  .pur { color: #5A17E6; } .amb { color: #D98E1F; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; }
+  #sub { position: absolute; left: 70px; right: 70px; top: 1500px; text-align: center; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 38px; font-weight: 600; line-height: 1.32; padding: 16px 28px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+  .chip { position: absolute; width: 150px; height: 46px; border-radius: 23px; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <div id="space"><div id="space3d"></div></div>
+  </div>
+  <div id="overlay"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs id="fdefs"></defs></svg>
+<script>
+// ===================== palette & math =====================
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { // damped spring, ~2% overshoot
+  if (dt <= 0) return 0; if (dt > 1.6) return 1;
+  const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt));
+}
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+const mixC = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], clamp(p)))).join(',')})`; };
+
+const world = document.getElementById('world'), space = document.getElementById('space3d'), overlay = document.getElementById('overlay');
+function el(parent, tag, cls, css, html) { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+// masked text line: x = 'c' centres it
+function mtext(x, y, size, html, o = {}) {
+  const m = el(o.parent || world, 'div', 'mask', { top: y + 'px', fontSize: size + 'px', lineHeight: '1.12', paddingBottom: '0.1em', zIndex: o.z || 20 });
+  const s = el(m, 'span', 'txt', { fontWeight: o.w || 800, color: o.color || INK }, html);
+  m.inner = s; m.cx = x === 'c'; if (x !== 'c') m.style.left = x + 'px';
+  return m;
+}
+function centre(m) { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }
+function showText(m, t, tIn, tOut = 1e9, dir = 1) {
+  const pin = sp(t, tIn), pout = sp(t, tOut);
+  m.inner.style.transform = `translateY(${((1 - pin) * 110 - pout * 110) * dir}%)`;
+  m.style.visibility = (t < tIn || pout > 0.995) ? 'hidden' : 'visible';
+}
+
+// ===================== shape pool (the morphing material) =====================
+// state: x,y centre; w,h; r radius; rot (rotateZ); rx (rotateX); z (translateZ); sk skew; c colour; o outline;
+// a/rad: orbit angle & radius around (x,y) so rotations move on arcs
+const NS = 14;
+const DEF = { e: 0, x: 540, y: 820, w: 0, h: 0, r: 0, rot: 0, rx: 0, z: 0, sk: 0, c: PUR, o: 0, a: 0, rad: 0 };
+const KF = Array.from({ length: NS }, () => [[-10, { ...DEF }]]);
+function K(i, t, p) { const last = KF[i][KF[i].length - 1][1]; KF[i].push([t, { ...last, ...p }]); }
+function KA(ids, t, fn) { ids.forEach((i, k) => K(i, t + (fn.d || 0) * k, typeof fn === 'function' ? fn(k) : fn)); }
+const fdefs = document.getElementById('fdefs');
+const shapes = [], blurs = [], anchors = [];
+// paint order: pages/layers (6-9) first, then rows, hand etc.
+const ORDER = [9, 8, 7, 6, 0, 1, 2, 3, 4, 5, 10, 11, 12, 13];
+for (let i = 0; i < NS; i++) {
+  fdefs.insertAdjacentHTML('beforeend', `<filter id="b${i}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>`);
+}
+ORDER.forEach(i => {
+  const s = el(space, 'div', 'shape', { filter: `url(#b${i})` });
+  anchors[i] = el(s, 'div', 'anchor');
+  shapes[i] = s;
+});
+for (let i = 0; i < NS; i++) blurs[i] = document.querySelector(`#b${i} feGaussianBlur`);
+function stateAt(i, t) {
+  const L = KF[i]; let k = 0;
+  while (k + 1 < L.length && L[k + 1][0] <= t) k++;
+  if (k === 0) return L[0][1];
+  const a = L[k - 1][1], b = L[k][1], p = b.e ? expo(t, L[k][0], 0.5) : sp(t, L[k][0]);
+  const o = {};
+  for (const key in b) o[key] = key === 'c' ? null : lerp(a[key], b[key], p);
+  o.c = mixC(a.c, b.c, p);
+  o.w = Math.max(0, o.w); o.h = Math.max(0, o.h);
+  return o;
+}
+function pos(s) { const ar = s.a * Math.PI / 180; return { x: s.x + Math.sin(ar) * s.rad, y: s.y - Math.cos(ar) * s.rad }; }
+
+// ===================== SCENE A: hook + kinetic type (0–8) =====================
+const ROWY = k => 760 + k * 100;
+K(0, -1, { x: 540, y: 820, w: 600, h: 8, c: PUR });
+for (let k = 1; k < 6; k++) K(k, -1, { x: 540, y: 820, w: 0, h: 4, c: INK });
+K(0, 0.5, { w: 920 });
+KA([0, 1, 2, 3, 4, 5], 1.5, Object.assign(k => ({ y: ROWY(k), w: 920, h: k === 0 ? 8 : 4 }), { d: 0.04 }));
+// kinetic slide: rows shear apart and back
+KA([0, 1, 2, 3, 4, 5], 5.5, k => ({ x: 540 + (k % 2 ? 70 : -70) }));
+KA([0, 1, 2, 3, 4, 5], 6.0, k => ({ x: 540 + (k % 2 ? -40 : 40) }));
+KA([0, 1, 2, 3, 4, 5], 6.5, k => ({ x: 540 }));
+const hookA = mtext('c', 420, 64, 'Har mahine,', { w: 700, color: MUT });
+const hookB = mtext('c', 480, 210, 'FEES<span class="pur">.</span>');
+const ROWWORDS = ['Kis student ki?', 'Jama hui?', '<span class="amb">Pending?</span>', 'Kitni collect hui?', 'Kiska record?', 'Kaunsa register?'];
+const rowText = ROWWORDS.map((w, k) => mtext(80, ROWY(k) - 72, 54, w, { w: 800 }));
+const ROWIN = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5];
+
+// ===================== SCENE B: shape morph (8–17) =====================
+// rows -> ruled lines on a register page
+const PY = k => 560 + k * 118;
+K(6, 7.5, { x: 540, y: 860, w: 0, h: 0, r: 18, c: WHT });
+K(6, 8.0, { w: 780, h: 1000 });
+K(9, 7.5, { x: 250, y: 860, w: 4, h: 0, c: AMB });
+K(9, 8.0, { h: 1000 });
+KA([0, 1, 2, 3, 4, 5], 8.0, Object.assign(k => ({ x: 575, y: PY(k), w: 610, h: k === 0 ? 6 : 3 }), { d: 0.04 }));
+const ENTRIES = ['Roll 01 &nbsp;·&nbsp; Apr &nbsp;<span class="pur">✓</span>', 'Roll 02 &nbsp;·&nbsp; Apr &nbsp;<span class="pur">✓</span>', 'Roll 03 &nbsp;·&nbsp; Apr &nbsp;<span class="amb">?</span>', 'Roll 04 &nbsp;·&nbsp; Apr &nbsp;<span class="pur">✓</span>', 'Roll 05 &nbsp;·&nbsp; Apr &nbsp;<span class="amb">?</span>'];
+const entryText = ENTRIES.map((e, k) => mtext(290, PY(k + 1) - 66, 42, e, { w: 600, z: 25 }));
+// more registers pile up
+K(7, 10.9, { x: 540, y: 860, w: 0, h: 0, r: 18, c: '#E9DDCA' });
+K(7, 11.0, { x: 500, y: 885, w: 780, h: 1000, rot: -7 });
+K(8, 11.4, { x: 540, y: 860, w: 0, h: 0, r: 18, c: '#EFE5D5' });
+K(8, 11.5, { x: 585, y: 870, w: 780, h: 1000, rot: 5 });
+K(6, 12.0, { rot: -2, x: 530 });
+// pile -> clock
+const CLK = { x: 540, y: 820 };
+[6, 7, 8].forEach((i, k) => K(i, 12.5 + k * 0.05, { x: CLK.x, y: CLK.y, w: 540, h: 540, r: 270, rot: 0, c: WHT, o: 8 }));
+K(9, 12.5, { x: CLK.x, y: CLK.y, w: 0, h: 0, c: AMB });
+// ticks (rows 1-5 + 10) orbit the centre; hand = row 0
+[1, 2, 3, 4, 5].forEach((i, k) => K(i, 12.6 + k * 0.04, { x: CLK.x, y: CLK.y, w: 10, h: 34, rad: 222, a: k * 72 + 36, rot: 0, c: INK }));
+K(0, 12.6, { x: CLK.x, y: CLK.y, w: 14, h: 200, rad: 92, a: 0, rot: 0, c: PUR });
+[13.5, 14.0, 14.5, 15.0].forEach((t, k) => K(0, t, { a: 90 * (k + 1) }));
+const clockA = mtext('c', 380, 84, 'Kaafi time.', { w: 800 });
+const clockB = mtext('c', 1150, 84, '<span class="amb">Mushkil</span> check.', { w: 800 });
+// clock -> app icon with the logo's three bars
+[6, 7, 8, 9].forEach(i => K(i, 15.5, { x: 540, y: 820, w: 400, h: 400, r: 96, c: PUR, o: 0, rot: 0 }));
+[1, 2, 3, 4, 5].forEach(i => K(i, 15.5, { w: 0, h: 0, rad: 0 }));
+K(0, 15.5, { a: 360, rad: 0, x: 488, y: 820, w: 44, h: 70, sk: -10, c: WHT });
+K(10, 15.4, { x: 540, y: 820, w: 0, h: 0, c: WHT, sk: -10 });
+K(10, 15.5, { w: 44, h: 70 });
+K(11, 15.4, { x: 592, y: 820, w: 0, h: 0, c: WHT, sk: -10 });
+K(11, 15.5, { w: 44, h: 70 });
+
+// ===================== SCENE C: 2D -> 3D (17–24.5) =====================
+const RX = 58, RZ = -40, LS = 420;
+const LAYERS = [9, 8, 7, 6];           // bottom .. top
+const LCOL = [INK, WHT, AMB, PUR];
+LAYERS.forEach((i, k) => K(i, 16.6, { x: 420, rx: RX, rot: RZ, w: LS, h: LS, r: 52, c: LCOL[k] }));
+// bars ride the top layer
+[0, 10, 11].forEach(i => K(i, 16.6, { w: 0, h: 0 }));  // bars fold into the top layer
+const LZ = [0, 100, 200, 300];
+// explicit final z per layer at each separation beat
+K(8, 17.5, { z: 100 }); K(7, 17.5, { z: 100 }); K(6, 17.5, { z: 100 });
+K(7, 18.0, { z: 200 }); K(6, 18.0, { z: 200 });
+K(6, 18.5, { z: 300 });
+// slow orbit
+[[20.5, -26], [21.5, -54], [22.5, -32], [23.2, -40]].forEach(([t, r]) => LAYERS.forEach(i => K(i, t, { rot: r })));
+const LNAMES = ['Students', 'Fee records', '<span class="amb">Pending fees</span>', '<span class="pur">Payments</span>'];
+const layerLbl = LNAMES.map(n => mtext(0, 0, 40, n, { w: 700, parent: overlay }));
+const LIN_ = [17.0, 17.5, 18.0, 18.5];
+const titleA = mtext('c', 190, 86, 'Fee Management', { w: 800 });
+const titleB = mtext('c', 285, 86, '<span class="pur">System</span>', { w: 800 });
+const titleC = mtext('c', 1270, 40, 'for Shree Narayan Vidyasthal School', { w: 600, color: MUT });
+
+// ===================== SCENE D: data / UI (24.5–31.5) =====================
+// layers flatten into a dashboard: white body (8) + purple header (6)
+const CARD = { x: 90, y: 330, w: 900, h: 1090 };
+LAYERS.forEach(i => K(i, 23.9, { rx: 0, rot: 0, z: 0 }));
+K(8, 24.3, { x: 540, y: CARD.y + CARD.h / 2, w: CARD.w, h: CARD.h, r: 30, c: WHT });
+K(6, 24.3, { x: 540, y: CARD.y + 70, w: CARD.w, h: 140, r: 30, c: PUR });
+K(7, 24.3, { x: 540, y: CARD.y + 70, w: 0, h: 0 });
+K(9, 24.3, { x: 540, y: CARD.y + CARD.h / 2, w: 0, h: 0 });
+[0, 10, 11].forEach((i, k) => K(i, 24.3, { x: 160 + k * 30, y: CARD.y + 70, w: 18, h: 36, z: 0 }));
+// progress fill uses shape 12 (purple) on a beige track
+const TRACK = { x: 150, y: 600, w: 780, h: 22 };
+// UI DOM (world space)
+const ui = el(world, 'div', '', { position: 'absolute', left: '0', top: '0', width: '1080px', height: '1920px', zIndex: 15 });
+const hdr1 = mtext(250, CARD.y + 34, 40, 'Fee Dashboard', { parent: ui, color: WHT });
+const hdr2 = mtext(250, CARD.y + 84, 24, 'Shree Narayan Vidyasthal School', { parent: ui, color: '#DCCCFB', w: 600 });
+const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug'];
+const tabs = MONTHS.map((m, k) => mtext(150 + k * 150, 490, 30, m, { parent: ui, w: 700, color: MUT }));
+const tabLine = el(ui, 'div', '', { position: 'absolute', top: '532px', height: '5px', borderRadius: '3px', background: INK });
+const fill = el(ui, 'div', '', { position: 'absolute', left: TRACK.x + 'px', top: TRACK.y + 'px', height: TRACK.h + 'px', borderRadius: '11px', background: PUR, zIndex: 2 });
+const colLbl = mtext(150, 552, 24, 'Collected', { parent: ui, w: 700, color: MUT });
+const track = el(ui, 'div', '', { position: 'absolute', left: TRACK.x + 'px', top: TRACK.y + 'px', width: TRACK.w + 'px', height: TRACK.h + 'px', borderRadius: '11px', background: '#EFE7DA', zIndex: -1 });
+const ROWS = [['Roll 01', 'Class 5 · A', 1], ['Roll 02', 'Class 5 · A', 1], ['Roll 03', 'Class 5 · B', 0], ['Roll 04', 'Class 6 · A', 1], ['Roll 05', 'Class 6 · B', 0]];
+const rowEls = ROWS.map(([n, c, paid]) => {
+  const r = el(ui, 'div', '', { position: 'absolute', left: '130px', width: '820px', height: '104px', borderRadius: '18px', background: '#FBF6EE', overflow: 'hidden' });
+  el(r, 'div', 'txt', { position: 'absolute', left: '28px', top: '18px', fontSize: '32px', fontWeight: 700 }, n);
+  el(r, 'div', '', { position: 'absolute', left: '28px', top: '60px', fontSize: '22px', color: MUT, fontWeight: 600 }, c);
+  r.chipP = el(r, 'div', 'chip', { right: '24px', top: '29px', background: PUR, color: WHT }, 'Paid');
+  r.chipQ = el(r, 'div', 'chip', { right: '24px', top: '29px', background: AMB, color: INK }, 'Pending');
+  r.detail = el(r, 'div', '', { position: 'absolute', left: '28px', top: '112px', fontSize: '24px', color: INK, fontWeight: 600, lineHeight: '1.6' },
+    'Month: Jul &nbsp;·&nbsp; Status: <span class="amb">Pending</span><br><span style="color:#8A8172">Fee details in one tap</span>');
+  r.paid = paid; return r;
+});
+const ROWTOP = k => 660 + k * 122;
+// order: normal, then pending first (filter), detail expands on Roll 03
+const ORDER1 = [0, 1, 2, 3, 4], ORDER2 = [2, 4, 0, 1, 3];
+
+// ===================== SCENE E: strongest moment (31.5–37.5) =====================
+// dashboard collapses into bars that drive the type
+K(8, 31.5, { x: 540, y: 760, w: 0, h: 0, r: 6 });
+K(6, 31.5, { x: 540, y: 330, w: 0, h: 0, r: 6 });
+[0, 10, 11].forEach(i => K(i, 31.5, { w: 0, h: 0 }));
+const eA = mtext('c', 470, 112, 'Sirf software', { w: 800 });
+const eB = mtext('c', 600, 112, 'nahi.', { w: 800, color: MUT });
+K(13, 32.9, { x: 120, y: 545, w: 0, h: 18, r: 3, c: INK });
+K(13, 33.0, { x: 540, w: 860 });
+const eC = mtext('c', 820, 112, 'Real problems', { w: 800 });
+const eD = mtext('c', 950, 112, '<span class="pur">solve karna.</span>', { w: 800 });
+K(13, 34.9, { x: 540, w: 0, h: 18 });
+// checkmark from two strokes (shapes 10, 11) on the big beat
+K(10, 35.0, { x: 470, y: 900, w: 0, h: 0, rot: -45, sk: 0, c: PUR, r: 30, rad: 0, a: 0, rx: 0, z: 0 });
+K(11, 35.0, { x: 600, y: 820, w: 0, h: 0, rot: 40, sk: 0, c: PUR, r: 30, rad: 0, a: 0, rx: 0, z: 0 });
+K(10, 35.5, { x: 455, y: 905, w: 64, h: 210 });
+K(11, 35.55, { x: 610, y: 820, w: 64, h: 420 });
+// purple fill grows from the checkmark past all four corners
+K(6, 36.4, { x: 540, y: 860, w: 120, h: 120, r: 60, c: PUR, rot: 0 });
+K(6, 36.5, { w: 2600, h: 2600, r: 1300 });
+K(10, 36.5, { c: WHT }); K(11, 36.5, { c: WHT });
+
+// ===================== SCENE F: end title (37.5–42) =====================
+K(10, 37.5, { w: 0, h: 0 }); K(11, 37.5, { w: 0, h: 0 });
+K(6, 37.5, { x: 540, y: 640, w: 600, h: 8, r: 0, e: 1 });
+const MK = 0.4, MCX = 540, MCY = 640;   // logo mark placement (source coords 1932 square, mark centre ~965,948)
+const markBar = k => ({ x: MCX + ([849, 985, 1119.5][k] - 965.5) * MK, y: MCY + (913 - 948) * MK, w: 110 * MK, h: 160 * MK, sk: -9.93 });
+// line splits into the three logo bars (shapes 0,1,2)
+[0, 1, 2].forEach((i, k) => K(i, 37.9, { x: 540, y: 640, w: 0, h: 8, c: PUR, rad: 0, a: 0, rot: 0, rx: 0, z: 0, sk: 0 }));
+K(6, 38.0, { w: 0, h: 0, e: 0 });
+[0, 1, 2].forEach((i, k) => K(i, 38.0, { ...markBar(k), r: 0 }));
+const markSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+markSvg.setAttribute('viewBox', '0 0 1932 1932'); markSvg.setAttribute('width', 1932 * MK); markSvg.setAttribute('height', 1932 * MK);
+markSvg.innerHTML = `<path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/>`;
+Object.assign(markSvg.style, { position: 'absolute', left: (MCX - 965.5 * MK) + 'px', top: (MCY - 948 * MK) + 'px', zIndex: 5 });
+world.appendChild(markSvg);
+const fA = mtext('c', 920, 128, 'HeliosLabs', { w: 800 });
+const fB = mtext('c', 1090, 46, 'We build software that', { w: 600, color: MUT });
+const fC = mtext('c', 1150, 46, '<span class="pur">works</span> for your business.', { w: 600, color: INK });
+// collapse back to the opening line (loop)
+[0, 1, 2].forEach(i => K(i, 41.5, { x: 540, y: 820, w: 200, h: 8, sk: 0 }));
+K(0, 41.7, { w: 600 }); K(1, 41.7, { w: 0, h: 0 }); K(2, 41.7, { w: 0, h: 0 });
+
+// ===================== camera: push through each scene, quick exhale at each change =====================
+const SCENES = [0, 8, 17, 24.5, 31.5, 37.5, 41.5, 42];
+function camAt(t) {
+  let i = 0; while (i + 1 < SCENES.length && SCENES[i + 1] <= t) i++;
+  const a = SCENES[i], b = SCENES[Math.min(i + 1, SCENES.length - 1)], span = Math.max(0.01, b - a);
+  const push = a >= 41.5 ? 0 : 0.05 * clamp((t - a) / span);
+  // exhale: the previous scene's end zoom eases back to 1 over 0.4s
+  const prevPush = i > 0 ? 0.05 : 0;
+  const ex = prevPush * (1 - expo(t, a, 0.45));
+  return { z: 1 + push + ex, cx: 540, cy: 840 };
+}
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.25, 4.0, 'Ek school mein har mahine fees manage karna ek badi responsibility thi.'],
+  [4.0, 8.0, 'Kis student ki fees jama hui, kiski pending hai, kitni fees collect hui…'],
+  [8.0, 11.0, '…in sabka record maintain karna aasaan nahi tha.'],
+  [11.0, 14.0, 'Manual entries aur registers mein kaafi time lagta tha,'],
+  [14.0, 17.0, 'aur records check karna bhi mushkil ho jaata tha.'],
+  [17.0, 20.0, 'Is problem ko solve karne ke liye, HeliosLabs ne'],
+  [20.0, 24.5, 'Shree Narayan Vidyasthal School ke liye ek Fee Management System develop kiya.'],
+  [24.5, 28.0, 'Ab fees records ko digitally manage karna, payments track karna'],
+  [28.0, 31.5, 'aur pending fees ki details dekhna zyada organised ho gaya.'],
+  [31.5, 35.0, 'Kyunki technology ka asli purpose sirf software banana nahi,'],
+  [35.0, 37.5, 'balki real problems ko solve karna hai.'],
+  [37.5, 41.4, 'HeliosLabs. We build software that works for your business.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+document.fonts && document.fonts.ready;
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { world.style.transform = 'none'; [hookA, hookB, clockA, clockB, titleA, titleB, titleC, eA, eB, eC, eD, fA, fB, fC].forEach(centre); measured = true; }
+  const c = camAt(t);
+  world.style.transform = `translate(540px,${c.cy}px) scale(${c.z}) translate(-540px,${-c.cy}px)`;
+
+  // ---- A
+  showText(hookA, t, 0.5, 6.5); showText(hookB, t, 1.0, 6.6);
+  rowText.forEach((m, k) => {
+    showText(m, t, ROWIN[k], 7.0 + k * 0.08);
+    const s = stateAt(k, t); m.style.transform = `translateX(${s.x - 540}px)`;
+  });
+  // ---- B
+  entryText.forEach((m, k) => showText(m, t, 8.5 + k * 0.5, 12.2 + k * 0.04));
+  showText(clockA, t, 13.5, 15.4); showText(clockB, t, 14.5, 15.45);
+  // ---- C
+  showText(titleA, t, 19.5, 23.5); showText(titleB, t, 20.0, 23.55); showText(titleC, t, 20.5, 23.6);
+  // ---- D
+  ui.style.display = (t >= 24.3 && t < 32.2) ? 'block' : 'none';
+  showText(hdr1, t, 24.6, 31.5); showText(hdr2, t, 24.8, 31.55);
+  tabs.forEach((m, k) => showText(m, t, 25.0 + k * 0.06, 31.5));
+  { // active tab underline slides on beats: Apr -> ... -> Jul
+    const steps = [[25.2, 0], [27.0, 1], [27.5, 2], [28.0, 3]];
+    let ia = 0, ib = 0, tp = 0; steps.forEach(([ts, k], j) => { if (t >= ts) { ia = ib; ib = k; tp = ts; } });
+    const p = sp(t, tp), k = lerp(ia, ib, p);
+    tabLine.style.left = (150 + k * 150) + 'px'; tabLine.style.width = (60 * clamp(sp(t, 25.2)) * (1 - clamp(sp(t, 31.4)))) + 'px';
+    tabs.forEach((m, j) => m.inner.style.color = Math.round(k) === j ? INK : MUT);
+  }
+  showText(colLbl, t, 25.0, 31.5);
+  track.style.clipPath = `inset(0 ${(1 - clamp(sp(t, 24.9))) * 100}% 0 0)`;
+  track.style.visibility = (t > 31.6) ? 'hidden' : 'visible';
+  { // fill grows on beats (shape 12 is purple, left-anchored)
+    const f = 0.35 * expo(t, 25.5, 1.2) + 0.25 * expo(t, 28.5, 0.8) + 0.2 * expo(t, 30.0, 0.6);
+    const w = TRACK.w * f * (t < 31.5 ? 1 : 1 - clamp(sp(t, 31.5)));
+    fill.style.width = w + 'px';
+  }
+  rowEls.forEach((r, k) => {
+    const tIn = 25.5 + k * 0.25;
+    const pIn = clamp(sp(t, tIn)), pOut = clamp(sp(t, 31.3 + k * 0.04));
+    const i1 = ORDER1.indexOf(k), i2 = ORDER2.indexOf(k);
+    const pr = sp(t, 28.0 + (k % 2) * 0.05);
+    let y = lerp(ROWTOP(i1), ROWTOP(i2), pr);
+    // Roll 03 opens its details at 29.0; rows below it make room
+    const open = clamp(sp(t, 29.0)) * (1 - clamp(sp(t, 31.0)));
+    if (i2 > 0) y += 110 * open;
+    r.style.top = y + 'px';
+    r.style.height = (104 + (k === 2 ? 110 * open : 0)) + 'px';
+    r.style.clipPath = `inset(0 ${(1 - pIn) * 100}% 0 0)`;
+    r.style.transform = `scaleY(${1 - pOut})`;
+    r.style.visibility = (t < tIn || pOut > 0.995) ? 'hidden' : 'visible';
+    // chips: Roll 03 flips Pending -> Paid at 30.0 (pop)
+    let paid = r.paid ? 1 : (k === 2 ? clamp(sp(t, 30.0)) : 0);
+    r.chipP.style.transform = `scale(${paid})`; r.chipQ.style.transform = `scale(${1 - paid})`;
+    const chipIn = clamp(sp(t, tIn + 0.25));
+    r.chipP.style.clipPath = r.chipQ.style.clipPath = `inset(0 ${(1 - chipIn) * 100}% 0 0 round 23px)`;
+  });
+  // ---- E
+  showText(eA, t, 32.0, 35.0); showText(eB, t, 32.5, 35.05);
+  showText(eC, t, 33.5, 35.1); showText(eD, t, 34.0, 35.15);
+  // ---- F
+  { const p = clamp(sp(t, 38.5)) * (1 - clamp(sp(t, 41.3)));
+    markSvg.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+    markSvg.style.visibility = (t < 38.5 || t > 41.9) ? 'hidden' : 'visible'; }
+  showText(fA, t, 39.0, 41.2); showText(fB, t, 39.5, 41.25); showText(fC, t, 39.8, 41.3);
+
+  // ---- shapes
+  for (let i = 0; i < NS; i++) {
+    const s = stateAt(i, t), s2 = stateAt(i, t - 1 / 60), e = shapes[i];
+    const p = pos(s), p2 = pos(s2);
+    const vx = (p.x - p2.x) * 60, vy = (p.y - p2.y) * 60;
+    blurs[i].setAttribute('stdDeviation', `${Math.min(16, Math.abs(vx) / 280).toFixed(2)} ${Math.min(16, Math.abs(vy) / 280).toFixed(2)}`);
+    const rot = s.rot + s.a;
+    Object.assign(e.style, {
+      width: s.w + 'px', height: s.h + 'px', borderRadius: Math.min(s.r, s.w / 2, s.h / 2) + 'px', background: s.c,
+      boxShadow: s.o > 0.2 ? `inset 0 0 0 ${s.o}px ${INK}` : 'none',
+      transform: `translate3d(${p.x - s.w / 2}px,${p.y - s.h / 2}px,0) rotateX(${s.rx}deg) rotateZ(${rot}deg) translateZ(${s.z}px) skewX(${s.sk}deg)`,
+      visibility: (s.w < 0.5 || s.h < 0.5) ? 'hidden' : 'visible',
+    });
+  }
+  // layer labels follow the projected right edge of each 3D layer
+  layerLbl.forEach((m, k) => {
+    const r = anchors[LAYERS[k]].getBoundingClientRect();
+    m.style.left = (760 * c.z - 540 * (c.z - 1)) + 'px'; m.style.top = (r.top - 26) + 'px';
+    showText(m, t, LIN_[k] + 0.15, 23.4 + k * 0.04);
+  });
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 42;
+window.seek(0);
+</script>
+</body>
+</html>
