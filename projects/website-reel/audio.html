@@ -3,7 +3,8 @@
 //  A  0–4.8   light, happy pluck tune (business running on Instagram)
 //  B  4.8–18  music cuts on the block; low tense drone + heartbeat; riser into 18.0
 //  C  18–49   uplifting progression C–G–Am–F with pad, plucks, bass and drums; resolves on C
-window.renderScore = async function (DUR, SFX) {
+window.renderScore = async function (DUR, SFX, P = { BAN: 4.8, WEB: 18.0, END: 47.4 }) {
+  const { BAN, WEB, END } = P;
   const sr = 44100, ctx = new OfflineAudioContext(2, Math.ceil(DUR * sr), sr);
   const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3; comp.connect(ctx.destination);
   const master = ctx.createGain(); master.gain.value = 0.85; master.connect(comp);
@@ -37,38 +38,39 @@ window.renderScore = async function (DUR, SFX) {
   const hat = (t, v = 0.06) => nz(t, 0.05, 8000, 'highpass', v);
 
   // ---------- A: 0–4.8 (C, Am) ----------
-  [[0, [60, 64, 67, 72]], [2.4, [57, 60, 64, 69]]].forEach(([t0, ch]) => {
+  [[0, [60, 64, 67, 72]], [2.4, [57, 60, 64, 69]], [4.8, [60, 64, 67, 72]]].filter(([t0]) => t0 < BAN).forEach(([t0, ch]) => {
     pad(t0, ch.slice(0, 3).map(m => m - 12), 2.4, 0.03, 1200);
     bass(t0, ch[0] - 24, 1.1, 0.16); bass(t0 + 1.2, ch[0] - 24, 1.0, 0.14);
-    for (let i = 0; i < 8; i++) pluck(t0 + i * 0.3, ch[[0, 1, 2, 3, 2, 1, 2, 3][i]] + 12, 0.12);
-    kick(t0, 0.6); kick(t0 + 1.2, 0.6); for (let i = 0; i < 4; i++) hat(t0 + i * B + 0.3, 0.04);
+    for (let i = 0; i < 8; i++) if (t0 + i * 0.3 < BAN) pluck(t0 + i * 0.3, ch[[0, 1, 2, 3, 2, 1, 2, 3][i]] + 12, 0.12);
+    [0, 1.2].forEach(d => { if (t0 + d < BAN) kick(t0 + d, 0.6); }); for (let i = 0; i < 4; i++) if (t0 + i * B + 0.3 < BAN) hat(t0 + i * B + 0.3, 0.04);
   });
   // ---------- B: 4.8–18 tension ----------
   function drone(t0, t1, notes, cut0, cut1) { notes.forEach(m => [-8, 8].forEach(det => { const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
     o.type = 'sawtooth'; o.frequency.value = hz(m); o.detune.value = det; lp.type = 'lowpass'; lp.frequency.setValueAtTime(cut0, t0); lp.frequency.linearRampToValueAtTime(cut1, t1);
     g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.05, t0 + 1.2); g.gain.setValueAtTime(0.05, t1 - 0.8); g.gain.linearRampToValueAtTime(0.0001, t1);
     o.connect(lp).connect(g).connect(musicBus); o.start(t0); o.stop(t1 + 0.1); })); }
-  drone(5.3, 13.4, [33, 40, 45], 220, 520);      // A minor-ish, dark
-  drone(12.6, 18.0, [29, 36, 44], 300, 900);      // F with an unsettled G# above
-  for (let t = 6.0; t < 17.0; t += 1.2) { kick(t, 0.32); kick(t + 0.22, 0.2); }   // heartbeat
+  const MID = BAN + (WEB - BAN) * 0.62;
+  drone(BAN + 0.5, MID + 0.6, [33, 40, 45], 220, 520);      // A minor-ish, dark
+  drone(MID - 0.2, WEB, [29, 36, 44], 300, 900);      // F with an unsettled G# above
+  for (let t = BAN + 1.2; t < WEB - 1.0; t += 1.2) { kick(t, 0.32); kick(t + 0.22, 0.2); }   // heartbeat
   // riser into 18.0
-  { const t0 = 16.4, t1 = 18.0, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  { const t0 = WEB - 1.6, t1 = WEB, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     s.buffer = noise; s.loop = true; f.type = 'bandpass'; f.Q.value = 1.5; f.frequency.setValueAtTime(300, t0); f.frequency.exponentialRampToValueAtTime(6000, t1);
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.22, t1 - 0.03); g.gain.linearRampToValueAtTime(0, t1);
     s.connect(f).connect(g).connect(master); s.start(t0); s.stop(t1); }
   // ---------- C: 18–49 uplift ----------
   const PROG = [[48, 52, 55], [43, 47, 50], [45, 48, 52], [41, 45, 48]];  // C G Am F
   const ARP = [0, 1, 2, 3, 2, 1, 2, 3];
-  for (let bar = 0; 18 + bar * 2.4 < 47.4; bar++) {
-    const t0 = 18 + bar * 2.4, ch = PROG[bar % 4];
+  for (let bar = 0; WEB + bar * 2.4 < END - 0.01; bar++) {
+    const t0 = WEB + bar * 2.4, ch = PROG[bar % 4];
     pad(t0, ch.map(m => m + 12), 2.4, 0.035, 1800);
     for (let i = 0; i < 8; i++) { const notes = [...ch.map(m => m + 24), ch[0] + 36]; pluck(t0 + i * 0.3, notes[ARP[i]], 0.1); }
     for (let i = 0; i < 8; i++) bass(t0 + i * 0.3, ch[0] - 12, 0.26, 0.15);
-    for (let b = 0; b < 4; b++) { const tb = t0 + b * B; kick(tb, 0.75); hat(tb + 0.3, 0.05); if (t0 >= 20.4 && (b === 1 || b === 3)) clap(tb); if (t0 >= 40.4) hat(tb + 0.15, 0.03); }
+    for (let b = 0; b < 4; b++) { const tb = t0 + b * B; kick(tb, 0.75); hat(tb + 0.3, 0.05); if (t0 >= WEB + 2.4 && (b === 1 || b === 3)) clap(tb); if (t0 >= END - 7.2) hat(tb + 0.15, 0.03); }
   }
   // impact at 18.0 and final chord
-  kick(18.0, 1.0); nz(18.0, 0.8, 600, 'lowpass', 0.35);
-  pad(47.4, [48, 52, 55, 60, 64], 1.6, 0.05, 2000); bass(47.4, 36, 1.5, 0.2); pluck(47.4, 72, 0.14); pluck(47.4, 76, 0.1); kick(47.4, 0.8);
+  kick(WEB, 1.0); nz(WEB, 0.8, 600, 'lowpass', 0.35);
+  pad(END, [48, 52, 55, 60, 64], DUR - END - 0.1, 0.05, 2000); bass(END, 36, 1.5, 0.2); pluck(END, 72, 0.14); pluck(END, 76, 0.1); kick(END, 0.8);
 
   // ---------- sound effects (only where the story needs them) ----------
   const bell = (t, ms, v) => ms.forEach((m, k) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = hz(m); env(g, t + k * 0.07, 0.004, v, 0.7); o.connect(g).connect(sfxBus); o.start(t + k * 0.07); o.stop(t + k * 0.07 + 0.8); });
@@ -89,7 +91,7 @@ window.renderScore = async function (DUR, SFX) {
     if (type === 'swing') whoosh(t, 300, 900, 0.7, 0.08);
   });
   // music stops dead at the block: duck the music bus to silence at 4.8
-  musicBus.gain.setValueAtTime(1, 4.78); musicBus.gain.linearRampToValueAtTime(0.0001, 4.82); musicBus.gain.setValueAtTime(0.0001, 5.2); musicBus.gain.linearRampToValueAtTime(1, 5.4);
+  musicBus.gain.setValueAtTime(1, BAN - 0.02); musicBus.gain.linearRampToValueAtTime(0.0001, BAN + 0.02); musicBus.gain.setValueAtTime(0.0001, BAN + 0.4); musicBus.gain.linearRampToValueAtTime(1, BAN + 0.6);
 
   const buf = await ctx.startRendering();
   const L = buf.getChannelData(0), R = buf.getChannelData(1), n = L.length, ab = new ArrayBuffer(44 + n * 4), dv = new DataView(ab);

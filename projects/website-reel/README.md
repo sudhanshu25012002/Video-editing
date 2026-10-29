@@ -33,3 +33,16 @@ ffmpeg -framerate 180 -i build-v/frames/%05d.jpg -i build-v/music.wav \
   -vf "tmix=frames=3,select='eq(mod(n\,3)\,2)',setpts=N/60/TB" -r 60 \
   -c:v libx264 -crf 18 -pix_fmt yuv420p -af "alimiter=limit=0.9" -c:a aac -t 49 website-reel-9x16.mp4
 ```
+
+## Voiceover version
+`vo/voiceover.mp3` is the ElevenLabs voiceover. Each line's start was measured with Whisper (word timestamps)
+and silence detection, then stored as `VO_MAP` (voiceover time → original animation time). Every scene and
+subtitle starts exactly on its spoken line. The score is re-arranged to the same cues: the music cuts at 5.2s
+("band ho gayi"), the lift lands at 23.17s ("Isiliye…") and the final chord at 59.17s. It ducks under the voice.
+```bash
+node audio.js vo && node render.js full 4 v vo
+ffmpeg -framerate 180 -i build-v-vo/frames/%05d.jpg -i build-v-vo/music.wav -i vo/voiceover.mp3 -filter_complex \
+ "[0:v]tmix=frames=3,select='eq(mod(n\,3)\,2)',setpts=N/60/TB[v];[2:a]aresample=44100,pan=stereo|c0=c0|c1=c0,apad,asplit=2[vo][key];\
+  [1:a]volume=0.55[m];[m][key]sidechaincompress=threshold=0.03:ratio=6:attack=15:release=400[md];[md][vo]amix=inputs=2:normalize=0,alimiter=limit=0.92[a]" \
+ -map "[v]" -map "[a]" -r 60 -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -t 60.5 website-reel-voiceover-9x16.mp4
+```
