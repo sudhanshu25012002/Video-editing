@@ -8,10 +8,14 @@ if [ -f "$1" ]; then cp "$1" $O/video.mp4; else
 ffprobe -v error -show_entries format=duration:stream=codec_type,width,height,r_frame_rate -of compact $O/video.mp4 > $O/info.txt
 ffmpeg -v error -i $O/video.mp4 -vf "fps=1,scale=480:-1" $O/frames/%03d.jpg
 ffmpeg -v error -i $O/video.mp4 -vf "select='gt(scene,0.3)',showinfo" -vsync vfr -f null - 2>&1 | grep -o 'pts_time:[0-9.]*' > $O/cuts.txt || true
-python3 -c "
+python3 -I -c "
+import subprocess, numpy as np
 from faster_whisper import WhisperModel
-m=WhisperModel('small',device='cpu',compute_type='int8')
-s,i=m.transcribe('$O/video.mp4')
-print('lang',i.language)
+raw = subprocess.run(['ffmpeg','-v','error','-i','$O/video.mp4','-f','s16le','-ac','1','-ar','16000','-'], capture_output=True).stdout
+audio = np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+if len(audio) == 0: print('no audio track'); raise SystemExit
+m = WhisperModel('small', device='cpu', compute_type='int8')
+s, i = m.transcribe(audio)
+print('lang', i.language)
 [print(f'[{x.start:.1f}-{x.end:.1f}] {x.text}') for x in s]" > $O/transcript.txt 2>/dev/null || echo "no speech/audio" > $O/transcript.txt
 echo $O; cat $O/info.txt; echo "cuts: $(wc -l < $O/cuts.txt)  frames: $(ls $O/frames|wc -l)"; cat $O/transcript.txt

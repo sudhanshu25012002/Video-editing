@@ -1,0 +1,524 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HeliosLabs Reel</title>
+<style>
+  :root {
+    --bg: #F3ECDF;
+    --ink: #1C1726;
+    --muted: #8A8172;
+    --line: #E2D8C6;
+    --card: #FFFCF6;
+    --tile: #E9DDCA;
+    --accent: #5A17E6;
+  }
+  html, body { margin: 0; padding: 0; background: var(--bg); overflow: hidden; }
+  body { width: 1920px; height: 1080px; font-family: 'Inter', sans-serif; color: var(--ink); }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
+  #world { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  .abs { position: absolute; }
+  .mask { position: absolute; overflow: hidden; }
+  .mask > span { display: inline-block; white-space: nowrap; }
+  .bar { position: absolute; background: var(--accent); }
+  .txt { white-space: nowrap; font-weight: 700; letter-spacing: -0.03em; }
+  .acc { color: var(--accent); }
+  .phone { background: var(--card); border-radius: 44px; box-shadow: 0 0 0 2px var(--line); }
+  .tile { position: absolute; background: var(--tile); border-radius: 6px; }
+  .btn { position: absolute; display: flex; align-items: center; justify-content: center; font-weight: 600; border-radius: 10px; }
+  .bubble { position: absolute; padding: 14px 20px; border-radius: 22px; font-size: 20px; font-weight: 500; white-space: nowrap; }
+  .card { position: absolute; background: var(--card); border-radius: 20px; box-shadow: 0 0 0 2px var(--line); }
+  #logoTL { position: absolute; left: 44px; top: 36px; width: 72px; height: 72px; border-radius: 16px; }
+  #caption { position: absolute; left: 0; right: 0; bottom: 44px; text-align: center; font-size: 28px; font-weight: 500; color: var(--ink); }
+  #caption span { display: inline-block; background: rgba(255,252,246,0.92); padding: 10px 22px; border-radius: 12px; box-shadow: 0 0 0 1.5px var(--line); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="caption"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="mb0" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>
+    <filter id="mb1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>
+    <filter id="mb2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>
+  </defs>
+</svg>
+<script>
+// ---------- math ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+// damped spring, ~2% overshoot, settles in ~0.5s
+function springS(dt) {
+  if (dt <= 0) return 0;
+  const w = 2 * Math.PI * 2.1, z = 0.78, wd = w * Math.sqrt(1 - z * z);
+  const v = 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt));
+  return dt > 1.5 ? 1 : v;
+}
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p === 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+// ---------- dom helpers ----------
+const world = document.getElementById('world');
+function el(tag, cls, css, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  Object.assign(e.style, css || {});
+  if (html !== undefined) e.innerHTML = html;
+  world.appendChild(e);
+  return e;
+}
+// masked line of text: outer clips, inner slides
+function mtext(x, y, size, html, opts = {}) {
+  const o = el('div', 'mask', { left: x + 'px', top: y + 'px', fontSize: size + 'px', lineHeight: '1.15', paddingBottom: '0.08em' });
+  const i = document.createElement('span');
+  i.className = 'txt';
+  i.innerHTML = html;
+  if (opts.weight) i.style.fontWeight = opts.weight;
+  if (opts.color) i.style.color = opts.color;
+  o.appendChild(i);
+  o.inner = i;
+  return o;
+}
+// reveal in at tIn (slide up from below), out at tOut (slide up and away)
+function showText(m, t, tIn, tOut = 1e9) {
+  const pin = sp(t, tIn), pout = sp(t, tOut);
+  const y = (1 - pin) * 110 - pout * 110;
+  m.inner.style.transform = `translateY(${y}%)`;
+  m.style.visibility = (t < tIn || pout > 0.999) ? 'hidden' : 'visible';
+}
+// clip-path reveal. dir: 'down' grows from top edge, 'up' from bottom, 'right' from left, 'center' from middle
+function clipReveal(e, t, tIn, tOut = 1e9, dir = 'down', outDir) {
+  const p = clamp(sp(t, tIn), 0, 1), q = clamp(sp(t, tOut), 0, 1);
+  const r = (1 - p) * 100;
+  let ins;
+  if (dir === 'down') ins = `0 0 ${r}% 0`;
+  else if (dir === 'up') ins = `${r}% 0 0 0`;
+  else if (dir === 'right') ins = `0 ${r}% 0 0`;
+  else if (dir === 'left') ins = `0 0 0 ${r}%`;
+  else ins = `${r / 2}% ${r / 2}% ${r / 2}% ${r / 2}%`;
+  if (t >= tOut) {
+    const s = q * 100, od = outDir || 'center';
+    if (od === 'up') ins = `0 0 ${s}% 0`;
+    else if (od === 'down') ins = `${s}% 0 0 0`;
+    else if (od === 'left') ins = `0 ${s}% 0 0`;
+    else ins = `${s / 2}% ${s / 2}% ${s / 2}% ${s / 2}%`;
+  }
+  e.style.clipPath = `inset(${ins})`;
+  e.style.visibility = (t < tIn || (t >= tOut && q > 0.999)) ? 'hidden' : 'visible';
+}
+function place(e, x, y, w, h) { Object.assign(e.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); }
+
+// ---------- palette ----------
+const ACC = '#5A17E6', INK = '#1C1726', MUTED = '#8A8172', CARD = '#FFFCF6', LINE = '#E2D8C6', TILE = '#E9DDCA';
+const SK = -9.93; // logo slant
+
+// =====================================================================
+// SCENE 0 — HOOK (0–2s)
+// =====================================================================
+const hook1 = mtext(0, 300, 150, 'Late reply');
+const hook2 = mtext(0, 500, 150, 'Lost order.');
+
+// =====================================================================
+// SCENE 1 — INSTAGRAM-STYLE PROFILE (2–8s)
+// =====================================================================
+const PH = { x: 750, y: 110, w: 420, h: 860 };
+const phone = el('div', 'abs phone'); place(phone, PH.x, PH.y, PH.w, PH.h);
+const prof = el('div', 'abs', { overflow: 'hidden', borderRadius: '44px' }); place(prof, PH.x, PH.y, PH.w, PH.h);
+function pel(cls, css, html) { const e = el('div', cls, css, html); world.removeChild(e); prof.appendChild(e); return e; }
+pel('abs', { left: '22px', top: '58px', width: '64px', height: '64px', borderRadius: '50%', background: TILE });
+pel('abs txt', { left: '102px', top: '60px', fontSize: '24px' }, 'your.shop');
+pel('abs', { left: '102px', top: '94px', fontSize: '17px', color: MUTED, fontWeight: 500 }, 'Homemade cakes &amp; bakes');
+pel('btn', { left: '22px', top: '142px', width: '180px', height: '44px', boxShadow: `inset 0 0 0 2px ${INK}`, fontSize: '18px' }, 'Follow');
+const msgLabel = el('div', 'btn', { left: (PH.x + 218) + 'px', top: (PH.y + 142) + 'px', width: '180px', height: '44px', color: '#fff', fontSize: '18px', zIndex: 45 }, 'Message');
+const tiles = [];
+const tileShades = ['#E9DDCA', '#E2D2BA', '#EFE4D3', '#E5D6C0'];
+for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) {
+  const t = pel('tile', { left: (17 + c * 136) + 'px', top: (210 + r * 136) + 'px', width: '130px', height: '130px', background: tileShades[(r + c) % 4] });
+  // simple cake glyph: base + top layer + cherry, neutral tones
+  t.innerHTML = `<div style="position:absolute;left:30px;top:66px;width:70px;height:34px;border-radius:6px;background:#C9A57E"></div>
+                 <div style="position:absolute;left:36px;top:48px;width:58px;height:22px;border-radius:6px 6px 2px 2px;background:#F7EFE3"></div>
+                 <div style="position:absolute;left:58px;top:36px;width:14px;height:14px;border-radius:50%;background:#B8524A"></div>`;
+  tiles.push(t);
+}
+const tileSel = tiles[4]; // row 1, col 1
+// DM view inside the same phone
+const dm = el('div', 'abs', { overflow: 'hidden', borderRadius: '44px', background: CARD }); place(dm, PH.x, PH.y, PH.w, PH.h);
+function del_(cls, css, html) { const e = el('div', cls, css, html); world.removeChild(e); dm.appendChild(e); return e; }
+del_('abs', { left: '22px', top: '50px', width: '44px', height: '44px', borderRadius: '50%', background: TILE });
+del_('abs txt', { left: '80px', top: '58px', fontSize: '22px' }, 'your.shop');
+del_('abs', { left: '0', top: '112px', width: '420px', height: '2px', background: LINE });
+const b1 = del_('bubble', { right: '18px', top: '150px', background: INK, color: '#fff' }, 'Hi! Ye chocolate cake<br>order karna hai');
+const chip1 = del_('abs', { left: '0', width: '420px', top: '270px', textAlign: 'center', fontSize: '15px', color: MUTED, fontWeight: 600 }, '2 ghante baad');
+const b2 = del_('bubble', { right: '18px', top: '304px', background: INK, color: '#fff' }, 'Hello? Available hai?');
+const chip2 = del_('abs', { left: '0', width: '420px', top: '384px', textAlign: 'center', fontSize: '15px', color: MUTED, fontWeight: 600 }, '3 ghante baad');
+const b3 = del_('bubble', { right: '18px', top: '418px', background: INK, color: '#fff' }, 'Rehne do, kahin aur<br>se le liya.');
+const typing = del_('bubble', { left: '18px', top: '600px', width: '96px', height: '50px', padding: '0', background: '#EFE7DA' }, '');
+// big side text, scene 2
+const late1 = mtext(150, 380, 110, 'Reply <span class="acc">late,</span>');
+const late2 = mtext(150, 520, 110, 'order gone.');
+
+// =====================================================================
+// SCENE 3 — WEBSITE (13–22s)
+// =====================================================================
+const BR = { x: 260, y: 120, w: 1400, h: 840 };
+const browser = el('div', 'abs card', { overflow: 'hidden' }); place(browser, BR.x, BR.y, BR.w, BR.h);
+function bel(cls, css, html) { const e = el('div', cls, css, html); world.removeChild(e); browser.appendChild(e); return e; }
+['#E2D8C6', '#E2D8C6', '#E2D8C6'].forEach((c, i) => bel('abs', { left: (28 + i * 24) + 'px', top: '34px', width: '14px', height: '14px', borderRadius: '50%', background: c }));
+const addr = bel('abs', { left: '300px', top: '22px', width: '800px', height: '38px', borderRadius: '19px', background: '#F1E9DC', fontSize: '18px', color: MUTED, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '');
+bel('abs', { left: '0', top: '82px', width: '1400px', height: '2px', background: LINE });
+const nav = bel('abs', { left: '60px', top: '112px', width: '1280px', height: '40px' }, `
+  <div class="txt" style="position:absolute;left:0;top:0;font-size:28px">your.shop</div>
+  <div style="position:absolute;right:0;top:4px;font-size:20px;font-weight:600;color:${INK};display:flex;gap:40px">
+    <span>Cakes</span><span>Cookies</span><span>Custom</span><span id="cartlink">Cart</span></div>`);
+const cartBadge = bel('abs', { left: '1352px', top: '104px', width: '26px', height: '26px', borderRadius: '13px', background: INK, color: '#fff', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '1');
+const hero = mtext(320, 310, 76, 'Order karo, <span class="acc">kabhi bhi.</span>');
+const heroSub = mtext(322, 410, 26, 'Fresh homemade cakes, online.', { weight: 500, color: MUTED });
+const products = ['Chocolate Cake', 'Red Velvet', 'Cookies Box', 'Brownies'];
+const pcards = products.map((name, i) => {
+  const x = 320 + i * 336;
+  const c = el('div', 'abs card'); place(c, x, 500, 310, 400);
+  c.innerHTML = `<div style="position:absolute;left:14px;top:14px;width:282px;height:200px;border-radius:12px;background:${tileShades[i]}">
+      <div style="position:absolute;left:96px;top:96px;width:90px;height:46px;border-radius:8px;background:#C9A57E"></div>
+      <div style="position:absolute;left:104px;top:72px;width:74px;height:30px;border-radius:8px 8px 3px 3px;background:#F7EFE3"></div>
+      <div style="position:absolute;left:132px;top:56px;width:18px;height:18px;border-radius:50%;background:#B8524A"></div></div>
+    <div class="txt" style="position:absolute;left:22px;top:236px;font-size:24px">${name}</div>
+    <div style="position:absolute;left:20px;top:330px;width:270px;height:48px;border-radius:10px;box-shadow:inset 0 0 0 2px ${INK};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:19px">Order</div>`;
+  return c;
+});
+const urlLabel = el('div', 'btn', { color: '#fff', fontSize: '18px', fontWeight: 500, zIndex: 45 }, ''); place(urlLabel, BR.x + 300, BR.y + 22, 800, 38);
+const orderLabel = el('div', 'btn', { color: '#fff', fontSize: '19px', zIndex: 45 }, 'Order'); place(orderLabel, 656 + 20, 500 + 330, 270, 48);
+
+// =====================================================================
+// SCENE 4 — THREE FEATURES (22–30s)
+// =====================================================================
+const brandLine = mtext(0, 150, 64, '<span class="acc">HeliosLabs</span> lekar aaya hai');
+const PANELS = [180, 720, 1260].map(x => ({ x, y: 300, w: 480, h: 560 }));
+const panelTitles = ['E-commerce website', 'WhatsApp ordering', 'Online checkout'];
+const panels = PANELS.map((P, i) => {
+  const c = el('div', 'abs card', { overflow: 'hidden' }); place(c, P.x, P.y, P.w, P.h);
+  c.innerHTML = `<div class="txt" style="position:absolute;left:32px;top:40px;font-size:32px">${panelTitles[i]}</div>`;
+  return c;
+});
+// panel 1 content: mini site wireframe
+panels[0].insertAdjacentHTML('beforeend', `
+  <div style="position:absolute;left:32px;top:120px;width:416px;height:380px;border-radius:14px;box-shadow:0 0 0 2px ${LINE}">
+    <div style="position:absolute;left:20px;top:22px;width:110px;height:14px;border-radius:7px;background:${INK}"></div>
+    <div style="position:absolute;left:20px;top:64px;width:250px;height:22px;border-radius:6px;background:#D9CDB9"></div>
+    ${[0, 1, 2].map(k => `<div style="position:absolute;left:${20 + k * 128}px;top:120px;width:116px;height:150px;border-radius:10px;background:${tileShades[k]}"></div>
+      <div style="position:absolute;left:${20 + k * 128}px;top:286px;width:116px;height:34px;border-radius:8px;box-shadow:inset 0 0 0 2px ${INK}"></div>`).join('')}
+  </div>`);
+// panel 2: whatsapp-style ordering
+const waBtn = document.createElement('div');
+Object.assign(waBtn.style, { position: 'absolute', left: '32px', top: '440px', width: '416px', height: '60px', borderRadius: '12px', background: INK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '21px' });
+waBtn.textContent = 'WhatsApp par order karein';
+panels[1].appendChild(waBtn);
+const waMsg = document.createElement('div');
+waMsg.className = 'bubble';
+Object.assign(waMsg.style, { right: '32px', top: '140px', background: '#EFE7DA', color: INK, lineHeight: '1.4' });
+waMsg.innerHTML = '<b>Naya order</b><br>1 × Chocolate Cake';
+panels[1].appendChild(waMsg);
+const waTick = document.createElement('div');
+Object.assign(waTick.style, { position: 'absolute', right: '36px', top: '238px', fontSize: '16px', color: MUTED, fontWeight: 600 });
+waTick.textContent = 'Delivered';
+panels[1].appendChild(waTick);
+// panel 3: checkout
+panels[2].insertAdjacentHTML('beforeend', `
+  ${['Cart', 'Address', 'Pay'].map((s, k) => `<div style="position:absolute;left:${32 + k * 142}px;top:150px;font-size:19px;font-weight:600;color:${MUTED}">${s}</div>
+     <div style="position:absolute;left:${32 + k * 142}px;top:186px;width:132px;height:12px;border-radius:2px;background:#EFE7DA"></div>`).join('')}
+  <div style="position:absolute;left:32px;top:240px;width:416px;height:2px;background:${LINE}"></div>
+  <div style="position:absolute;left:32px;top:268px;font-size:21px;font-weight:600">Chocolate Cake</div>
+  <div style="position:absolute;left:32px;top:308px;font-size:18px;color:${MUTED};font-weight:500">UPI · Card · Netbanking</div>`);
+const payBtn = document.createElement('div');
+Object.assign(payBtn.style, { position: 'absolute', left: '32px', top: '440px', width: '416px', height: '60px', borderRadius: '12px', background: INK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '21px' });
+payBtn.textContent = 'Pay';
+panels[2].appendChild(payBtn);
+const payOk = document.createElement('div');
+Object.assign(payOk.style, { position: 'absolute', left: '32px', top: '440px', width: '416px', height: '60px', borderRadius: '12px', background: '#EFE7DA', color: INK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '21px' });
+payOk.textContent = '✓  Order confirmed';
+panels[2].appendChild(payOk);
+
+// =====================================================================
+// SCENE 5 — PRICE (30–36s)
+// =====================================================================
+const priceTop = mtext(0, 250, 40, 'Plans sirf', { weight: 600, color: MUTED });
+const rupee = mtext(0, 330, 260, '₹');
+const digits = [0, 1, 2].map(() => mtext(0, 330, 260, '<span class="acc">9</span>'));
+const perMonth = mtext(0, 520, 44, '/month se shuru', { weight: 600, color: MUTED });
+const incl1 = mtext(0, 700, 40, '✓ Hosting', { weight: 600 });
+const incl2 = mtext(0, 700, 40, '✓ Maintenance', { weight: 600 });
+
+// =====================================================================
+// SCENE 6 — END CARD (36–44s)
+// =====================================================================
+const MK = 0.38, MX = 400, MY = 540; // world = MX + (x-460)*MK, MY + (y-948)*MK
+const markSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+markSvg.setAttribute('width', 1932 * MK); markSvg.setAttribute('height', 1932 * MK);
+markSvg.setAttribute('viewBox', '0 0 1932 1932');
+Object.assign(markSvg.style, { position: 'absolute', left: (MX - 460 * MK) + 'px', top: (MY - 948 * MK) + 'px' });
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+markSvg.innerHTML = `<path d="${BRACE}" fill="${ACC}"/><path d="${BRACE}" fill="${ACC}" transform="rotate(180 967 948)"/>`;
+world.appendChild(markSvg);
+const name = mtext(MX + (1500 - 460) * MK + 40, 400, 150, 'HeliosLabs');
+const tag = mtext(MX + (1500 - 460) * MK + 46, 590, 42, 'Aapka business, aapki online dukaan.', { weight: 600, color: MUTED });
+const cta = mtext(MX + (1500 - 460) * MK + 46, 670, 42, '<span class="acc">DM karein</span> aur online journey shuru karein', { weight: 600 });
+
+// ---------- cursor ----------
+const cursor = el('div', 'abs', { width: '40px', height: '40px', zIndex: 50, transformOrigin: '4px 4px' },
+  `<svg width="40" height="40" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ---------- through-line bars ----------
+const bars = [0, 1, 2].map(i => el('div', 'bar', { zIndex: 40, filter: `url(#mb${i})` }));
+const mbf = [0, 1, 2].map(i => document.querySelector(`#mb${i} feGaussianBlur`));
+
+// ---------- measure layout (runtime) ----------
+function W(e) { return e.inner.getBoundingClientRect().width; }
+const L = {};
+function measure() {
+  world.style.transform = 'none';
+  // hook centred
+  L.h1w = W(hook1); L.h2w = W(hook2);
+  const ellW = 3 * 34;
+  L.h1x = 960 - (L.h1w + 24 + ellW) / 2;
+  hook1.style.left = L.h1x + 'px';
+  hook2.style.left = (960 - L.h2w / 2) + 'px';
+  L.ellX = L.h1x + L.h1w + 24;
+  // brand line centred
+  brandLine.style.left = (960 - W(brandLine) / 2) + 'px';
+  // price row centred
+  const rw = W(rupee), dw = W(digits[0]);
+  const total = rw + 3 * dw + 10;
+  L.px = 960 - total / 2;
+  rupee.style.left = L.px + 'px';
+  L.dx = [0, 1, 2].map(k => L.px + rw + 10 + k * dw);
+  L.dw = dw;
+  digits.forEach((d, k) => d.style.left = L.dx[k] + 'px');
+  priceTop.style.left = L.px + 'px';
+  perMonth.style.left = (L.dx[2] + dw + 16) + 'px';
+  L.i1w = W(incl1); L.i2w = W(incl2);
+  incl1.style.left = (960 - (L.i1w + 60 + L.i2w) / 2) + 'px';
+  incl2.style.left = (960 - (L.i1w + 60 + L.i2w) / 2 + L.i1w + 60) + 'px';
+  // end-card group centred: mark + name
+  const nameW = Math.max(W(name), W(cta) + 6);
+  const markL = 461, markR = 1470;
+  const groupW = (markR - markL) * MK + 40 + nameW;
+  L.MX = 960 - groupW / 2 + (460 - markL) * MK;
+  markSvg.style.left = (L.MX - 460 * MK) + 'px';
+  const nx = L.MX + (markR - 460) * MK + 40;
+  name.style.left = nx + 'px'; tag.style.left = (nx + 6) + 'px'; cta.style.left = (nx + 6) + 'px';
+}
+measure();
+function markBar(k) { // logo bar k in world coords
+  const cx = [849, 985, 1119.5][k], cy = 913;
+  return { x: L.MX + (cx - 460) * MK, y: MY + (cy - 948) * MK, w: 110 * MK, h: 160 * MK, sk: SK };
+}
+
+// ---------- bar keyframes: [time, [state0, state1, state2]] ----------
+// state = centre x, centre y, width, height, skew(deg)
+function S(x, y, w, h, sk = SK) { return { x, y, w, h, sk }; }
+function row(cx, cy, w, h, gap, sk = SK) { return [0, 1, 2].map(k => S(cx + (k - 1) * (w + gap), cy, w, h, sk)); }
+let BK;
+function buildBarKeys() {
+  const ell = [0, 1, 2].map(k => S(L.ellX + 17 + k * 34, 300 + 150 * 0.86, 22, 30));
+  const pc = [832, 968, 1104];
+  const gridCols = pc.map(x => S(x, 320 + 269 + 0, 130, 538, 0));
+  const msgBtn = [0, 1, 2].map(k => S(PH.x + 218 + 30 + k * 60, PH.y + 142 + 22, 62, 44));
+  const typeDots = [0, 1, 2].map(k => S(PH.x + 18 + 28 + k * 20, PH.y + 600 + 25, 12, 22));
+  const flat = [0, 1, 2].map(k => S(PH.x + 18 + 28 + k * 20, PH.y + 600 + 25, 22, 4, 0));
+  const addrBar = [0, 1, 2].map(k => S(BR.x + 300 + 133 + k * 267, BR.y + 22 + 19, 268, 38, 0));
+  const orderBtn = [0, 1, 2].map(k => S(656 + 20 + 45 + k * 90, 500 + 330 + 24, 92, 48));
+  const strips = PANELS.map(P => S(P.x + P.w / 2, P.y + 5, P.w, 10, 0));
+  const steps = [0, 1, 2].map(k => S(PANELS[2].x + 32 + 66 + k * 142, PANELS[2].y + 192, 132, 12, 0));
+  const stepsEmpty = steps.map(s => S(s.x - 66, s.y, 0.01, 12, 0));
+  const tall = L.dx.map(x => S(x + L.dw / 2, 330 + 150, L.dw * 0.8, 300));
+  const under = L.dx.map(x => S(x + L.dw / 2, 660, L.dw * 0.8, 12));
+  const logo = [0, 1, 2].map(markBar);
+  BK = [
+    [-1, ell.map(s => S(s.x, s.y, 0.01, 0.01))],
+    [0.5, ell],                                   // beat 1: ellipsis grows after "Late reply"
+    [1.5, [0, 1, 2].map(k => S(960 + (k - 1) * 150, 470, 120, 520))], // beat 3: bars stretch tall, interrupt
+    [2.0, gridCols],                              // bar 2: become grid columns (curtain)
+    [3.0, msgBtn],                                // become the Message button
+    [6.1, typeDots],                              // typing dots in the reply bubble
+    [12.0, flat],                                 // collapse to a line
+    [12.5, flat.map((s, k) => S(960 + (k - 1) * 268, BR.y + 41, 268, 4, 0))], // stretch
+    [13.0, addrBar],                              // become the address bar
+    [16.5, orderBtn],                             // become the Order button
+    [21.5, orderBtn.map(s => S(s.x, s.y - 140, s.w, s.h))], // lift out
+    [22.0, strips],                               // panel top strips
+    [26.0, stepsEmpty],                           // drop into checkout slots (empty)
+    [26.5, [steps[0], stepsEmpty[1], stepsEmpty[2]]],
+    [27.0, [steps[0], steps[1], stepsEmpty[2]]],
+    [27.5, steps],
+    [30.0, tall],                                 // big beat: tall columns
+    [30.5, under],                                // reveal digits, become underlines
+    [36.0, logo],                                 // become the logo bars
+  ];
+}
+buildBarKeys();
+function barState(t, k) {
+  const d = k * 0.05;
+  let i = 0;
+  while (i + 1 < BK.length && BK[i + 1][0] + d <= t) i++;
+  if (i === 0) return BK[0][1][k];
+  const a = BK[i - 1][1][k], b = BK[i][1][k];
+  const p = sp(t, BK[i][0] + d);
+  return { x: lerp(a.x, b.x, p), y: lerp(a.y, b.y, p), w: Math.max(0, lerp(a.w, b.w, p)), h: Math.max(0, lerp(a.h, b.h, p)), sk: lerp(a.sk, b.sk, p) };
+}
+
+// ---------- cursor keys: [t, x, y] ----------
+const CK = [
+  [0, 1500, 1200], [3.0, 1500, 1200], [3.4, 980, 540], [5.0, 1060, 280], [6.8, 1300, 1200],
+  [15.5, 1700, 1100], [16.2, 1250, 700], [17.2, 800, 860], [19.0, 1500, 1200],
+  [23.8, 1300, 1200], [24.4, 980, 776], [26.0, 1400, 860], [28.0, 1500, 776], [29.5, 1700, 1200],
+];
+const CLICKS = [4.0, 5.5, 17.6, 25.0, 28.5];
+function cursorAt(t) {
+  let i = 0;
+  while (i + 1 < CK.length && CK[i + 1][0] <= t) i++;
+  if (i === 0) return { x: CK[0][1], y: CK[0][2] };
+  const a = CK[i - 1], b = CK[i];
+  const p = expo(t, b[0], 0.55);
+  return { x: lerp(a[1], b[1], p), y: lerp(a[2], b[2], p) };
+}
+
+// ---------- camera keys: [t, cx, cy, zoom] (eased continuously between keys) ----------
+const CAM = [
+  [0, 960, 540, 1.0], [2.0, 960, 540, 1.04],
+  [3.6, 968, 560, 1.12], [5.4, 1040, 400, 1.22], [6.4, 960, 430, 1.14], [8.4, 960, 470, 1.18],
+  [9.6, 760, 540, 1.04], [12.6, 760, 540, 1.06], [13.2, 960, 540, 1.0],
+  [15.2, 960, 560, 1.02], [17.3, 800, 760, 1.38], [18.8, 760, 420, 1.28], [21.6, 860, 470, 1.32],
+  [22.4, 960, 540, 1.0], [24.6, 960, 700, 1.3], [26.3, 1500, 600, 1.38], [29.6, 1500, 620, 1.44],
+  [30.2, 960, 500, 1.12], [35.8, 960, 500, 1.16],
+  [36.6, 960, 540, 1.14], [44.0, 960, 540, 1.22],
+];
+function camAt(t) {
+  let i = 0;
+  while (i + 1 < CAM.length && CAM[i + 1][0] <= t) i++;
+  if (i + 1 >= CAM.length) return { cx: CAM[i][1], cy: CAM[i][2], z: CAM[i][3] };
+  const a = CAM[i], b = CAM[i + 1], span = b[0] - a[0];
+  const M = Math.min(0.6, span);
+  const ws = b[0] - M;                                   // move window start
+  const drift = z => z * (1 + 0.03 * clamp((t - a[0]) / span)); // slow push, never still
+  if (t < ws) return { cx: a[1], cy: a[2], z: drift(a[3]) };
+  const p = inout(clamp((t - ws) / M));
+  const za = a[3] * (1 + 0.03 * clamp((ws - a[0]) / span));
+  return { cx: lerp(a[1], b[1], p), cy: lerp(a[2], b[2], p), z: lerp(za, b[3], p) };
+}
+// ---------- captions ----------
+const CAPS = [
+  [0.4, 7.5, 'Ek customer aapki Instagram par aata hai, products dekhta hai… aur order karne ke liye message karta hai.'],
+  [7.9, 12.5, 'Lekin reply late mila, toh ho sakta hai woh kisi aur se order kar le.'],
+  [13.0, 21.6, 'Ab sochiye, agar aapki khud ki website ho, jahan customers kabhi bhi products dekh sakein aur aasani se order kar sakein?'],
+  [22.1, 29.6, 'Isi liye HeliosLabs lekar aaya hai e-commerce websites, WhatsApp ordering aur online checkout ke saath.'],
+  [30.1, 36.3, 'Aur plans sirf ₹999 per month se shuru, hosting aur maintenance ke saath.'],
+  [36.4, 40.5, 'Aapka business, aapki online dukaan. HeliosLabs ke saath.'],
+  [40.6, 44.0, 'DM karein aur apni online journey shuru karein!'],
+];
+const capBox = document.querySelector('#caption span');
+
+// =====================================================================
+// seek(t): every style is a pure function of t
+// =====================================================================
+window.seek = function (t) {
+  // camera
+  const c = camAt(t);
+  world.style.transform = `translate(960px,540px) scale(${c.z}) translate(${-c.cx}px,${-c.cy}px)`;
+
+  // ----- scene 0: hook -----
+  showText(hook1, t, 0.0, 1.62);
+  showText(hook2, t, 1.0, 1.7);
+
+  // ----- scene 1: profile -----
+  const s1on = t >= 1.9 && t < 13.2;
+  phone.style.display = s1on ? 'block' : 'none';
+  if (s1on) clipReveal(phone, t, 1.9, 12.6, 'down', 'up');
+  prof.style.display = (t >= 1.9 && t < 6.6) ? 'block' : 'none';
+  if (t >= 1.9 && t < 6.6) clipReveal(prof, t, 1.9, 1e9, 'down');
+  tiles.forEach(e => { e.style.transform = 'none'; e.style.boxShadow = 'none'; });
+  const press = (tc) => 1 - 0.06 * Math.sin(Math.PI * clamp((t - tc) / 0.18));
+  tileSel.style.transform = `scale(${press(4.0)})`;
+  if (t > 4.0) tileSel.style.boxShadow = `inset 0 0 0 ${3 * sp(t, 4.0)}px ${INK}`;
+  msgLabel.style.visibility = (t > 3.1 && t < 6.4) ? 'visible' : 'hidden';
+  msgLabel.style.transform = `scale(${press(5.5)})`;
+  // DM view revealed from the right after the Message click
+  dm.style.display = (t >= 5.7 && t < 12.9) ? 'block' : 'none';
+  if (t >= 5.7) clipReveal(dm, t, 5.7, 1e9, 'left');
+  const bub = (e, tIn) => { const p = sp(t, tIn); e.style.transform = `scale(${0.6 + 0.4 * p})`; e.style.transformOrigin = 'right bottom'; e.style.clipPath = `inset(0 0 0 ${(1 - clamp(p)) * 100}%)`; e.style.visibility = t < tIn ? 'hidden' : 'visible'; };
+  bub(b1, 6.1);
+  bub(b2, 9.0);
+  [chip1, chip2].forEach((e, k) => { const tIn = [8.5, 10.0][k]; e.style.clipPath = `inset(0 ${(1 - clamp(sp(t, tIn))) * 50}% 0 ${(1 - clamp(sp(t, tIn))) * 50}%)`; e.style.visibility = t < tIn ? 'hidden' : 'visible'; });
+  bub(b3, 11.0);
+  // typing bubble grows at 6.8, closes at 11.9
+  { const p = clamp(sp(t, 6.5)), q = clamp(sp(t, 11.9));
+    typing.style.transformOrigin = 'left center';
+    typing.style.transform = `scaleX(${p * (1 - q)})`;
+    typing.style.visibility = (t < 6.5 || q > 0.999) ? 'hidden' : 'visible'; }
+  showText(late1, t, 9.5, 12.4);
+  showText(late2, t, 11.0, 12.5);
+
+  // ----- scene 3: website -----
+  const s3on = t >= 12.9 && t < 22.6;
+  browser.style.display = s3on ? 'block' : 'none';
+  if (s3on) clipReveal(browser, t, 13.0, 22.0, 'down', 'center');
+  { const url = 'yourshop.in'; const n = Math.floor(clamp((t - 13.5) / 1.0) * url.length); addr.textContent = url.slice(0, n); urlLabel.textContent = url.slice(0, n); urlLabel.style.visibility = (t > 13.3 && t < 16.5) ? 'visible' : 'hidden'; }
+  nav.style.clipPath = `inset(0 ${(1 - clamp(sp(t, 14.0))) * 100}% 0 0)`;
+  showText(hero, t, 14.5, 22.0);
+  showText(heroSub, t, 15.0, 22.0);
+  pcards.forEach((e, i) => { if (s3on) clipReveal(e, t, 15.0 + i * 0.25, 22.0, 'up', 'center'); else e.style.visibility = 'hidden'; });
+  orderLabel.style.visibility = (t > 16.7 && t < 21.6) ? 'visible' : 'hidden';
+  orderLabel.style.transform = `scale(${press(17.6)})`;
+  { const p = clamp(sp(t, 18.0)); cartBadge.style.transform = `scale(${p})`; cartBadge.style.visibility = (t < 18.0 || t > 22.0) ? 'hidden' : 'visible'; }
+
+  // ----- scene 4: features -----
+  showText(brandLine, t, 22.5, 29.8);
+  panels.forEach((e, i) => { e.style.display = (t >= 22 && t < 30.4) ? 'block' : 'none'; clipReveal(e, t, 22.3 + i * 0.5, 29.8, 'down', 'center'); });
+  waBtn.style.transform = `scale(${press(25.0)})`;
+  { const p = sp(t, 25.5); waMsg.style.transformOrigin = 'right top'; waMsg.style.transform = `scale(${0.6 + 0.4 * p})`; waMsg.style.clipPath = `inset(0 0 0 ${(1 - clamp(p)) * 100}%)`; waMsg.style.visibility = t < 25.5 ? 'hidden' : 'visible'; }
+  waTick.style.clipPath = `inset(0 0 0 ${(1 - clamp(sp(t, 26.0))) * 100}%)`;
+  payBtn.style.transform = `scale(${press(28.5)})`;
+  payOk.style.clipPath = `inset(0 ${(1 - clamp(sp(t, 29.0))) * 100}% 0 0)`;
+
+  // ----- scene 5: price -----
+  showText(priceTop, t, 30.5, 35.6);
+  showText(rupee, t, 30.0, 35.8);
+  digits.forEach((d, k) => showText(d, t, 30.5 + k * 0.08, 35.9 + k * 0.05));
+  showText(perMonth, t, 31.0, 35.7);
+  showText(incl1, t, 32.0, 35.7);
+  showText(incl2, t, 33.0, 35.8);
+
+  // ----- scene 6: end card -----
+  { const p = clamp(sp(t, 36.5));
+    markSvg.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+    markSvg.style.visibility = t < 36.5 ? 'hidden' : 'visible'; }
+  showText(name, t, 37.0);
+  showText(tag, t, 38.0);
+  showText(cta, t, 40.5);
+
+  // ----- bars + direction-aware motion blur -----
+  bars.forEach((b, k) => {
+    const s = barState(t, k), s2 = barState(t - 1 / 60, k);
+    const vx = (s.x - s2.x) * 60, vy = (s.y - s2.y) * 60;
+    mbf[k].setAttribute('stdDeviation', `${Math.min(18, Math.abs(vx) / 260).toFixed(2)} ${Math.min(18, Math.abs(vy) / 260).toFixed(2)}`);
+    Object.assign(b.style, { left: (s.x - s.w / 2) + 'px', top: (s.y - s.h / 2) + 'px', width: s.w + 'px', height: s.h + 'px', transform: `skewX(${s.sk}deg)` });
+    b.style.visibility = (s.w < 0.5 || s.h < 0.5) ? 'hidden' : 'visible';
+  });
+  // bars sit under digits in scene 5 but in front elsewhere
+  // ----- cursor -----
+  const cp = cursorAt(t);
+  let cs = 1; CLICKS.forEach(tc => { cs = Math.min(cs, press(tc) * (1 - 0.12 * Math.sin(Math.PI * clamp((t - tc) / 0.18)))); });
+  Object.assign(cursor.style, { left: cp.x + 'px', top: cp.y + 'px', transform: `scale(${cs / Math.sqrt(c.z)})` });
+
+  // ----- captions -----
+  const cap = CAPS.find(([a, b]) => t >= a && t < b);
+  capBox.parentElement.style.visibility = cap ? 'visible' : 'hidden';
+  if (cap) { capBox.textContent = cap[2]; const p = clamp(sp(t, cap[0])); capBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 44;
+window.seek(0);
+</script>
+</body>
+</html>

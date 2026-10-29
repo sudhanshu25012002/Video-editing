@@ -1,0 +1,52 @@
+<!doctype html><meta charset="utf-8"><script>
+// 120 BPM soundtrack: kick every beat, clap on 2 & 4, offbeat hats, bass line, hit on each scene change
+window.renderTrack = async function (dur, cuts) {
+  const sr = 44100, ctx = new OfflineAudioContext(2, Math.ceil(dur * sr), sr);
+  const master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+  const noiseBuf = ctx.createBuffer(1, sr, sr); const nd = noiseBuf.getChannelData(0);
+  let seed = 7; for (let i = 0; i < nd.length; i++) { seed = (seed * 16807) % 2147483647; nd[i] = seed / 1073741823.5 - 1; }
+  function kick(t, v = 1) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(0.9 * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    o.connect(g).connect(master); o.start(t); o.stop(t + 0.4);
+  }
+  function noise(t, len, freq, type, v) {
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = noiseBuf; f.type = type; f.frequency.value = freq;
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + len + 0.05);
+  }
+  function bass(t, f, len) {
+    const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 380;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    o.connect(lp).connect(g).connect(master); o.start(t); o.stop(t + len + 0.05);
+  }
+  function hit(t) { kick(t, 1.2); noise(t, 0.5, 1800, 'bandpass', 0.35); bass(t, 55, 0.9); }
+  const roots = [55, 55, 43.65, 49]; // A, A, F, G (per bar)
+  for (let b = 0; b * 0.5 < dur - 0.25; b++) {
+    const t = b * 0.5, bar = Math.floor(b / 4), inBar = b % 4;
+    kick(t);
+    if (inBar === 1 || inBar === 3) noise(t, 0.18, 1500, 'highpass', 0.25);
+    noise(t + 0.25, 0.05, 8000, 'highpass', 0.12);
+    bass(t + 0.25, roots[bar % 4], 0.22);
+  }
+  cuts.forEach(hit);
+  const buf = await ctx.startRendering();
+  // encode 16-bit WAV
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), n = L.length;
+  const ab = new ArrayBuffer(44 + n * 4), dv = new DataView(ab);
+  const ws = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+  ws(0, 'RIFF'); dv.setUint32(4, 36 + n * 4, true); ws(8, 'WAVE'); ws(12, 'fmt '); dv.setUint32(16, 16, true);
+  dv.setUint16(20, 1, true); dv.setUint16(22, 2, true); dv.setUint32(24, sr, true); dv.setUint32(28, sr * 4, true);
+  dv.setUint16(32, 4, true); dv.setUint16(34, 16, true); ws(36, 'data'); dv.setUint32(40, n * 4, true);
+  for (let i = 0; i < n; i++) {
+    dv.setInt16(44 + i * 4, Math.max(-1, Math.min(1, L[i])) * 32767, true);
+    dv.setInt16(46 + i * 4, Math.max(-1, Math.min(1, R[i])) * 32767, true);
+  }
+  let bin = ''; const u8 = new Uint8Array(ab);
+  for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+</script>
