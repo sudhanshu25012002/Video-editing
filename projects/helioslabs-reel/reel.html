@@ -50,7 +50,7 @@
   </defs>
 </svg>
 <script>
-const V = location.hash === '#v'; // vertical 1080x1920
+const V = location.hash.startsWith('#v'); // vertical 1080x1920
 const SW = V ? 1080 : 1920, SH = V ? 1920 : 1080;
 if (V) document.body.classList.add('v');
 // ---------- math ----------
@@ -543,6 +543,11 @@ window.seek = function (t) {
   if (cap) { capBox.textContent = cap[2]; const p = clamp(sp(t, cap[0])); capBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
 };
 window.DURATION = 44;
+// Voiceover mode (#v-vo): animation time is remapped so each beat lands on its spoken line / key word
+const VO_MAP = [[0, 0], [6.1, 5.74], [7.9, 6.94], [13.0, 11.58], [14.5, 14.84], [17.6, 17.4], [19.0, 18.1], [22.1, 19.4], [22.5, 19.98],
+  [25.0, 23.12], [27.0, 24.5], [30.1, 26.6], [30.5, 27.04], [32.0, 29.95], [33.0, 30.7], [36.4, 31.89], [38.0, 32.6], [40.5, 35.58], [44.0, 40.0]];
+function mapT(a) { for (let i = 1; i < VO_MAP.length; i++) { const [t0, a0] = VO_MAP[i - 1], [t1, a1] = VO_MAP[i]; if (a <= a1) return t0 + (t1 - t0) * clamp((a - a0) / (a1 - a0)); } return 44; }
+if (location.hash.includes('vo')) { const base = window.seek; window.seek = a => base(mapT(a)); window.DURATION = 40.0; }
 window.seek(0);
 </script>
 </body>

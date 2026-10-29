@@ -28,3 +28,12 @@ ffmpeg -framerate 180 -i build/frames/%05d.jpg -i build/mix.wav \
 ## Voiceover
 The guide voiceover uses the free Piper voice `hi_IN-priyamvada-medium`, run offline. Its training data is
 CC BY-NC-SA 4.0 (non-commercial), so record a human voiceover, or use a voice licensed for commercial use, before running this as an ad.
+
+## Voiceover version (9:16)
+`vo/voiceover.mp3` is the ElevenLabs voiceover. `VO_MAP` in `reel.html` remaps animation time so each scene and key moment lands
+on its spoken line or word: the DM bubble on "message", "kabhi bhi", the Order click, "HeliosLabs", the WhatsApp click,
+₹999, Hosting/Maintenance and "DM karein". The score in `score.html` is the story-shaped score from the website reel:
+it is light first, cuts with tension on "Lekin reply late", and lifts on "Ab sochiye". It ducks under the voice.
+```bash
+node vo-audio.js && node render-vo.js full 4 v vo   # then mix as in projects/website-reel/README.md
+```
