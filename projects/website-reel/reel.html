@@ -1,0 +1,383 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Website Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  #world { position: absolute; left: 0; top: 0; width: 6000px; height: 4000px; transform-origin: 0 0; }
+  .a { position: absolute; }
+  .scene { position: absolute; width: 1080px; height: 1920px; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; }
+  #sub { position: absolute; left: 70px; right: 70px; top: 1500px; text-align: center; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 38px; font-weight: 600; line-height: 1.32; padding: 16px 28px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"></div>
+  <div id="overlay"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs><filter id="mb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="0 0"/></filter></defs></svg>
+<script>
+// ===================== palette & math =====================
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const world = document.getElementById('world'), overlay = document.getElementById('overlay');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+function scene(x, y, z, clip) { return E(world, { left: x + 'px', top: y + 'px', zIndex: z, overflow: clip ? 'hidden' : 'visible' }, '', 'scene'); }
+// masked text; x === 'c' centres in a 1080-wide scene
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+const texts = [];
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function popIn(e, t, tIn, tOut = 1e9, origin = 'center') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transformOrigin = origin; e.style.transform = `scale(${p})`; e.style.visibility = p < 0.002 ? 'hidden' : 'visible'; }
+function wipe(e, t, tIn, dir = 'down', tOut = 1e9) {
+  const p = clamp(sp(t, tIn)), q = clamp(sp(t, tOut)), r = (1 - p) * 100 + q * 100;
+  e.style.clipPath = dir === 'down' ? `inset(0 0 ${r}% 0)` : dir === 'up' ? `inset(${r}% 0 0 0)` : `inset(0 ${r}% 0 0)`;
+  e.style.visibility = (t < tIn || q > 0.995) ? 'hidden' : 'visible';
+}
+const cake = (w) => `<div style="position:absolute;left:${w * 0.28}px;top:${w * 0.5}px;width:${w * 0.44}px;height:${w * 0.24}px;border-radius:6px;background:#C9A57E"></div>
+  <div style="position:absolute;left:${w * 0.32}px;top:${w * 0.37}px;width:${w * 0.36}px;height:${w * 0.16}px;border-radius:6px 6px 2px 2px;background:#F7EFE3"></div>
+  <div style="position:absolute;left:${w * 0.45}px;top:${w * 0.27}px;width:${w * 0.1}px;height:${w * 0.1}px;border-radius:50%;background:#B8524A"></div>`;
+
+// ===================== backgrounds (world) =====================
+const darkBg = E(world, { left: '-200px', top: '-200px', width: '1480px', height: '4240px', background: INK, zIndex: 1 });
+const beigeFlood = E(world, { left: '-200px', top: '1920px', width: '1480px', height: '2100px', background: BEI, zIndex: 3 });
+
+// ===================== S1/S2: Instagram profile, then blocked (0–12.8) =====================
+const s1 = scene(0, 0, 2);
+const phone = E(s1, { left: '260px', top: '380px', width: '560px', height: '1080px', borderRadius: '64px', background: WHT, boxShadow: '0 30px 70px rgba(28,23,38,0.14), 0 0 0 3px #E2D8C6', overflow: 'hidden' });
+E(phone, { left: '220px', top: '18px', width: '120px', height: '10px', borderRadius: '5px', background: LIN });
+E(phone, { left: '40px', top: '90px', width: '110px', height: '110px', borderRadius: '55px', background: PUR });
+E(phone, { left: '78px', top: '112px', fontSize: '56px', fontWeight: 800, color: WHT }, 'y');
+E(phone, { left: '170px', top: '100px', fontSize: '34px', fontWeight: 800 }, 'your.shop');
+E(phone, { left: '170px', top: '146px', fontSize: '22px', fontWeight: 600, color: MUT }, 'Homemade cakes · Order on DM');
+const stat = (x, n, l) => `<div style="position:absolute;left:${x}px;top:230px;width:180px;text-align:center"><div style="font-size:34px;font-weight:800">${n}</div><div style="font-size:20px;color:${MUT};font-weight:600">${l}</div></div>`;
+E(phone, {}, stat(10, '86', 'Posts') + stat(370, '210', 'Following'));
+E(phone, { left: '40px', top: '330px', width: '230px', height: '56px', borderRadius: '14px', background: PUR, color: WHT, fontSize: '22px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }, 'Follow');
+E(phone, { left: '290px', top: '330px', width: '230px', height: '56px', borderRadius: '14px', boxShadow: `inset 0 0 0 2px ${INK}`, fontSize: '22px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }, 'Message');
+// locked state
+const lockPlate = E(phone, { left: '0', top: '0', width: '560px', height: '1080px', background: '#ECE6DC', zIndex: 3 });
+lockPlate.innerHTML = `<svg style="position:absolute;left:200px;top:380px" width="160" height="190" viewBox="0 0 160 190">
+  <path d="M40 80 V55 a40 40 0 0 1 80 0 V80" fill="none" stroke="${INK}" stroke-width="16" stroke-linecap="round"/>
+  <rect x="14" y="78" width="132" height="104" rx="22" fill="${INK}"/><circle cx="80" cy="122" r="13" fill="${AMB}"/><rect x="74" y="128" width="12" height="28" rx="5" fill="${AMB}"/></svg>
+  <div style="position:absolute;left:0;width:560px;top:610px;text-align:center;font-size:34px;font-weight:800">Account unavailable</div>
+  <div style="position:absolute;left:0;width:560px;top:660px;text-align:center;font-size:22px;font-weight:600;color:${MUT}">Is ID par ab kuch nahi dikhega</div>`;
+// falling parts (world space, sit on top of the phone)
+const followers = E(s1, { left: '450px', top: '610px', width: '180px', textAlign: 'center', zIndex: 5 }, `<div class="fnum" style="font-size:34px;font-weight:800">9,200</div><div style="font-size:20px;color:${MUT};font-weight:600">Followers</div>`);
+const fnum = followers.querySelector('.fnum');
+const tiles = Array.from({ length: 9 }, (_, k) => E(s1, { left: (282 + (k % 3) * 174) + 'px', top: (790 + Math.floor(k / 3) * 174) + 'px', width: '168px', height: '168px', borderRadius: '8px', background: TILE[k % 3], zIndex: 5 }, cake(168)));
+const dm = E(s1, { left: '300px', top: '410px', width: '480px', height: '70px', borderRadius: '35px', background: INK, color: WHT, fontSize: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '14px', paddingLeft: '28px', boxSizing: 'border-box', zIndex: 6 },
+  `<span style="width:14px;height:14px;border-radius:7px;background:${PUR};display:inline-block"></span>Naya message: “Price kya hai?”`);
+const FALL = [{ e: followers, t: 6.6, vx: -60, r: -40 }, ...tiles.map((e, k) => ({ e, t: 7.4 + k * 0.07, vx: ((k % 3) - 1) * 90, r: ((k * 37) % 50) - 25 })), { e: dm, t: 8.8, vx: 70, r: 30 }];
+const s1A = T(s1, 'c', 150, 72, 'Kal ID band ho gayi…', { color: WHT });
+const s1B = T(s1, 'c', 240, 72, '<span class="amb">toh?</span>', { color: WHT });
+// screen-space labels while things fall
+const L1 = T(overlay, 'c', 210, 60, 'Followers <span class="amb">✕</span>', { color: WHT });
+const L2 = T(overlay, 'c', 290, 60, 'Products <span class="amb">✕</span>', { color: WHT });
+const L3 = T(overlay, 'c', 370, 60, 'Customer contact <span class="amb">✕</span>', { color: WHT });
+const L4 = T(overlay, 'c', 260, 96, 'Sab kuch <span class="amb">affect.</span>', { color: WHT });
+
+// ===================== S3: audience != control (12.8–18) =====================
+const s3 = scene(0, 1920, 2);
+const a1 = T(s3, 'c', 300, 120, 'Audience', { color: WHT });
+const a2 = T(s3, 'c', 440, 150, '<span class="amb">≠</span>', { color: WHT });
+const a3 = T(s3, 'c', 610, 120, 'Control', { color: WHT });
+const slab = E(s3, { left: '190px', top: '1150px', width: '700px', height: '44px', borderRadius: '10px', background: AMB, transformOrigin: '50% 50%', zIndex: 4 },
+  `<div style="position:absolute;left:0;right:0;top:56px;text-align:center;font-size:30px;font-weight:700;color:${AMB}">Platform</div>`);
+const shopHTML = (s) => `<svg width="${220 * s}" height="${200 * s}" viewBox="0 0 220 200"><rect x="20" y="70" width="180" height="130" rx="10" fill="${PUR}"/>
+  <path d="M0 74 L30 20 H190 L220 74 Z" fill="${WHT}"/><path d="M30 20 H70 L58 74 H0 Z M110 20 H150 L162 74 H110 Z" fill="${AMB}"/>
+  <rect x="88" y="120" width="44" height="80" rx="6" fill="${WHT}"/></svg>`;
+const shop = E(world, { left: '0px', top: '0px', width: '220px', height: '200px', zIndex: 6, transformOrigin: '50% 100%' }, shopHTML(1));
+const shopLbl = T(s3, 'c', 860, 34, 'Aapka business', { color: WHT, w: 700 });
+
+// ===================== S4/S5: own website builds, order placed (18–24.4) =====================
+const s4 = scene(0, 1920, 4);
+const b1 = T(s4, 'c', 230, 92, 'Apni khud ki');
+const b2 = T(s4, 'c', 340, 92, '<span class="pur">website.</span>');
+const b3 = T(s4, 'c', 285, 92, 'Products dekhein.');
+const b4 = T(s4, 'c', 285, 92, '<span class="pur">Order</span> karein.');
+const browser = E(s4, { left: '90px', top: '520px', width: '900px', height: '880px', borderRadius: '28px', background: WHT, boxShadow: '0 30px 70px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6', overflow: 'hidden' });
+const bBar = E(browser, { left: '0', top: '0', width: '900px', height: '84px', borderBottom: `2px solid ${LIN}` },
+  `<div style="position:absolute;left:28px;top:34px;width:16px;height:16px;border-radius:8px;background:${LIN}"></div><div style="position:absolute;left:54px;top:34px;width:16px;height:16px;border-radius:8px;background:${LIN}"></div>
+   <div style="position:absolute;left:220px;top:20px;width:460px;height:44px;border-radius:22px;background:#F1E9DC;font-size:22px;font-weight:600;color:${MUT};display:flex;align-items:center;justify-content:center">yourshop.in</div>`);
+const cartBadge = E(browser, { left: '820px', top: '22px', width: '42px', height: '42px', borderRadius: '21px', background: PUR, color: WHT, fontSize: '22px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '1');
+const bNav = E(browser, { left: '40px', top: '110px', width: '820px', height: '50px' }, `<div style="position:absolute;left:0;top:4px;font-size:32px;font-weight:800">your.shop</div><div style="position:absolute;right:0;top:10px;font-size:22px;font-weight:600;display:flex;gap:32px"><span>Cakes</span><span>Cookies</span><span>Cart</span></div>`);
+const bHero = E(browser, { left: '40px', top: '190px', width: '820px', height: '150px', borderRadius: '20px', background: '#F6EEE2' }, `<div style="position:absolute;left:32px;top:30px;font-size:42px;font-weight:800;letter-spacing:-0.03em">Fresh cakes, online.</div><div style="position:absolute;left:32px;top:92px;font-size:24px;font-weight:600;color:${MUT}">24×7 order karein</div>`);
+const pcards = [0, 1, 2].map(k => E(browser, { left: (40 + k * 280) + 'px', top: '370px', width: '260px', height: '360px', borderRadius: '20px', background: '#FBF6EE' },
+  `<div style="position:absolute;left:14px;top:14px;width:232px;height:180px;border-radius:14px;background:${TILE[k]};overflow:hidden"><div style="position:absolute;left:26px;top:0;width:180px;height:180px">${cake(180)}</div></div>
+   <div style="position:absolute;left:18px;top:206px;font-size:24px;font-weight:700">${['Chocolate', 'Red Velvet', 'Fruit Cake'][k]}</div>
+   <div class="add" style="position:absolute;left:14px;top:290px;width:232px;height:52px;border-radius:12px;background:${INK};color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center">Add to cart</div>`));
+const placeBar = E(browser, { left: '40px', top: '760px', width: '820px', height: '84px', borderRadius: '18px', background: PUR, color: WHT, fontSize: '30px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }, 'Place order');
+const toast = E(s4, { left: '240px', top: '440px', width: '600px', height: '96px', borderRadius: '48px', background: INK, color: WHT, fontSize: '32px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', zIndex: 8 },
+  `<span style="width:46px;height:46px;border-radius:23px;background:${PUR};display:inline-flex;align-items:center;justify-content:center;font-size:28px">✓</span>Order placed`);
+const cursor = E(s4, { width: '60px', height: '60px', zIndex: 9 }, `<svg width="60" height="60" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ===================== S5b: Google search (24.4–27.8) =====================
+const s5 = scene(1080, 1920, 4, true);
+const g1 = T(s5, 'c', 250, 92, 'Google par bhi');
+const g2 = T(s5, 'c', 360, 92, '<span class="pur">discover.</span>');
+const search = E(s5, { left: '100px', top: '560px', width: '880px', height: '112px', borderRadius: '56px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6' },
+  `<svg style="position:absolute;left:36px;top:32px" width="48" height="48" viewBox="0 0 48 48"><circle cx="20" cy="20" r="14" fill="none" stroke="${INK}" stroke-width="5"/><path d="M31 31 L43 43" stroke="${INK}" stroke-width="6" stroke-linecap="round"/></svg>
+   <div class="q" style="position:absolute;left:110px;top:32px;font-size:40px;font-weight:600"></div>`);
+const q = search.querySelector('.q');
+const RES = [['City Bakery', 'Bakery · Nearby', false], ['Sweet Corner', 'Cakes · Nearby', false], ['your.shop', 'Homemade cakes · Order online', true]];
+const results = RES.map(([n, d, me]) => E(s5, { left: '100px', width: '880px', height: '160px', borderRadius: '24px', background: WHT, boxShadow: me ? `0 0 0 4px ${PUR}` : '0 0 0 2px #E2D8C6' },
+  `<div style="position:absolute;left:36px;top:30px;font-size:36px;font-weight:800;color:${me ? PUR : INK}">${n}</div><div style="position:absolute;left:36px;top:86px;font-size:24px;font-weight:600;color:${MUT}">${d}</div>
+   ${me ? `<div style="position:absolute;right:30px;top:52px;padding:0 24px;height:56px;border-radius:28px;background:${PUR};color:#fff;font-size:22px;font-weight:700;display:flex;align-items:center">Visit website</div>` : ''}`));
+const RY = k => 740 + k * 190;
+
+// ===================== S6: Instagram for reach, website as home (27.8–35.4) =====================
+const s6 = scene(2160, 1920, 4, true);
+const r1 = T(s6, 'c', 250, 84, 'Reach: <span class="amb">Instagram.</span>');
+const r2 = T(s6, 'c', 250, 84, 'Business: apni <span class="pur">website.</span>');
+const mini = E(s6, { left: '120px', top: '500px', width: '280px', height: '520px', borderRadius: '40px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.10), 0 0 0 3px #E2D8C6', overflow: 'hidden' },
+  `<div style="position:absolute;left:24px;top:40px;width:64px;height:64px;border-radius:32px;background:${PUR}"></div><div style="position:absolute;left:100px;top:56px;font-size:24px;font-weight:800">your.shop</div>
+   ${Array.from({ length: 9 }, (_, k) => `<div style="position:absolute;left:${16 + (k % 3) * 84}px;top:${140 + Math.floor(k / 3) * 84}px;width:80px;height:80px;border-radius:6px;background:${TILE[k % 3]}"></div>`).join('')}
+   <div style="position:absolute;left:0;right:0;bottom:24px;text-align:center;font-size:24px;font-weight:700;color:${AMB}">Instagram</div>`);
+const site = E(s6, { left: '460px', top: '880px', width: '520px', height: '460px', borderRadius: '28px', background: WHT, boxShadow: '0 24px 60px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6', overflow: 'hidden', transformOrigin: '50% 50%' },
+  `<div style="position:absolute;left:0;right:0;top:0;height:60px;border-bottom:2px solid ${LIN}"></div><div style="position:absolute;left:120px;top:14px;width:280px;height:32px;border-radius:16px;background:#F1E9DC;font-size:18px;font-weight:600;color:${MUT};display:flex;align-items:center;justify-content:center">yourshop.in</div>
+   <div style="position:absolute;left:28px;top:84px;font-size:30px;font-weight:800">your.shop</div>
+   ${[0, 1, 2].map(k => `<div style="position:absolute;left:${28 + k * 160}px;top:150px;width:144px;height:180px;border-radius:14px;background:${TILE[k]}"></div>`).join('')}
+   <div style="position:absolute;left:28px;top:356px;width:464px;height:64px;border-radius:14px;background:${PUR};color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center">Order now</div>`);
+const siteLbl = T(s6, 'c', 1390, 40, 'Hamesha aapke <span class="pur">control</span> mein', { w: 700 });
+const pathSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+pathSvg.setAttribute('width', 1080); pathSvg.setAttribute('height', 1920); pathSvg.style.position = 'absolute'; pathSvg.style.left = '0'; pathSvg.style.top = '0';
+pathSvg.innerHTML = `<path id="flow" d="M400 760 C 620 760, 520 1000, 720 880" fill="none" stroke="${PUR}" stroke-width="8" stroke-linecap="round" stroke-dasharray="10 18"/>`;
+s6.appendChild(pathSvg);
+const flow = pathSvg.querySelector('#flow'), FLEN = flow.getTotalLength();
+const dots = Array.from({ length: 5 }, () => E(s6, { width: '28px', height: '28px', borderRadius: '14px', background: PUR, zIndex: 5 }));
+
+// ===================== S7: promotion vs property (35.4–40.4) =====================
+const s7 = scene(3240, 1920, 4, true);
+const cA = E(s7, { left: '90px', top: '360px', width: '900px', height: '500px' }, '', 'card');
+cA.innerHTML = `<svg style="position:absolute;left:60px;top:130px" width="240" height="240" viewBox="0 0 240 240">
+  <path d="M30 95 H80 L190 35 V205 L80 145 H30 Z" fill="${AMB}"/><rect x="50" y="145" width="40" height="70" rx="10" fill="${AMB}"/>
+  <path d="M210 90 Q230 120 210 150" fill="none" stroke="${AMB}" stroke-width="10" stroke-linecap="round"/></svg>
+  <div style="position:absolute;left:340px;top:160px;font-size:60px;font-weight:800;letter-spacing:-0.03em">Instagram</div>
+  <div style="position:absolute;left:340px;top:240px;font-size:44px;font-weight:700;color:${AMB}">= Promotion</div>`;
+const cB = E(s7, { left: '90px', top: '920px', width: '900px', height: '500px' }, '', 'card');
+cB.innerHTML = `<svg style="position:absolute;left:50px;top:100px" width="260" height="300" viewBox="0 0 260 300">
+  <path d="M20 130 L130 30 L240 130 Z" fill="${PUR}"/><rect x="40" y="125" width="180" height="160" rx="10" fill="${PUR}"/>
+  <rect x="100" y="185" width="60" height="100" rx="6" fill="#3E0FA8"/></svg>
+  <div class="door" style="position:absolute;left:150px;top:285px;width:60px;height:100px;border-radius:6px;background:${WHT};transform-origin:0 50%"><div style="position:absolute;left:38px;top:46px;width:10px;height:10px;border-radius:5px;background:${PUR}"></div></div>
+  <div style="position:absolute;left:340px;top:150px;font-size:60px;font-weight:800;letter-spacing:-0.03em">Website</div>
+  <div style="position:absolute;left:340px;top:230px;font-size:40px;font-weight:700;color:${PUR};line-height:1.25">= Aapki digital<br>property</div>`;
+const door = cB.querySelector('.door');
+const key = E(s7, { left: '0px', top: '0px', width: '150px', height: '60px', zIndex: 6, transformOrigin: '16px 30px' },
+  `<svg width="150" height="60" viewBox="0 0 150 60"><circle cx="122" cy="30" r="24" fill="none" stroke="${AMB}" stroke-width="12"/><rect x="10" y="24" width="92" height="12" rx="4" fill="${AMB}"/><rect x="18" y="34" width="10" height="16" rx="2" fill="${AMB}"/><rect x="36" y="34" width="10" height="12" rx="2" fill="${AMB}"/></svg>`);
+
+// ===================== S8/S9: price tag, end title (40.4–49) =====================
+const s8 = scene(4320, 1920, 4, true);
+const p1 = T(s8, 'c', 230, 72, '<span class="pur">HeliosLabs</span> ke saath');
+const p2 = T(s8, 'c', 320, 72, 'apni online dukaan banaiye.');
+const p3 = T(s8, 'c', 520, 44, 'Plans start at', { color: MUT, w: 600 });
+const tag = E(s8, { left: '240px', top: '620px', width: '600px', height: '520px', transformOrigin: '300px 0px', zIndex: 5 },
+  `<div style="position:absolute;left:298px;top:0;width:4px;height:150px;background:${INK}"></div>
+   <div style="position:absolute;left:0;top:140px;width:600px;height:360px;border-radius:44px;background:${PUR}">
+     <div style="position:absolute;left:280px;top:26px;width:40px;height:40px;border-radius:20px;background:${BEI}"></div>
+     <div style="position:absolute;left:0;right:0;top:86px;text-align:center;font-size:170px;font-weight:800;color:${WHT};letter-spacing:-0.04em;line-height:1">₹999</div>
+     <div style="position:absolute;left:0;right:0;top:270px;text-align:center;font-size:44px;font-weight:700;color:#DCCCFB">per month</div></div>`);
+const MK = 0.42;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+mark.setAttribute('viewBox', '0 0 1932 1932'); mark.setAttribute('width', 1932 * MK); mark.setAttribute('height', 1932 * MK);
+mark.innerHTML = `<g class="br"><path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+Object.assign(mark.style, { position: 'absolute', left: (540 - 965.5 * MK) + 'px', top: (720 - 948 * MK) + 'px', zIndex: 5 });
+s8.appendChild(mark);
+const markBr = mark.querySelector('.br'), markBars = [...mark.querySelectorAll('.bar')];
+const e1 = T(s8, 'c', 1000, 128, 'HeliosLabs');
+const e2 = T(s8, 'c', 1170, 48, 'Build your business', { color: MUT, w: 700 });
+const e3 = T(s8, 'c', 1234, 48, '<span class="pur">beyond social media.</span>', { w: 700 });
+
+// ===================== camera =====================
+// [start, duration, cx, cy, zoom, ease]
+const CAM = [
+  [0, 4.6, 540, 920, 1.07, 'io'], [4.8, 0.5, 540, 900, 1.16, 'ex'], [5.4, 1.0, 540, 960, 1.0, 'io'], [6.4, 3.0, 540, 860, 0.96, 'io'],
+  [9.6, 3.0, 540, 2880, 1.0, 'io'], [12.8, 5.0, 540, 2900, 1.06, 'io'], [17.9, 0.8, 540, 2880, 1.0, 'ex'], [18.7, 2.0, 540, 2860, 1.04, 'io'],
+  [20.8, 1.0, 600, 2900, 1.16, 'io'], [22.2, 0.5, 540, 2850, 1.08, 'ex'], [22.7, 1.6, 540, 2860, 1.11, 'io'],
+  [24.4, 0.55, 1620, 2880, 1.0, 'ex'], [26.4, 1.2, 1620, 2860, 1.08, 'io'],
+  [27.8, 0.55, 2700, 2880, 1.0, 'ex'], [29.0, 3.0, 2700, 2880, 1.05, 'io'], [32.0, 3.3, 2700, 2860, 1.08, 'io'],
+  [35.4, 0.55, 3780, 2880, 1.0, 'ex'], [36.0, 4.0, 3780, 2880, 1.06, 'io'],
+  [40.4, 0.55, 4860, 2880, 1.0, 'ex'], [41.0, 3.3, 4860, 2880, 1.06, 'io'], [44.4, 0.6, 4860, 2880, 1.0, 'ex'], [45.0, 4.0, 4860, 2880, 1.08, 'io'],
+];
+function cam(t) {
+  let c = { x: 540, y: 960, z: 1.0 };
+  for (const [s, d, x, y, z, e] of CAM) {
+    if (t < s) break;
+    const p = e === 'ex' ? expo(t, s, d) : inout(clamp((t - s) / d));
+    c = { x: lerp(c.x, x, p), y: lerp(c.y, y, p), z: lerp(c.z, z, p) };
+  }
+  return c;
+}
+const mbf = document.querySelector('#mb feGaussianBlur');
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.2, 2.6, 'Aapka business Instagram par chal raha hai…'],
+  [2.6, 6.4, 'lekin sochiye, kal aapki Instagram ID band ho gayi, toh kya hoga?'],
+  [6.4, 11.2, 'Aapke followers, aapke products, aur customers ke aapse contact karne ka ek important raasta…'],
+  [11.2, 12.8, 'sab kuch affect ho sakta hai.'],
+  [12.8, 15.6, 'Aur sabse badi baat, Instagram par audience hone ka matlab yeh nahi'],
+  [15.6, 18.0, 'ki aapka poora business aapke control mein hai.'],
+  [18.0, 20.6, 'Isiliye apni khud ki website hona zaroori hai.'],
+  [20.6, 24.4, 'Jahan customers aapke products dekh sakein, orders place kar sakein,'],
+  [24.4, 27.8, 'aur Google par bhi aapke business ko discover kar sakein.'],
+  [27.8, 31.0, 'Instagram ka use customers tak pahunchne ke liye kijiye,'],
+  [31.0, 35.4, 'lekin apne business ki poori online presence sirf usi par dependent mat rakhiye.'],
+  [35.4, 37.8, 'Instagram aapki dukaan ka promotion hai.'],
+  [37.8, 40.4, 'Aapki website aapki apni digital property hai.'],
+  [40.4, 44.6, 'HeliosLabs ke saath apni online dukaan banaiye. Plans start at ₹999 per month.'],
+  [44.6, 49.0, 'HeliosLabs. Build your business beyond social media.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  const c = cam(t), c2 = cam(t - 1 / 60);
+  world.style.transform = `translate(${540 - c.x * c.z}px,${960 - c.y * c.z}px) scale(${c.z})`;
+  const vx = Math.abs(c.x - c2.x) * c.z * 60, vy = Math.abs(c.y - c2.y) * c.z * 60;
+  const bx = Math.min(28, vx / 260), by = Math.min(28, vy / 260);
+  mbf.setAttribute('stdDeviation', `${bx.toFixed(2)} ${by.toFixed(2)}`);
+  world.style.filter = (bx > 0.3 || by > 0.3) ? 'url(#mb)' : 'none';
+
+  // ---- S1: profile alive
+  { const n = Math.round(lerp(9200, 12400, inout(clamp(t / 4.4)))); fnum.textContent = n >= 10000 ? (n / 1000).toFixed(1) + 'K' : n.toLocaleString('en-IN'); }
+  const base = new Map();
+  tiles.forEach((e, k) => { const p = clamp(sp(t, 0.3 + k * 0.18)); base.set(e, { tf: `scale(${p})`, vis: p > 0.01 }); });
+  base.set(followers, { tf: '', vis: true });
+  base.set(dm, { tf: `translateY(${(1 - clamp(sp(t, 2.4))) * -120}px)`, vis: t >= 2.4 });
+  // ---- ban at 4.8
+  const ban = clamp(expo(t, 4.8, 0.35));
+  [followers, dm, ...tiles].forEach(e => e.style.filter = `grayscale(${ban}) opacity(${1 - 0.35 * ban})`);
+  lockPlate.style.clipPath = `inset(0 0 ${(1 - clamp(sp(t, 4.85))) * 100}% 0)`;
+  lockPlate.style.visibility = t < 4.85 ? 'hidden' : 'visible';
+  { const r = 4200 * expo(t, 4.85, 0.9); darkBg.style.clipPath = `circle(${r}px at 740px 1100px)`; darkBg.style.visibility = t < 4.85 ? 'hidden' : 'visible'; }
+  show(s1A, t, 5.2, 6.3); show(s1B, t, 5.6, 6.35);
+  // ---- falling
+  FALL.forEach(({ e, t: t0, vx: v, r }) => {
+    const b = base.get(e), d = Math.max(0, t - t0), y = 0.5 * 2200 * d * d - 120 * d, x = v * d;
+    e.style.transform = `translate(${x}px,${y}px) rotate(${r * d}deg) ${b.tf}`;
+    e.style.visibility = (b.vis && y < 3400) ? 'visible' : 'hidden';
+  });
+  show(L1, t, 6.6, 10.6); show(L2, t, 7.6, 10.65); show(L3, t, 8.8, 10.7); show(L4, t, 11.2, 12.6);
+  // ---- S3
+  show(a1, t, 12.9, 17.6); show(a2, t, 13.4, 17.65); show(a3, t, 13.9, 17.7);
+  wipe(slab, t, 13.0, 'right', 18.2);
+  const tilt = 16 * inout(clamp((t - 15.6) / 1.8));
+  slab.style.transform = `rotate(${tilt}deg)`;
+  { // shop: on slab (S3) -> slides with tilt -> becomes the browser favicon (S4)
+    const baseX = 540, baseY = 1920 + 1150;   // slab top centre (world)
+    let slide = 260 * inout(clamp((t - 16.0) / 1.6));
+    const a = tilt * Math.PI / 180;
+    let x = baseX + Math.cos(a) * slide, y = baseY + Math.sin(a) * slide;
+    let s = clamp(sp(t, 13.2)), rot = tilt;
+    if (t >= 18.0) { const p = clamp(sp(t, 18.0)); x = lerp(x, 90 + 150, p); y = lerp(y, 1920 + 520 + 64, p); s = lerp(1, 0.22, p); rot = lerp(tilt, 0, p); }
+    shop.style.left = (x - 110) + 'px'; shop.style.top = (y - 200) + 'px';
+    shop.style.transform = `rotate(${rot}deg) scale(${s})`;
+    shop.style.visibility = (t < 13.2 || t > 18.9) ? 'hidden' : 'visible';
+  }
+  show(shopLbl, t, 13.6, 15.8);
+  { const r = 2400 * expo(t, 18.0, 0.9); beigeFlood.style.clipPath = `circle(${r}px at 1000px 1150px)`; beigeFlood.style.visibility = t < 18.0 ? 'hidden' : 'visible'; }
+  // ---- S4: website builds
+  s4.style.visibility = t < 18.0 ? 'hidden' : 'visible';
+  show(b1, t, 18.2, 20.6); show(b2, t, 18.5, 20.65);
+  show(b3, t, 20.8, 21.9); show(b4, t, 22.0, 24.4);
+  { const p = clamp(sp(t, 18.3)); browser.style.transform = `translateY(${(1 - p) * 300}px) scale(${0.9 + 0.1 * p})`; browser.style.clipPath = `inset(0 0 ${(1 - p) * 100}% 0 round 28px)`; browser.style.visibility = t < 18.3 ? 'hidden' : 'visible'; }
+  const drop = (e, t0) => { const p = clamp(sp(t, t0)); e.style.transform = `translateY(${(1 - p) * -160}px)`; e.style.clipPath = `inset(${(1 - p) * 100}% 0 0 0)`; };
+  drop(bNav, 18.9); drop(bHero, 19.5); pcards.forEach((e, k) => drop(e, 20.1 + k * 0.15));
+  popIn(cartBadge, t, 21.7);
+  { const p = clamp(sp(t, 21.9)); placeBar.style.transform = `translateY(${(1 - p) * 140}px)`; placeBar.style.visibility = t < 21.9 ? 'hidden' : 'visible';
+    placeBar.style.transform += ` scale(${1 - 0.05 * Math.sin(Math.PI * clamp((t - 22.6) / 0.2))})`; }
+  pcards[1].querySelector('.add').style.transform = `scale(${1 - 0.08 * Math.sin(Math.PI * clamp((t - 21.6) / 0.2))})`;
+  { const p = clamp(sp(t, 22.7)); toast.style.transform = `translateY(${(1 - p) * -200}px)`; toast.style.visibility = (t < 22.7 || t > 24.6) ? 'hidden' : 'visible'; }
+  { // cursor path: enter -> Add to cart (card 2) -> Place order
+    const K = [[20.9, 1150, 1700], [21.3, 590, 1350], [22.25, 560, 1340]];
+    let x = 1150, y = 1700, prev = [1150, 1700];
+    K.forEach(([ts, kx, ky]) => { const p = expo(t, ts, 0.5); x = lerp(prev[0], kx, p); y = lerp(prev[1], ky, p); if (t >= ts) prev = [x, y]; });
+    const press = 1 - 0.15 * (Math.sin(Math.PI * clamp((t - 21.6) / 0.2)) + Math.sin(Math.PI * clamp((t - 22.6) / 0.2)));
+    cursor.style.left = x + 'px'; cursor.style.top = y + 'px'; cursor.style.transform = `scale(${press})`;
+    cursor.style.visibility = (t > 20.9 && t < 23.2) ? 'visible' : 'hidden';
+  }
+  // ---- S5b search
+  show(g1, t, 24.6, 27.8); show(g2, t, 24.9, 27.85);
+  popIn(search, t, 24.5, 1e9, '50% 50%');
+  { const s = 'cakes near me'; q.textContent = s.slice(0, Math.max(0, Math.floor((t - 24.9) / 0.085))); }
+  results.forEach((e, k) => {
+    const order = t < 26.8 ? k : [1, 2, 0][k];
+    const y0 = RY(k), y1 = RY(order), p = clamp(sp(t, 26.8));
+    e.style.top = (t < 26.8 ? y0 : lerp(y0, y1, p)) + 'px';
+    const pin = clamp(sp(t, 26.1 + k * 0.12));
+    e.style.clipPath = `inset(0 ${(1 - pin) * 100}% 0 0 round 24px)`;
+    e.style.zIndex = k === 2 ? 3 : 1;
+    if (k === 2) e.style.transform = `scale(${1 + 0.04 * Math.sin(Math.PI * clamp((t - 26.8) / 0.5))})`;
+  });
+  // ---- S6 reach -> home
+  show(r1, t, 28.0, 31.0); show(r2, t, 31.2, 35.4);
+  { const p = clamp(sp(t, 28.0)), out = inout(clamp((t - 31.6) / 0.8));
+    mini.style.transform = `translateX(${(1 - p) * -500 - out * 700}px)`; }
+  { const draw = clamp((t - 28.3) / 0.6) * (1 - clamp((t - 31.4) / 0.4));
+    flow.style.strokeDasharray = `${FLEN}`; flow.style.strokeDashoffset = `${FLEN * (1 - draw)}`; }
+  dots.forEach((d, k) => {
+    const on = t > 28.9 && t < 31.5;
+    const u = ((t - 28.9) * 0.55 + k / 5) % 1;
+    const pt = flow.getPointAtLength(u * FLEN);
+    d.style.left = (pt.x - 14) + 'px'; d.style.top = (pt.y - 14) + 'px';
+    d.style.transform = `scale(${Math.sin(Math.PI * u)})`; d.style.visibility = on ? 'visible' : 'hidden';
+  });
+  { const pin = clamp(sp(t, 28.2)), grow = inout(clamp((t - 32.0) / 0.9));
+    site.style.transform = `translate(${-200 * grow}px,${-180 * grow}px) scale(${pin * (1 + 0.25 * grow)})`; }
+  show(siteLbl, t, 32.8, 35.4);
+  // ---- S7 promotion vs property
+  { const a = clamp(sp(t, 35.6)), b = clamp(sp(t, 37.8));
+    cA.style.transform = `translateX(${(1 - a) * 1100}px)`; cB.style.transform = `translateX(${(1 - b) * -1100}px)`; }
+  { // key slides to the door, turns, door opens
+    const p = expo(t, 38.1, 0.5);
+    const kx = lerp(1100, 90 + 50 + 150 + 38, p), ky = 920 + 100 + 285 + 50 - 30;
+    key.style.left = (kx - 16) + 'px'; key.style.top = ky + 'px';
+    key.style.transform = `rotate(${90 * clamp(sp(t, 38.6))}deg) scale(0.8)`;
+    key.style.visibility = (t > 38.1 && t < 40.6) ? 'visible' : 'hidden';
+    door.style.transform = `scaleX(${1 - 0.8 * clamp(sp(t, 38.9))})`; }
+  // ---- S8 price tag
+  show(p1, t, 40.6, 44.4); show(p2, t, 40.9, 44.45); show(p3, t, 41.3, 44.5);
+  { const d = t - 41.5; const drop = clamp(sp(t, 41.5)), lift = expo(t, 44.4, 0.6);
+    const rot = d > 0 ? 18 * Math.exp(-2.2 * d) * Math.cos(6 * d) : 18;
+    tag.style.transform = `translateY(${(1 - drop) * -1500 - lift * 1500}px) rotate(${rot}deg)`;
+    tag.style.visibility = (t < 41.5 || lift > 0.99) ? 'hidden' : 'visible'; }
+  // ---- S9 end title
+  { const p = clamp(sp(t, 45.0)); markBr.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+    markBars.forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, 44.7 + k * 0.1))})`);
+    mark.style.visibility = t < 44.7 ? 'hidden' : 'visible'; }
+  show(e1, t, 45.4); show(e2, t, 45.9); show(e3, t, 46.2);
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 49;
+window.seek(0);
+</script>
+</body>
+</html>
