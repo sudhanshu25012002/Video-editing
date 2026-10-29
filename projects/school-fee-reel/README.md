@@ -26,3 +26,12 @@ ffmpeg -framerate 180 -i build-v/frames/%05d.jpg -i build-v/music.wav \
 ```
 
 The dashboard shows sample rows (Roll 01–05) as illustration only, not real school data.
+
+## Voiceover version
+`vo/voiceover.wav` is the voiceover (converted from the WhatsApp audio). `VO_MAP` in `reel.html` remaps animation time to the spoken
+words, and `VO_SUBS` makes the subtitles follow the voice. The score (`score.html`) is calm at first, tense from "aasaan nahi tha", and lifts on
+"Is problem ko solve karne ke liye". Sound effects (`vo-audio.js`): pen clicks for the entries, a whoosh as the pages pile up, clock ticks,
+clicks as the layers split, a whoosh as the rows sort, a "paid" bell, a strike-through swipe and a fill whoosh.
+```bash
+node vo-audio.js && node render-vo.js full 4 v vo   # then mix as in projects/website-reel/README.md
+```
