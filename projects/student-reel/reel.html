@@ -1,0 +1,336 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Student System Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  #world { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; }
+  #space { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; perspective: 1700px; perspective-origin: 540px 820px; }
+  #space3d { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .shape { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
+  .anchor { position: absolute; left: 100%; top: 50%; width: 1px; height: 1px; }
+  .mask { position: absolute; overflow: hidden; }
+  .mask > span { display: inline-block; white-space: nowrap; }
+  .txt { font-weight: 800; letter-spacing: -0.035em; white-space: nowrap; }
+  .pur { color: #5A17E6; } .amb { color: #D98E1F; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; }
+  #sub { position: absolute; left: 70px; right: 70px; top: 1500px; text-align: center; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 38px; font-weight: 600; line-height: 1.32; padding: 16px 28px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+  .chip { position: absolute; width: 150px; height: 46px; border-radius: 23px; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <div id="space"><div id="space3d"></div></div>
+  </div>
+  <div id="overlay"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs id="fdefs"></defs></svg>
+<script>
+// ===================== palette & math =====================
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { // damped spring, ~2% overshoot
+  if (dt <= 0) return 0; if (dt > 1.6) return 1;
+  const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt));
+}
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+const mixC = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], clamp(p)))).join(',')})`; };
+
+const world = document.getElementById('world'), space = document.getElementById('space3d'), overlay = document.getElementById('overlay');
+function el(parent, tag, cls, css, html) { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+// masked text line: x = 'c' centres it
+function mtext(x, y, size, html, o = {}) {
+  const m = el(o.parent || world, 'div', 'mask', { top: y + 'px', fontSize: size + 'px', lineHeight: '1.12', paddingBottom: '0.1em', zIndex: o.z || 20 });
+  const s = el(m, 'span', 'txt', { fontWeight: o.w || 800, color: o.color || INK }, html);
+  m.inner = s; m.cx = x === 'c'; if (x !== 'c') m.style.left = x + 'px';
+  return m;
+}
+function centre(m) { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }
+function showText(m, t, tIn, tOut = 1e9, dir = 1) {
+  const pin = sp(t, tIn), pout = sp(t, tOut);
+  m.inner.style.transform = `translateY(${((1 - pin) * 110 - pout * 110) * dir}%)`;
+  m.style.visibility = (t < tIn || pout > 0.995) ? 'hidden' : 'visible';
+}
+
+// ===================== shape pool (the morphing material) =====================
+// state: x,y centre; w,h; r radius; rot (rotateZ); rx (rotateX); z (translateZ); sk skew; c colour; o outline;
+// a/rad: orbit angle & radius around (x,y) so rotations move on arcs
+const NS = 18;
+const DEF = { e: 0, x: 540, y: 820, w: 0, h: 0, r: 0, rot: 0, rx: 0, z: 0, sk: 0, c: PUR, o: 0, a: 0, rad: 0 };
+const KF = Array.from({ length: NS }, () => [[-10, { ...DEF }]]);
+function K(i, t, p) { const last = KF[i][KF[i].length - 1][1]; KF[i].push([t, { ...last, ...p }]); }
+function KA(ids, t, fn) { ids.forEach((i, k) => K(i, t + (fn.d || 0) * k, typeof fn === 'function' ? fn(k) : fn)); }
+const fdefs = document.getElementById('fdefs');
+const shapes = [], blurs = [], anchors = [];
+// paint order: pages/layers (6-9) first, then rows, hand etc.
+const ORDER = [4, 5, 0, 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+for (let i = 0; i < NS; i++) {
+  fdefs.insertAdjacentHTML('beforeend', `<filter id="b${i}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>`);
+}
+ORDER.forEach(i => {
+  const s = el(space, 'div', 'shape', { filter: `url(#b${i})` });
+  anchors[i] = el(s, 'div', 'anchor');
+  shapes[i] = s;
+});
+for (let i = 0; i < NS; i++) blurs[i] = document.querySelector(`#b${i} feGaussianBlur`);
+function stateAt(i, t) {
+  const L = KF[i]; let k = 0;
+  while (k + 1 < L.length && L[k + 1][0] <= t) k++;
+  if (k === 0) return L[0][1];
+  const a = L[k - 1][1], b = L[k][1], p = b.e ? expo(t, L[k][0], 0.5) : sp(t, L[k][0]);
+  const o = {};
+  for (const key in b) o[key] = key === 'c' ? null : lerp(a[key], b[key], p);
+  o.c = mixC(a.c, b.c, p);
+  o.w = Math.max(0, o.w); o.h = Math.max(0, o.h);
+  return o;
+}
+function pos(s) { const ar = s.a * Math.PI / 180; return { x: s.x + Math.sin(ar) * s.rad, y: s.y - Math.cos(ar) * s.rad }; }
+
+// ===================== SCENE A: hook — book (0–3.5) =====================
+K(0, -1, { x: 540, y: 820, w: 140, h: 90, r: 14, c: PUR });          // opening frame: one small purple card
+K(0, 0.5, { x: 425, y: 840, w: 230, h: 320, r: 14 });                 // book cover (left page)
+K(1, -1, { x: 540, y: 840, w: 0, h: 0, r: 14, c: WHT, o: 3 });
+K(1, 0.5, { x: 655, y: 840, w: 230, h: 320 });                        // right page
+[2, 3, 4].forEach((i, k) => { K(i, -1, { x: 600, y: 760 + k * 60, w: 0, h: 5, r: 3, c: INK }); K(i, 2.0 + k * 0.25, { x: 655, w: 150 }); });
+const aA = mtext('c', 300, 110, 'Sirf padhai?');
+const aB = mtext('c', 420, 110, 'Kaafi <span class="pur">nahi.</span>');
+// book closes into the student card
+[2, 3, 4].forEach(i => K(i, 3.1, { w: 0, x: 540 }));
+K(1, 3.1, { x: 540, w: 0, o: 0 });
+// ===================== SCENE B: the student card (3.5–10) =====================
+const SC = { x: 540, y: 760, w: 760, h: 470 };
+K(0, 3.4, { x: SC.x, y: SC.y, w: SC.w, h: SC.h, r: 32, c: WHT });
+K(1, 3.5, { x: SC.x, y: SC.y - SC.h / 2 + 45, w: SC.w, h: 90, r: 28, c: PUR, o: 0 });
+K(2, 3.6, { x: 260, y: 720, w: 130, h: 130, r: 65, c: '#E9DDCA' });
+const cardTitle = mtext(200, SC.y - SC.h / 2 + 22, 36, 'Student Profile', { color: WHT, z: 26 });
+const cardSub = mtext(214, 800, 28, 'Roll 12', { w: 600, color: MUT, z: 26 });
+const FIELDS = ['Details <span class="pur">✓</span>', 'Attendance <span class="pur">✓</span>', 'Class records <span class="pur">✓</span>', 'Academic progress <span class="pur">✓</span>'];
+const fieldText = FIELDS.map((f, k) => mtext(380, 636 + k * 54, 32, f, { w: 700, z: 26 }));
+const DOTS = [6, 7, 8, 9, 11, 15, 16];
+DOTS.forEach((i, k) => { K(i, -1, { x: 400 + k * 62, y: 870, w: 0, h: 0, r: 20, c: k === 4 ? AMB : PUR }); K(i, 6.0 + k * 0.25, { w: 40, h: 40 }); });
+K(10, -1, { x: 380, y: 940, w: 0, h: 16, r: 8, c: PUR });
+K(10, 7.5, { x: 380 + 240, w: 480 });
+const orgd = mtext('c', 300, 120, '<span class="pur">Organised.</span>');
+// ===================== SCENE C: many students -> spreadsheet (10–17) =====================
+const MINI = [0, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14];
+const MX = c => 250 + c * 290, MY = r => 560 + r * 170;
+K(1, 10.0, { w: 0, h: 0, x: 540, y: 760 }); K(2, 10.0, { w: 0, h: 0 }); K(10, 10.0, { w: 0, x: 540 });
+[15, 16].forEach(i => K(i, 10.0, { w: 0, h: 0 }));
+MINI.forEach((i, k) => {
+  const c = k % 3, r = Math.floor(k / 3), t = 10.0 + Math.floor(k / 2) * 0.5;
+  if (i === 0) { K(0, 10.0, { x: MX(0), y: MY(0), w: 250, h: 140, r: 20, c: WHT }); return; }
+  if (KF[i].length === 1) K(i, -1, { x: MX(c), y: MY(r), w: 0, h: 0, r: 20, c: WHT });
+  K(i, t, { x: MX(c), y: MY(r), w: 250, h: 140, r: 20, c: WHT });
+});
+// cards collapse into spreadsheet cells
+const CX = c => 330 + c * 210, CY = r => 560 + r * 74;
+MINI.forEach((i, k) => {
+  const c = k % 3, r = Math.floor(k / 3);
+  K(i, 13.0 + k * 0.02, { x: CX(c), y: CY(r), w: 206, h: 70, r: 2, c: WHT, o: 2 });
+});
+// misalign + errors
+const SLIP = [[0, 0], [14, 6], [0, 0], [-18, 0], [0, 10], [22, -4], [0, 0], [-12, 8], [16, 0], [0, -6], [-20, 4], [10, 0]];
+MINI.forEach((i, k) => K(i, 14.5 + k * 0.03, { x: CX(k % 3) + SLIP[k][0], y: CY(Math.floor(k / 3)) + SLIP[k][1], rot: (k % 4 === 1 ? 4 : (k % 4 === 3 ? -3 : 0)), c: [1, 5, 8, 10].includes(k) ? AMB : WHT }));
+// beyond the 12 cells, the sheet keeps going: rows 4-7 are DOM cells (static grid lines)
+const cA = mtext('c', 280, 104, 'Students <span class="pur">↑</span>');
+const cB = mtext('c', 280, 104, 'Registers.');
+const cC = mtext('c', 280, 104, 'Spreadsheets.');
+const cD = mtext('c', 280, 120, '<span class="amb">Challenging.</span>');
+// ===================== SCENE D: one system, 2D -> 3D (17–21.5) =====================
+const RX = 58, RZ = -40, TS = 400, LAY = [0, 3, 4, 5], LCOL = [INK, WHT, AMB, PUR];
+LAY.forEach((i, k) => K(i, 17.0 + k * 0.03, { x: 420, y: 960, w: TS, h: TS, r: 44, rot: RZ, rx: RX, z: k * 4, o: 0, c: LCOL[k] }));
+MINI.filter(i => !LAY.includes(i)).forEach((i, k) => K(i, 17.0 + k * 0.02, { x: 420, y: 960, w: 0, h: 0, rot: 0, o: 0 }));
+[[17.5, 1], [18.0, 2], [18.5, 3]].forEach(([t, j]) => LAY.forEach((i, k) => { if (k >= j) K(i, t, { z: j * 95 + (k - j) * 4 }); }));
+[[19.5, -28], [20.5, -50], [21.0, -40]].forEach(([t, r]) => LAY.forEach(i => K(i, t, { rot: r })));
+const LN = ['Details', 'Attendance', '<span class="amb">Records</span>', '<span class="pur">Progress</span>'];
+const layerLbl = LN.map(n => mtext(0, 0, 40, n, { w: 700, parent: overlay }));
+const dA = mtext('c', 230, 104, 'Ek hi');
+const dB = mtext('c', 345, 104, '<span class="pur">system.</span>');
+// ===================== SCENE E: Student Management System UI (21.5–30) =====================
+const DC = { x: 540, y: 860, w: 900, h: 1080 };
+LAY.forEach(i => K(i, 21.3, { rx: 0, rot: 0, z: 0 }));
+K(4, 21.5, { x: DC.x, y: DC.y, w: DC.w, h: DC.h, r: 30, c: WHT });
+K(5, 21.5, { x: DC.x, y: DC.y - DC.h / 2 + 70, w: DC.w, h: 140, r: 30, c: PUR });
+K(0, 21.5, { x: DC.x, y: DC.y, w: 0, h: 0 }); K(3, 21.5, { x: DC.x, y: DC.y, w: 0, h: 0 });
+const ui = el(world, 'div', '', { position: 'absolute', inset: '0', zIndex: 15 });
+const hd1 = mtext(130, 350, 40, 'Student Management System', { parent: ui, color: WHT });
+const hd2 = mtext(130, 402, 24, 'Student records · Daily admin tasks', { parent: ui, color: '#DCCCFB', w: 600 });
+const TABS = [['Profile', 130], ['Attendance', 300], ['Records', 520], ['Progress', 710]];
+const tabEls = TABS.map(([n, x]) => mtext(x, 485, 30, n, { parent: ui, w: 700, color: MUT }));
+const tabLine = el(ui, 'div', '', { position: 'absolute', top: '530px', height: '5px', borderRadius: '3px', background: INK });
+const TABT = [22.3, 24.5, 26.0, 27.5];
+function pane(html) { const d = el(ui, 'div', '', { position: 'absolute', left: '90px', top: '560px', width: '900px', height: '820px', overflow: 'hidden' }); d.innerHTML = html; return d; }
+const field = (y, l) => `<div style="position:absolute;left:40px;top:${y}px;font-size:26px;color:${MUT};font-weight:600">${l}</div><div style="position:absolute;left:40px;top:${y + 42}px;width:${380 + (y % 3) * 60}px;height:22px;border-radius:8px;background:#EFE7DA"></div>`;
+const panes = [
+  pane(`<div style="position:absolute;left:40px;top:50px;width:130px;height:130px;border-radius:65px;background:#E9DDCA"></div>
+        <div class="txt" style="position:absolute;left:200px;top:64px;font-size:42px">Roll 12</div>
+        <div style="position:absolute;left:200px;top:120px;font-size:28px;color:${MUT};font-weight:600">Class 7 · B</div>
+        ${field(250, 'Parent contact')}${field(360, 'Address')}${field(470, 'Admission no.')}${field(580, 'Documents')}`),
+  pane(`<div style="position:absolute;left:40px;top:40px;font-size:28px;color:${MUT};font-weight:600">This month</div>
+        ${Array.from({ length: 30 }, (_, k) => `<div class="adot" style="position:absolute;left:${40 + (k % 6) * 140}px;top:${110 + Math.floor(k / 6) * 120}px;width:70px;height:70px;border-radius:35px;background:#EFE7DA"><div style="position:absolute;inset:0;border-radius:35px;background:${[7, 18, 23].includes(k) ? AMB : PUR}"></div></div>`).join('')}`),
+  pane(['Unit Test 1', 'Term 1', 'Project work', 'Practical file', 'Activities'].map((n, k) => `
+        <div class="rrow" style="position:absolute;left:40px;top:${40 + k * 130}px;width:820px;height:104px;border-radius:18px;background:#FBF6EE">
+          <div class="txt" style="position:absolute;left:28px;top:32px;font-size:32px;font-weight:700">${n}</div>
+          <div style="position:absolute;right:24px;top:30px;width:170px;height:46px;border-radius:23px;background:${PUR};color:#fff;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center">✓ Updated</div></div>`).join('')),
+  pane(['Maths', 'Science', 'English', 'Hindi', 'SSt'].map((n, k) => `
+        <div class="pbar" data-h="${[0.62, 0.8, 0.7, 0.92, 0.74][k]}" style="position:absolute;left:${60 + k * 165}px;bottom:110px;width:100px;border-radius:12px 12px 4px 4px;background:${k === 3 ? PUR : '#E2D2BA'}"></div>
+        <div style="position:absolute;left:${60 + k * 165}px;width:100px;text-align:center;bottom:60px;font-size:24px;font-weight:600;color:${MUT}">${n}</div>`).join('')),
+];
+const adots = [...panes[1].querySelectorAll('.adot > div')], rrows = [...panes[2].querySelectorAll('.rrow')], pbars = [...panes[3].querySelectorAll('.pbar')];
+// ===================== SCENE F: smarter (30–34) =====================
+K(4, 30.0, { x: 540, y: 820, w: 440, h: 440, r: 220, c: BEI, o: 16 });
+K(5, 30.0, { x: 540, y: 820, w: 0, h: 0, r: 220 });
+const ring = el(world, 'div', '', { position: 'absolute', left: '320px', top: '600px', width: '440px', height: '440px', borderRadius: '50%', zIndex: 3 });
+const fA = mtext('c', 300, 96, 'Better technology');
+const fB = mtext('c', 760, 92, '<span class="pur">Smarter.</span>');
+K(5, 32.9, { x: 540, y: 820, w: 440, h: 440, r: 220, c: PUR });
+K(5, 33.0, { w: 2600, h: 2600, r: 1300, e: 1 });
+K(4, 33.0, { w: 0, h: 0, o: 0 });
+// ===================== SCENE G: CTA on purple (34–38.5) =====================
+const gA = mtext('c', 530, 72, 'Aapke school ko bhi', { color: WHT });
+const gB = mtext('c', 625, 72, 'custom software chahiye?', { color: WHT });
+const btn = el(world, 'div', '', { position: 'absolute', left: '290px', top: '820px', width: '500px', height: '120px', borderRadius: '60px', background: WHT, color: PUR, fontSize: '44px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 21, letterSpacing: '-0.02em' }, 'Contact karein');
+const cursor = el(world, 'div', '', { position: 'absolute', width: '56px', height: '56px', zIndex: 30 },
+  `<svg width="56" height="56" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+const gC = mtext('c', 1000, 52, 'HeliosLabs se contact karein.', { color: WHT, w: 700 });
+// ===================== SCENE H: end title (38.5–44) =====================
+K(5, 38.5, { x: 540, y: 640, w: 600, h: 8, r: 0, e: 1 });
+const MK = 0.4, MCX = 540, MCY = 640;
+const markBar = k => ({ x: MCX + ([849, 985, 1119.5][k] - 965.5) * MK, y: MCY + (913 - 948) * MK, w: 110 * MK, h: 160 * MK, sk: -9.93, r: 0, o: 0 });
+[0, 1, 2].forEach(i => K(i, 38.9, { x: 540, y: 640, w: 0, h: 8, c: PUR, rot: 0, rx: 0, z: 0, r: 0, sk: 0, o: 0 }));
+K(5, 39.0, { w: 0, h: 0, e: 0 });
+[0, 1, 2].forEach((i, k) => K(i, 39.0, markBar(k)));
+const markSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+markSvg.setAttribute('viewBox', '0 0 1932 1932'); markSvg.setAttribute('width', 1932 * MK); markSvg.setAttribute('height', 1932 * MK);
+markSvg.innerHTML = `<path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/>`;
+Object.assign(markSvg.style, { position: 'absolute', left: (MCX - 965.5 * MK) + 'px', top: (MCY - 948 * MK) + 'px', zIndex: 5 });
+world.appendChild(markSvg);
+const hA = mtext('c', 920, 128, 'HeliosLabs');
+const hB = mtext('c', 1090, 46, 'Smart software for', { w: 600, color: MUT });
+const hC = mtext('c', 1150, 46, '<span class="pur">real-world problems.</span>', { w: 700 });
+[0, 1, 2].forEach(i => K(i, 43.2, { x: 540, y: 820, w: 46, h: 70, sk: 0 }));
+K(0, 43.45, { w: 140, h: 90, r: 14, e: 1 }); K(1, 43.45, { w: 0, h: 0 }); K(2, 43.45, { w: 0, h: 0 });
+
+// ===================== camera =====================
+const SCENES = [0, 3.5, 10, 17, 21.5, 30, 34, 38.5, 43.2, 44];
+function camAt(t) {
+  let i = 0; while (i + 1 < SCENES.length && SCENES[i + 1] <= t) i++;
+  const a = SCENES[i], b = SCENES[Math.min(i + 1, SCENES.length - 1)], span = Math.max(0.01, b - a);
+  const push = a >= 43.2 ? 0 : 0.05 * clamp((t - a) / span);
+  const ex = (i > 0 ? 0.05 : 0) * (1 - expo(t, a, 0.45));
+  return { z: 1 + push + ex, cx: 540, cy: 840 };
+}
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.25, 3.5, 'Ek school mein sirf padhai manage karna hi kaafi nahi hota.'],
+  [3.5, 7.5, 'Har student ki details, attendance, class records aur academic progress…'],
+  [7.5, 10.0, 'sab kuch organised rakhna bhi zaroori hota hai.'],
+  [10.0, 14.0, 'Jab students ki sankhya badhti hai, toh registers aur spreadsheets mein'],
+  [14.0, 17.0, 'sab kuch manage karna aur bhi challenging ho sakta hai.'],
+  [17.0, 21.5, 'Sochiye, agar student ki saari important information ek hi system mein mil jaaye toh?'],
+  [21.5, 24.5, 'HeliosLabs develop karta hai Student Management Systems,'],
+  [24.5, 30.0, 'jo schools ko student records aur daily administrative tasks ko digitally manage karne mein help karte hain.'],
+  [30.0, 34.0, 'Kyunki better technology se school ka management bhi ho sakta hai smarter.'],
+  [34.0, 36.5, 'Aapke school ko bhi custom software chahiye?'],
+  [36.5, 38.5, 'HeliosLabs se contact karein.'],
+  [38.5, 43.1, 'HeliosLabs. Smart software for real-world problems.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { world.style.transform = 'none'; [aA, aB, orgd, cA, cB, cC, cD, dA, dB, fA, fB, gA, gB, gC, hA, hB, hC].forEach(centre); measured = true; }
+  const c = camAt(t);
+  world.style.transform = `translate(540px,${c.cy}px) scale(${c.z}) translate(-540px,${-c.cy}px)`;
+  // A
+  showText(aA, t, 0.5, 3.0); showText(aB, t, 1.5, 3.05);
+  // B
+  showText(cardTitle, t, 3.9, 9.8); showText(cardSub, t, 4.0, 9.8);
+  fieldText.forEach((m, k) => showText(m, t, 4.0 + k * 0.5, 9.8 + k * 0.03));
+  showText(orgd, t, 8.0, 9.7);
+  // C
+  showText(cA, t, 10.5, 12.9); showText(cB, t, 13.0, 13.45); showText(cC, t, 13.5, 14.9); showText(cD, t, 15.0, 16.7);
+  // D
+  showText(dA, t, 19.0, 21.2); showText(dB, t, 19.5, 21.25);
+  layerLbl.forEach((m, k) => {
+    m.style.left = '740px'; m.style.top = [885, 805, 720, 630][k] + 'px';
+    showText(m, t, 18.9 + k * 0.12, 21.0 + k * 0.04);
+  });
+  // E
+  ui.style.display = (t >= 21.6 && t < 30.3) ? 'block' : 'none';
+  showText(hd1, t, 21.8, 29.9); showText(hd2, t, 22.0, 29.95);
+  tabEls.forEach((m, k) => showText(m, t, 22.0 + k * 0.06, 29.9));
+  { let ia = 0, ib = 0, tp = 0; TABT.forEach((ts, k) => { if (t >= ts) { ia = ib; ib = k; tp = ts; } });
+    const p = sp(t, tp), k = lerp(ia, ib, p), W = [90, 150, 112, 120];
+    tabLine.style.left = lerp(TABS[ia][1], TABS[ib][1], p) + 'px';
+    tabLine.style.width = (lerp(W[ia], W[ib], p) * clamp(sp(t, 22.3)) * (1 - clamp(sp(t, 29.9)))) + 'px';
+    tabEls.forEach((m, j) => m.inner.style.color = Math.round(k) === j ? INK : MUT); }
+  panes.forEach((d, k) => {
+    const tIn = TABT[k], tOut = k < 3 ? TABT[k + 1] : 29.9;
+    const pin = clamp(sp(t, tIn)), pout = clamp(sp(t, tOut));
+    d.style.transform = `translateX(${(1 - pin) * 120 - pout * 120}%)`;
+    d.style.visibility = (t < tIn || pout > 0.995) ? 'hidden' : 'visible';
+  });
+  adots.forEach((d, k) => d.style.transform = `scale(${clamp(sp(t, 24.7 + k * 0.035))})`);
+  rrows.forEach((r, k) => r.style.clipPath = `inset(0 ${(1 - clamp(sp(t, 26.1 + k * 0.2))) * 100}% 0 0)`);
+  pbars.forEach((b, k) => b.style.height = (560 * +b.dataset.h * clamp(sp(t, 27.7 + k * 0.25))) + 'px');
+  // F: progress ring fills a quarter per beat
+  { const f = [31.0, 31.5, 32.0, 32.5].reduce((acc, ts) => acc + 0.25 * clamp(expo(t, ts, 0.4)), 0);
+    ring.style.background = `conic-gradient(${PUR} ${f * 360}deg, transparent 0)`;
+    ring.style.webkitMask = ring.style.mask = 'radial-gradient(circle, transparent 196px, #000 197px)';
+    ring.style.visibility = (t > 30.6 && t < 33.1) ? 'visible' : 'hidden'; }
+  showText(fA, t, 30.5, 32.9); showText(fB, t, 32.5, 32.95);
+  // G
+  showText(gA, t, 33.5, 38.3); showText(gB, t, 34.0, 38.35);
+  { const p = clamp(sp(t, 36.5)), q = clamp(sp(t, 38.2));
+    const press = 1 - 0.07 * Math.sin(Math.PI * clamp((t - 37.5) / 0.2));
+    btn.style.transform = `scale(${p * (1 - q) * press})`; btn.style.visibility = (t < 36.5 || q > 0.99) ? 'hidden' : 'visible';
+    const cp = expo(t, 36.9, 0.55);
+    cursor.style.left = lerp(900, 600, cp) + 'px'; cursor.style.top = lerp(1300, 890, cp) + 'px';
+    cursor.style.transform = `scale(${1 - 0.15 * Math.sin(Math.PI * clamp((t - 37.5) / 0.2))})`;
+    cursor.style.visibility = (t > 36.9 && t < 38.2) ? 'visible' : 'hidden'; }
+  showText(gC, t, 37.0, 38.3);
+  // H
+  { const p = clamp(sp(t, 39.5)) * (1 - clamp(sp(t, 42.9)));
+    markSvg.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+    markSvg.style.visibility = (t < 39.5 || t > 43.4) ? 'hidden' : 'visible'; }
+  showText(hA, t, 40.0, 42.8); showText(hB, t, 40.5, 42.85); showText(hC, t, 40.8, 42.9);
+
+  // shapes
+  for (let i = 0; i < NS; i++) {
+    const s = stateAt(i, t), s2 = stateAt(i, t - 1 / 60), e = shapes[i];
+    const p = pos(s), p2 = pos(s2);
+    const vx = (p.x - p2.x) * 60, vy = (p.y - p2.y) * 60;
+    blurs[i].setAttribute('stdDeviation', `${Math.min(16, Math.abs(vx) / 280).toFixed(2)} ${Math.min(16, Math.abs(vy) / 280).toFixed(2)}`);
+    Object.assign(e.style, {
+      width: s.w + 'px', height: s.h + 'px', borderRadius: Math.min(s.r, s.w / 2, s.h / 2) + 'px', background: s.c,
+      boxShadow: s.o > 0.2 ? `inset 0 0 0 ${s.o}px ${INK}` : 'none',
+      transform: `translate3d(${p.x - s.w / 2}px,${p.y - s.h / 2}px,0) rotateX(${s.rx}deg) rotateZ(${s.rot + s.a}deg) translateZ(${s.z}px) skewX(${s.sk}deg)`,
+      visibility: (s.w < 0.5 || s.h < 0.5) ? 'hidden' : 'visible',
+    });
+  }
+  // subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 44;
+window.seek(0);
+</script>
+</body>
+</html>
