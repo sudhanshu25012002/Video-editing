@@ -26,7 +26,7 @@ window.renderTrack = async function (dur, cuts, pops, riser) {
   function pop(t) { // bubble burst: a fast upward "blup" that ends in a tiny high click
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(1500, t + 0.045);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.38, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
     o.connect(g).connect(master); o.start(t); o.stop(t + 0.09);
     const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), ng = ctx.createGain();
     s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = 4500;
