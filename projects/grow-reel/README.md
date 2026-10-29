@@ -28,3 +28,11 @@ ffmpeg -framerate 180 -i build-v/frames/%05d.jpg -i build-v/music.wav \
   -vf "tmix=frames=3,select='eq(mod(n\,3)\,2)',setpts=N/60/TB" -r 60 \
   -c:v libx264 -crf 18 -pix_fmt yuv420p -af "volume=0.9,alimiter=limit=0.9" -c:a aac -t 38 grow-reel-9x16.mp4
 ```
+
+## Voiceover version
+`vo/voiceover.mp3` is the voiceover. `VO_MAP` in `reel.html` remaps animation time to the spoken words, and `VO_SUBS` makes the subtitles follow the voice.
+The score (`score.html`) is happy at first, cuts into a tense pulse on "Lekin jaise-jaise", and lifts on "Isliye". Sound effects (`vo-audio.js`):
+checkbox ticks, a "Problem." thud, clicks as the tower layers stack, a cart pop, a strike-through swipe and a whoosh as the bar fills the screen.
+```bash
+node vo-audio.js && node render-vo.js full 4 v vo   # then mix as in projects/website-reel/README.md
+```
