@@ -1,21 +1,22 @@
 // usage: node render.js beats|full [workers]
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
-const mode = process.argv[2] || 'beats', N = +(process.argv[3] || 4);
+const mode = process.argv[2] || 'beats', N = +(process.argv[3] || 4), VERT = process.argv[4] === 'v';
+const VW = VERT ? 1080 : 1920, VH = VERT ? 1920 : 1080, HASH = VERT ? '#v' : '';
 const html = fs.readFileSync(path.join(__dirname, 'reel.html'), 'utf8').replace('LOGO_B64', fs.readFileSync(path.join(__dirname, 'logo.b64'), 'utf8').trim());
-const tmp = path.join(__dirname, 'build'); fs.mkdirSync(tmp, { recursive: true });
+const tmp = path.join(__dirname, VERT ? 'build-v' : 'build'); fs.mkdirSync(tmp, { recursive: true });
 fs.writeFileSync(path.join(tmp, 'page.html'), html);
 (async () => {
   const browser = await chromium.launch();
-  const page0 = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
-  await page0.goto('file://' + path.join(tmp, 'page.html'));
+  const page0 = await browser.newPage({ viewport: { width: VW, height: VH } });
+  await page0.goto('file://' + path.join(tmp, 'page.html') + HASH);
   const D = await page0.evaluate(() => window.DURATION);
   let times;
   const outDir = path.join(tmp, mode === 'beats' ? 'beats' : 'frames'); fs.mkdirSync(outDir, { recursive: true });
   if (mode === 'beats') times = Array.from({ length: D * 2 }, (_, i) => i * 0.5 + 0.25); // mid-beat
   else times = Array.from({ length: D * 180 }, (_, i) => i / 180); // 60fps x 3 subframes
   const pages = [page0];
-  for (let i = 1; i < N; i++) { const p = await browser.newPage({ viewport: { width: 1920, height: 1080 } }); await p.goto('file://' + path.join(tmp, 'page.html')); pages.push(p); }
+  for (let i = 1; i < N; i++) { const p = await browser.newPage({ viewport: { width: VW, height: VH } }); await p.goto('file://' + path.join(tmp, 'page.html') + HASH); pages.push(p); }
   let next = 0, done = 0;
   await Promise.all(pages.map(async p => {
     while (next < times.length) {

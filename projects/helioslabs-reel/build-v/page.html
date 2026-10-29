@@ -1,0 +1,549 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HeliosLabs Reel</title>
+<style>
+  :root {
+    --bg: #F3ECDF;
+    --ink: #1C1726;
+    --muted: #8A8172;
+    --line: #E2D8C6;
+    --card: #FFFCF6;
+    --tile: #E9DDCA;
+    --accent: #5A17E6;
+  }
+  html, body { margin: 0; padding: 0; background: var(--bg); overflow: hidden; }
+  body { width: 1920px; height: 1080px; font-family: 'Inter', sans-serif; color: var(--ink); }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
+  #world { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  .abs { position: absolute; }
+  .mask { position: absolute; overflow: hidden; }
+  .mask > span { display: inline-block; white-space: nowrap; }
+  .bar { position: absolute; background: var(--accent); }
+  .txt { white-space: nowrap; font-weight: 700; letter-spacing: -0.03em; }
+  .acc { color: var(--accent); }
+  .phone { background: var(--card); border-radius: 44px; box-shadow: 0 0 0 2px var(--line); }
+  .tile { position: absolute; background: var(--tile); border-radius: 6px; }
+  .btn { position: absolute; display: flex; align-items: center; justify-content: center; font-weight: 600; border-radius: 10px; }
+  .bubble { position: absolute; padding: 14px 20px; border-radius: 22px; font-size: 20px; font-weight: 500; white-space: nowrap; }
+  .card { position: absolute; background: var(--card); border-radius: 20px; box-shadow: 0 0 0 2px var(--line); }
+  #logoTL { position: absolute; left: 44px; top: 36px; width: 72px; height: 72px; border-radius: 16px; }
+  #caption { position: absolute; left: 0; right: 0; bottom: 44px; text-align: center; font-size: 28px; font-weight: 500; color: var(--ink); }
+  body.v { width: 1080px; height: 1920px; }
+  body.v #caption { bottom: 250px; font-size: 34px; padding: 0 60px; line-height: 1.35; }
+  body.v #caption span { white-space: normal; }
+  #caption span { display: inline-block; background: rgba(255,252,246,0.92); padding: 10px 22px; border-radius: 12px; box-shadow: 0 0 0 1.5px var(--line); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"></div>
+  <img id="logoTL" src="data:image/png;base64,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">
+  <div id="caption"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="mb0" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>
+    <filter id="mb1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>
+    <filter id="mb2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>
+  </defs>
+</svg>
+<script>
+const V = location.hash === '#v'; // vertical 1080x1920
+const SW = V ? 1080 : 1920, SH = V ? 1920 : 1080;
+if (V) document.body.classList.add('v');
+// ---------- math ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+// damped spring, ~2% overshoot, settles in ~0.5s
+function springS(dt) {
+  if (dt <= 0) return 0;
+  const w = 2 * Math.PI * 2.1, z = 0.78, wd = w * Math.sqrt(1 - z * z);
+  const v = 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt));
+  return dt > 1.5 ? 1 : v;
+}
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p === 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+// ---------- dom helpers ----------
+const world = document.getElementById('world');
+function el(tag, cls, css, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  Object.assign(e.style, css || {});
+  if (html !== undefined) e.innerHTML = html;
+  world.appendChild(e);
+  return e;
+}
+// masked line of text: outer clips, inner slides
+function mtext(x, y, size, html, opts = {}) {
+  const o = el('div', 'mask', { left: x + 'px', top: y + 'px', fontSize: size + 'px', lineHeight: '1.15', paddingBottom: '0.08em' });
+  const i = document.createElement('span');
+  i.className = 'txt';
+  i.innerHTML = html;
+  if (opts.weight) i.style.fontWeight = opts.weight;
+  if (opts.color) i.style.color = opts.color;
+  o.appendChild(i);
+  o.inner = i;
+  return o;
+}
+// reveal in at tIn (slide up from below), out at tOut (slide up and away)
+function showText(m, t, tIn, tOut = 1e9) {
+  const pin = sp(t, tIn), pout = sp(t, tOut);
+  const y = (1 - pin) * 110 - pout * 110;
+  m.inner.style.transform = `translateY(${y}%)`;
+  m.style.visibility = (t < tIn || pout > 0.999) ? 'hidden' : 'visible';
+}
+// clip-path reveal. dir: 'down' grows from top edge, 'up' from bottom, 'right' from left, 'center' from middle
+function clipReveal(e, t, tIn, tOut = 1e9, dir = 'down', outDir) {
+  const p = clamp(sp(t, tIn), 0, 1), q = clamp(sp(t, tOut), 0, 1);
+  const r = (1 - p) * 100;
+  let ins;
+  if (dir === 'down') ins = `0 0 ${r}% 0`;
+  else if (dir === 'up') ins = `${r}% 0 0 0`;
+  else if (dir === 'right') ins = `0 ${r}% 0 0`;
+  else if (dir === 'left') ins = `0 0 0 ${r}%`;
+  else ins = `${r / 2}% ${r / 2}% ${r / 2}% ${r / 2}%`;
+  if (t >= tOut) {
+    const s = q * 100, od = outDir || 'center';
+    if (od === 'up') ins = `0 0 ${s}% 0`;
+    else if (od === 'down') ins = `${s}% 0 0 0`;
+    else if (od === 'left') ins = `0 ${s}% 0 0`;
+    else ins = `${s / 2}% ${s / 2}% ${s / 2}% ${s / 2}%`;
+  }
+  e.style.clipPath = `inset(${ins})`;
+  e.style.visibility = (t < tIn || (t >= tOut && q > 0.999)) ? 'hidden' : 'visible';
+}
+function place(e, x, y, w, h) { Object.assign(e.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); }
+
+// ---------- palette ----------
+const ACC = '#5A17E6', INK = '#1C1726', MUTED = '#8A8172', CARD = '#FFFCF6', LINE = '#E2D8C6', TILE = '#E9DDCA';
+const SK = -9.93; // logo slant
+
+// =====================================================================
+// SCENE 0 — HOOK (0–2s)
+// =====================================================================
+const hook1 = mtext(0, 300, 150, 'Late reply');
+const hook2 = mtext(0, 500, 150, 'Lost order.');
+
+// =====================================================================
+// SCENE 1 — INSTAGRAM-STYLE PROFILE (2–8s)
+// =====================================================================
+const PH = { x: 750, y: 110, w: 420, h: 860 };
+const phone = el('div', 'abs phone'); place(phone, PH.x, PH.y, PH.w, PH.h);
+const prof = el('div', 'abs', { overflow: 'hidden', borderRadius: '44px' }); place(prof, PH.x, PH.y, PH.w, PH.h);
+function pel(cls, css, html) { const e = el('div', cls, css, html); world.removeChild(e); prof.appendChild(e); return e; }
+pel('abs', { left: '22px', top: '58px', width: '64px', height: '64px', borderRadius: '50%', background: TILE });
+pel('abs txt', { left: '102px', top: '60px', fontSize: '24px' }, 'your.shop');
+pel('abs', { left: '102px', top: '94px', fontSize: '17px', color: MUTED, fontWeight: 500 }, 'Homemade cakes &amp; bakes');
+pel('btn', { left: '22px', top: '142px', width: '180px', height: '44px', boxShadow: `inset 0 0 0 2px ${INK}`, fontSize: '18px' }, 'Follow');
+const msgLabel = el('div', 'btn', { left: (PH.x + 218) + 'px', top: (PH.y + 142) + 'px', width: '180px', height: '44px', color: '#fff', fontSize: '18px', zIndex: 45 }, 'Message');
+const tiles = [];
+const tileShades = ['#E9DDCA', '#E2D2BA', '#EFE4D3', '#E5D6C0'];
+for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) {
+  const t = pel('tile', { left: (17 + c * 136) + 'px', top: (210 + r * 136) + 'px', width: '130px', height: '130px', background: tileShades[(r + c) % 4] });
+  // simple cake glyph: base + top layer + cherry, neutral tones
+  t.innerHTML = `<div style="position:absolute;left:30px;top:66px;width:70px;height:34px;border-radius:6px;background:#C9A57E"></div>
+                 <div style="position:absolute;left:36px;top:48px;width:58px;height:22px;border-radius:6px 6px 2px 2px;background:#F7EFE3"></div>
+                 <div style="position:absolute;left:58px;top:36px;width:14px;height:14px;border-radius:50%;background:#B8524A"></div>`;
+  tiles.push(t);
+}
+const tileSel = tiles[4]; // row 1, col 1
+// DM view inside the same phone
+const dm = el('div', 'abs', { overflow: 'hidden', borderRadius: '44px', background: CARD }); place(dm, PH.x, PH.y, PH.w, PH.h);
+function del_(cls, css, html) { const e = el('div', cls, css, html); world.removeChild(e); dm.appendChild(e); return e; }
+del_('abs', { left: '22px', top: '50px', width: '44px', height: '44px', borderRadius: '50%', background: TILE });
+del_('abs txt', { left: '80px', top: '58px', fontSize: '22px' }, 'your.shop');
+del_('abs', { left: '0', top: '112px', width: '420px', height: '2px', background: LINE });
+const b1 = del_('bubble', { right: '18px', top: '150px', background: INK, color: '#fff' }, 'Hi! Ye chocolate cake<br>order karna hai');
+const chip1 = del_('abs', { left: '0', width: '420px', top: '270px', textAlign: 'center', fontSize: '15px', color: MUTED, fontWeight: 600 }, '2 ghante baad');
+const b2 = del_('bubble', { right: '18px', top: '304px', background: INK, color: '#fff' }, 'Hello? Available hai?');
+const chip2 = del_('abs', { left: '0', width: '420px', top: '384px', textAlign: 'center', fontSize: '15px', color: MUTED, fontWeight: 600 }, '3 ghante baad');
+const b3 = del_('bubble', { right: '18px', top: '418px', background: INK, color: '#fff' }, 'Rehne do, kahin aur<br>se le liya.');
+const typing = del_('bubble', { left: '18px', top: '600px', width: '96px', height: '50px', padding: '0', background: '#EFE7DA' }, '');
+// big side text, scene 2
+const late1 = mtext(150, V ? 1010 : 380, 110, 'Reply <span class="acc">late,</span>');
+const late2 = mtext(150, V ? 1140 : 520, 110, 'order gone.');
+
+// =====================================================================
+// SCENE 3 — WEBSITE (13–22s)
+// =====================================================================
+const BR = V ? { x: 510, y: 120, w: 900, h: 1300 } : { x: 260, y: 120, w: 1400, h: 840 };
+const AD = V ? { l: 150, w: 600 } : { l: 300, w: 800 };
+const browser = el('div', 'abs card', { overflow: 'hidden' }); place(browser, BR.x, BR.y, BR.w, BR.h);
+function bel(cls, css, html) { const e = el('div', cls, css, html); world.removeChild(e); browser.appendChild(e); return e; }
+['#E2D8C6', '#E2D8C6', '#E2D8C6'].forEach((c, i) => bel('abs', { left: (28 + i * 24) + 'px', top: '34px', width: '14px', height: '14px', borderRadius: '50%', background: c }));
+const addr = bel('abs', { left: AD.l + 'px', top: '22px', width: AD.w + 'px', height: '38px', borderRadius: '19px', background: '#F1E9DC', fontSize: '18px', color: MUTED, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '');
+bel('abs', { left: '0', top: '82px', width: BR.w + 'px', height: '2px', background: LINE });
+const nav = bel('abs', { left: '60px', top: '112px', width: (BR.w - 120) + 'px', height: '40px' }, `
+  <div class="txt" style="position:absolute;left:0;top:0;font-size:28px">your.shop</div>
+  <div style="position:absolute;right:0;top:4px;font-size:20px;font-weight:600;color:${INK};display:flex;gap:40px">
+    <span>Cakes</span><span>Cookies</span><span>Custom</span><span id="cartlink">Cart</span></div>`);
+const cartBadge = bel('abs', { left: (BR.w - 48) + 'px', top: '104px', width: '26px', height: '26px', borderRadius: '13px', background: INK, color: '#fff', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '1');
+const hero = mtext(BR.x + 60, 310, V ? 62 : 76, 'Order karo, <span class="acc">kabhi bhi.</span>');
+const heroSub = mtext(BR.x + 62, V ? 395 : 410, 26, 'Fresh homemade cakes, online.', { weight: 500, color: MUTED });
+const CW = V ? 380 : 310;
+function cardPos(i) { return V ? { x: BR.x + 60 + (i % 2) * (CW + 20), y: 480 + Math.floor(i / 2) * 420 } : { x: 320 + i * 336, y: 500 }; }
+const products = ['Chocolate Cake', 'Red Velvet', 'Cookies Box', 'Brownies'];
+const pcards = products.map((name, i) => {
+  const P = cardPos(i), x = P.x;
+  const c = el('div', 'abs card'); place(c, x, P.y, CW, 400);
+  c.innerHTML = `<div style="position:absolute;left:14px;top:14px;width:${CW - 28}px;height:200px;border-radius:12px;background:${tileShades[i]}"><div style="position:absolute;left:${(CW - 310) / 2}px;top:0;width:282px;height:200px">
+      <div style="position:absolute;left:96px;top:96px;width:90px;height:46px;border-radius:8px;background:#C9A57E"></div>
+      <div style="position:absolute;left:104px;top:72px;width:74px;height:30px;border-radius:8px 8px 3px 3px;background:#F7EFE3"></div>
+      <div style="position:absolute;left:132px;top:56px;width:18px;height:18px;border-radius:50%;background:#B8524A"></div></div></div>
+    <div class="txt" style="position:absolute;left:22px;top:236px;font-size:24px">${name}</div>
+    <div style="position:absolute;left:20px;top:330px;width:${CW - 40}px;height:48px;border-radius:10px;box-shadow:inset 0 0 0 2px ${INK};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:19px">Order</div>`;
+  return c;
+});
+const urlLabel = el('div', 'btn', { color: '#fff', fontSize: '18px', fontWeight: 500, zIndex: 45 }, ''); place(urlLabel, BR.x + AD.l, BR.y + 22, AD.w, 38);
+const orderLabel = el('div', 'btn', { color: '#fff', fontSize: '19px', zIndex: 45 }, 'Order'); place(orderLabel, cardPos(1).x + 20, cardPos(1).y + 330, CW - 40, 48);
+
+// =====================================================================
+// SCENE 4 — THREE FEATURES (22–30s)
+// =====================================================================
+const brandLine = mtext(0, V ? 150 : 150, 64, '<span class="acc">HeliosLabs</span> lekar aaya hai');
+const PANELS = V ? [280, 820, 1360].map(y => ({ x: 580, y, w: 760, h: 520 })) : [180, 720, 1260].map(x => ({ x, y: 300, w: 480, h: 560 }));
+const panelTitles = ['E-commerce website', 'WhatsApp ordering', 'Online checkout'];
+const panels = PANELS.map((P, i) => {
+  const c = el('div', 'abs card', { overflow: 'hidden' }); place(c, P.x, P.y, P.w, P.h);
+  c.innerHTML = `<div class="txt" style="position:absolute;left:32px;top:40px;font-size:32px">${panelTitles[i]}</div>`;
+  return c;
+});
+// panel 1 content: mini site wireframe
+panels[0].insertAdjacentHTML('beforeend', `
+  <div style="position:absolute;left:32px;top:120px;width:416px;height:380px;border-radius:14px;box-shadow:0 0 0 2px ${LINE}">
+    <div style="position:absolute;left:20px;top:22px;width:110px;height:14px;border-radius:7px;background:${INK}"></div>
+    <div style="position:absolute;left:20px;top:64px;width:250px;height:22px;border-radius:6px;background:#D9CDB9"></div>
+    ${[0, 1, 2].map(k => `<div style="position:absolute;left:${20 + k * 128}px;top:120px;width:116px;height:150px;border-radius:10px;background:${tileShades[k]}"></div>
+      <div style="position:absolute;left:${20 + k * 128}px;top:286px;width:116px;height:34px;border-radius:8px;box-shadow:inset 0 0 0 2px ${INK}"></div>`).join('')}
+  </div>`);
+// panel 2: whatsapp-style ordering
+const waBtn = document.createElement('div');
+Object.assign(waBtn.style, { position: 'absolute', left: '32px', top: '440px', width: '416px', height: '60px', borderRadius: '12px', background: INK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '21px' });
+waBtn.textContent = 'WhatsApp par order karein';
+panels[1].appendChild(waBtn);
+const waMsg = document.createElement('div');
+waMsg.className = 'bubble';
+Object.assign(waMsg.style, { right: '32px', top: '140px', background: '#EFE7DA', color: INK, lineHeight: '1.4' });
+waMsg.innerHTML = '<b>Naya order</b><br>1 × Chocolate Cake';
+panels[1].appendChild(waMsg);
+const waTick = document.createElement('div');
+Object.assign(waTick.style, { position: 'absolute', right: '36px', top: '238px', fontSize: '16px', color: MUTED, fontWeight: 600 });
+waTick.textContent = 'Delivered';
+panels[1].appendChild(waTick);
+// panel 3: checkout
+panels[2].insertAdjacentHTML('beforeend', `
+  ${['Cart', 'Address', 'Pay'].map((s, k) => `<div style="position:absolute;left:${32 + k * 142}px;top:150px;font-size:19px;font-weight:600;color:${MUTED}">${s}</div>
+     <div style="position:absolute;left:${32 + k * 142}px;top:186px;width:132px;height:12px;border-radius:2px;background:#EFE7DA"></div>`).join('')}
+  <div style="position:absolute;left:32px;top:240px;width:416px;height:2px;background:${LINE}"></div>
+  <div style="position:absolute;left:32px;top:268px;font-size:21px;font-weight:600">Chocolate Cake</div>
+  <div style="position:absolute;left:32px;top:308px;font-size:18px;color:${MUTED};font-weight:500">UPI · Card · Netbanking</div>`);
+const payBtn = document.createElement('div');
+Object.assign(payBtn.style, { position: 'absolute', left: '32px', top: '440px', width: '416px', height: '60px', borderRadius: '12px', background: INK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '21px' });
+payBtn.textContent = 'Pay';
+panels[2].appendChild(payBtn);
+const payOk = document.createElement('div');
+Object.assign(payOk.style, { position: 'absolute', left: '32px', top: '440px', width: '416px', height: '60px', borderRadius: '12px', background: '#EFE7DA', color: INK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '21px' });
+payOk.textContent = '✓  Order confirmed';
+panels[2].appendChild(payOk);
+
+// =====================================================================
+// SCENE 5 — PRICE (30–36s)
+// =====================================================================
+const priceTop = mtext(0, 250, 40, 'Plans sirf', { weight: 600, color: MUTED });
+const rupee = mtext(0, 330, 260, '₹');
+const digits = [0, 1, 2].map(() => mtext(0, 330, 260, '<span class="acc">9</span>'));
+const perMonth = mtext(0, V ? 700 : 520, 44, '/month se shuru', { weight: 600, color: MUTED });
+const incl1 = mtext(0, V ? 800 : 700, 40, '✓ Hosting', { weight: 600 });
+const incl2 = mtext(0, V ? 800 : 700, 40, '✓ Maintenance', { weight: 600 });
+
+// =====================================================================
+// SCENE 6 — END CARD (36–44s)
+// =====================================================================
+const MK = V ? 0.42 : 0.38, MX = 400, MY = V ? 480 : 540; // world = MX + (x-460)*MK, MY + (y-948)*MK
+const markSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+markSvg.setAttribute('width', 1932 * MK); markSvg.setAttribute('height', 1932 * MK);
+markSvg.setAttribute('viewBox', '0 0 1932 1932');
+Object.assign(markSvg.style, { position: 'absolute', left: (MX - 460 * MK) + 'px', top: (MY - 948 * MK) + 'px' });
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+markSvg.innerHTML = `<path d="${BRACE}" fill="${ACC}"/><path d="${BRACE}" fill="${ACC}" transform="rotate(180 967 948)"/>`;
+world.appendChild(markSvg);
+const name = mtext(0, V ? 760 : 400, V ? 130 : 150, 'HeliosLabs');
+const tag = mtext(0, V ? 930 : 590, 42, 'Aapka business, aapki online dukaan.', { weight: 600, color: MUTED });
+const cta = mtext(0, V ? 1000 : 670, V ? 38 : 42, '<span class="acc">DM karein</span> aur online journey shuru karein', { weight: 600 });
+
+// ---------- cursor ----------
+const cursor = el('div', 'abs', { width: '40px', height: '40px', zIndex: 50, transformOrigin: '4px 4px' },
+  `<svg width="40" height="40" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ---------- through-line bars ----------
+const bars = [0, 1, 2].map(i => el('div', 'bar', { zIndex: 40, filter: `url(#mb${i})` }));
+const mbf = [0, 1, 2].map(i => document.querySelector(`#mb${i} feGaussianBlur`));
+
+// ---------- measure layout (runtime) ----------
+function W(e) { return e.inner.getBoundingClientRect().width; }
+const L = {};
+function measure() {
+  world.style.transform = 'none';
+  // hook centred
+  L.h1w = W(hook1); L.h2w = W(hook2);
+  const ellW = 3 * 34;
+  L.h1x = 960 - (L.h1w + 24 + ellW) / 2;
+  hook1.style.left = L.h1x + 'px';
+  hook2.style.left = (960 - L.h2w / 2) + 'px';
+  L.ellX = L.h1x + L.h1w + 24;
+  // brand line centred
+  brandLine.style.left = (960 - W(brandLine) / 2) + 'px';
+  // price row centred
+  const rw = W(rupee), dw = W(digits[0]);
+  const total = rw + 3 * dw + 10;
+  L.px = 960 - total / 2;
+  rupee.style.left = L.px + 'px';
+  L.dx = [0, 1, 2].map(k => L.px + rw + 10 + k * dw);
+  L.dw = dw;
+  digits.forEach((d, k) => d.style.left = L.dx[k] + 'px');
+  priceTop.style.left = L.px + 'px';
+  perMonth.style.left = V ? (960 - W(perMonth) / 2) + 'px' : (L.dx[2] + dw + 16) + 'px';
+  L.i1w = W(incl1); L.i2w = W(incl2);
+  incl1.style.left = (960 - (L.i1w + 60 + L.i2w) / 2) + 'px';
+  incl2.style.left = (960 - (L.i1w + 60 + L.i2w) / 2 + L.i1w + 60) + 'px';
+  // end-card group centred: mark + name
+  const nameW = Math.max(W(name), W(cta) + 6);
+  const markL = 461, markR = 1470;
+  const groupW = (markR - markL) * MK + 40 + nameW;
+  L.MX = V ? 960 - ((markR + markL) / 2 - 460) * MK : 960 - groupW / 2 + (460 - markL) * MK;
+  markSvg.style.left = (L.MX - 460 * MK) + 'px';
+  const nx = L.MX + (markR - 460) * MK + 40;
+  if (V) { [name, tag, cta].forEach(m => m.style.left = (960 - W(m) / 2) + 'px'); }
+  else { name.style.left = nx + 'px'; tag.style.left = (nx + 6) + 'px'; cta.style.left = (nx + 6) + 'px'; }
+  late1.style.left = V ? (960 - W(late1) / 2) + 'px' : '150px';
+  late2.style.left = V ? (960 - W(late2) / 2) + 'px' : '150px';
+}
+measure();
+function markBar(k) { // logo bar k in world coords
+  const cx = [849, 985, 1119.5][k], cy = 913;
+  return { x: L.MX + (cx - 460) * MK, y: MY + (cy - 948) * MK, w: 110 * MK, h: 160 * MK, sk: SK };
+}
+
+// ---------- bar keyframes: [time, [state0, state1, state2]] ----------
+// state = centre x, centre y, width, height, skew(deg)
+function S(x, y, w, h, sk = SK) { return { x, y, w, h, sk }; }
+function row(cx, cy, w, h, gap, sk = SK) { return [0, 1, 2].map(k => S(cx + (k - 1) * (w + gap), cy, w, h, sk)); }
+let BK;
+function buildBarKeys() {
+  const ell = [0, 1, 2].map(k => S(L.ellX + 17 + k * 34, 300 + 150 * 0.86, 22, 30));
+  const pc = [832, 968, 1104];
+  const gridCols = pc.map(x => S(x, 320 + 269 + 0, 130, 538, 0));
+  const msgBtn = [0, 1, 2].map(k => S(PH.x + 218 + 30 + k * 60, PH.y + 142 + 22, 62, 44));
+  const typeDots = [0, 1, 2].map(k => S(PH.x + 18 + 28 + k * 20, PH.y + 600 + 25, 12, 22));
+  const flat = [0, 1, 2].map(k => S(PH.x + 18 + 28 + k * 20, PH.y + 600 + 25, 22, 4, 0));
+  const aw = AD.w / 3, bw = (CW - 40) / 3, c1 = cardPos(1);
+  const addrBar = [0, 1, 2].map(k => S(BR.x + AD.l + aw / 2 + k * aw, BR.y + 22 + 19, aw + 1, 38, 0));
+  const orderBtn = [0, 1, 2].map(k => S(c1.x + 20 + bw / 2 + k * bw, c1.y + 330 + 24, bw + 2, 48));
+  const strips = PANELS.map(P => S(P.x + P.w / 2, P.y + 5, P.w, 10, 0));
+  const steps = [0, 1, 2].map(k => S(PANELS[2].x + 32 + 66 + k * 142, PANELS[2].y + 192, 132, 12, 0));
+  const stepsEmpty = steps.map(s => S(s.x - 66, s.y, 0.01, 12, 0));
+  const tall = L.dx.map(x => S(x + L.dw / 2, 330 + 150, L.dw * 0.8, 300));
+  const under = L.dx.map(x => S(x + L.dw / 2, 660, L.dw * 0.8, 12));
+  const logo = [0, 1, 2].map(markBar);
+  BK = [
+    [-1, ell.map(s => S(s.x, s.y, 0.01, 0.01))],
+    [0.5, ell],                                   // beat 1: ellipsis grows after "Late reply"
+    [1.5, [0, 1, 2].map(k => S(960 + (k - 1) * 150, 470, 120, 520))], // beat 3: bars stretch tall, interrupt
+    [2.0, gridCols],                              // bar 2: become grid columns (curtain)
+    [3.0, msgBtn],                                // become the Message button
+    [6.1, typeDots],                              // typing dots in the reply bubble
+    [12.0, flat],                                 // collapse to a line
+    [12.5, flat.map((s, k) => S(960 + (k - 1) * aw, BR.y + 41, aw + 1, 4, 0))], // stretch
+    [13.0, addrBar],                              // become the address bar
+    [16.5, orderBtn],                             // become the Order button
+    [21.5, orderBtn.map(s => S(s.x, s.y - 140, s.w, s.h))], // lift out
+    [22.0, strips],                               // panel top strips
+    [26.0, stepsEmpty],                           // drop into checkout slots (empty)
+    [26.5, [steps[0], stepsEmpty[1], stepsEmpty[2]]],
+    [27.0, [steps[0], steps[1], stepsEmpty[2]]],
+    [27.5, steps],
+    [30.0, tall],                                 // big beat: tall columns
+    [30.5, under],                                // reveal digits, become underlines
+    [36.0, logo],                                 // become the logo bars
+  ];
+}
+buildBarKeys();
+function barState(t, k) {
+  const d = k * 0.05;
+  let i = 0;
+  while (i + 1 < BK.length && BK[i + 1][0] + d <= t) i++;
+  if (i === 0) return BK[0][1][k];
+  const a = BK[i - 1][1][k], b = BK[i][1][k];
+  const p = sp(t, BK[i][0] + d);
+  return { x: lerp(a.x, b.x, p), y: lerp(a.y, b.y, p), w: Math.max(0, lerp(a.w, b.w, p)), h: Math.max(0, lerp(a.h, b.h, p)), sk: lerp(a.sk, b.sk, p) };
+}
+
+// ---------- cursor keys: [t, x, y] ----------
+const CK = [
+  [0, 1500, 1200], [3.0, 1500, 1200], [3.4, 980, 540], [5.0, 1060, 280], [6.8, 1300, 1200],
+  [15.5, 1700, 1100], [16.2, 1250, 700], [17.2, 800, 860], [19.0, 1500, 1200],
+  [23.8, 1300, 1200], [24.4, 980, 776], [26.0, 1400, 860], [28.0, 1500, 776], [29.5, 1700, 1200],
+];
+const CLICKS = [4.0, 5.5, 17.6, 25.0, 28.5];
+if (V) CK.splice(0, CK.length,
+  [0, 1300, 2100], [3.0, 1300, 2100], [3.4, 980, 540], [5.0, 1060, 280], [6.8, 1300, 2100],
+  [15.5, 1300, 1900], [16.2, 1250, 1000], [17.2, 1160, 836], [19.0, 1300, 2100],
+  [23.8, 1300, 2000], [24.4, 980, 1292], [26.0, 1300, 1700], [28.0, 980, 1832], [29.5, 1300, 2200]);
+function cursorAt(t) {
+  let i = 0;
+  while (i + 1 < CK.length && CK[i + 1][0] <= t) i++;
+  if (i === 0) return { x: CK[0][1], y: CK[0][2] };
+  const a = CK[i - 1], b = CK[i];
+  const p = expo(t, b[0], 0.55);
+  return { x: lerp(a[1], b[1], p), y: lerp(a[2], b[2], p) };
+}
+
+// ---------- camera keys: [t, cx, cy, zoom] (eased continuously between keys) ----------
+const CAM = [
+  [0, 960, 540, 1.0], [2.0, 960, 540, 1.04],
+  [3.6, 968, 560, 1.12], [5.4, 1040, 400, 1.22], [6.4, 960, 430, 1.14], [8.4, 960, 470, 1.18],
+  [9.6, 760, 540, 1.04], [12.6, 760, 540, 1.06], [13.2, 960, 540, 1.0],
+  [15.2, 960, 560, 1.02], [17.3, 800, 760, 1.38], [18.8, 760, 420, 1.28], [21.6, 860, 470, 1.32],
+  [22.4, 960, 540, 1.0], [24.6, 960, 700, 1.3], [26.3, 1500, 600, 1.38], [29.6, 1500, 620, 1.44],
+  [30.2, 960, 500, 1.12], [35.8, 960, 500, 1.16],
+  [36.6, 960, 540, 1.14], [44.0, 960, 540, 1.22],
+];
+if (V) CAM.splice(0, CAM.length,
+  [0, 960, 500, 1.0], [2.0, 960, 500, 1.04],
+  [3.6, 968, 560, 1.55], [5.4, 1040, 420, 1.8], [6.4, 960, 500, 1.6], [8.4, 960, 520, 1.62],
+  [9.6, 960, 760, 1.0], [12.6, 960, 760, 1.04], [13.2, 960, 770, 1.15],
+  [15.2, 960, 770, 1.18], [17.3, 1160, 830, 1.7], [18.8, 960, 520, 1.16], [21.6, 960, 540, 1.2],
+  [22.4, 960, 1070, 1.0], [24.6, 960, 1080, 1.3], [26.3, 960, 1620, 1.3], [29.6, 960, 1640, 1.36],
+  [30.2, 960, 600, 1.4], [35.8, 960, 600, 1.45],
+  [36.6, 960, 760, 1.3], [44.0, 960, 760, 1.38]);
+function camAt(t) {
+  let i = 0;
+  while (i + 1 < CAM.length && CAM[i + 1][0] <= t) i++;
+  if (i + 1 >= CAM.length) return { cx: CAM[i][1], cy: CAM[i][2], z: CAM[i][3] };
+  const a = CAM[i], b = CAM[i + 1], span = b[0] - a[0];
+  const M = Math.min(0.6, span);
+  const ws = b[0] - M;                                   // move window start
+  const drift = z => z * (1 + 0.03 * clamp((t - a[0]) / span)); // slow push, never still
+  if (t < ws) return { cx: a[1], cy: a[2], z: drift(a[3]) };
+  const p = inout(clamp((t - ws) / M));
+  const za = a[3] * (1 + 0.03 * clamp((ws - a[0]) / span));
+  return { cx: lerp(a[1], b[1], p), cy: lerp(a[2], b[2], p), z: lerp(za, b[3], p) };
+}
+// ---------- captions ----------
+const CAPS = [
+  [0.4, 7.5, 'Ek customer aapki Instagram par aata hai, products dekhta hai… aur order karne ke liye message karta hai.'],
+  [7.9, 12.5, 'Lekin reply late mila, toh ho sakta hai woh kisi aur se order kar le.'],
+  [13.0, 21.6, 'Ab sochiye, agar aapki khud ki website ho, jahan customers kabhi bhi products dekh sakein aur aasani se order kar sakein?'],
+  [22.1, 29.6, 'Isi liye HeliosLabs lekar aaya hai e-commerce websites, WhatsApp ordering aur online checkout ke saath.'],
+  [30.1, 36.3, 'Aur plans sirf ₹999 per month se shuru, hosting aur maintenance ke saath.'],
+  [36.4, 40.5, 'Aapka business, aapki online dukaan. HeliosLabs ke saath.'],
+  [40.6, 44.0, 'DM karein aur apni online journey shuru karein!'],
+];
+const capBox = document.querySelector('#caption span');
+
+// =====================================================================
+// seek(t): every style is a pure function of t
+// =====================================================================
+window.seek = function (t) {
+  // camera
+  const c = camAt(t);
+  world.style.transform = `translate(${SW / 2}px,${SH / 2}px) scale(${c.z}) translate(${-c.cx}px,${-c.cy}px)`;
+
+  // ----- scene 0: hook -----
+  showText(hook1, t, 0.0, 1.62);
+  showText(hook2, t, 1.0, 1.7);
+
+  // ----- scene 1: profile -----
+  const s1on = t >= 1.9 && t < 13.2;
+  phone.style.display = s1on ? 'block' : 'none';
+  if (s1on) clipReveal(phone, t, 1.9, 12.6, 'down', 'up');
+  prof.style.display = (t >= 1.9 && t < 6.6) ? 'block' : 'none';
+  if (t >= 1.9 && t < 6.6) clipReveal(prof, t, 1.9, 1e9, 'down');
+  tiles.forEach(e => { e.style.transform = 'none'; e.style.boxShadow = 'none'; });
+  const press = (tc) => 1 - 0.06 * Math.sin(Math.PI * clamp((t - tc) / 0.18));
+  tileSel.style.transform = `scale(${press(4.0)})`;
+  if (t > 4.0) tileSel.style.boxShadow = `inset 0 0 0 ${3 * sp(t, 4.0)}px ${INK}`;
+  msgLabel.style.visibility = (t > 3.1 && t < 6.4) ? 'visible' : 'hidden';
+  msgLabel.style.transform = `scale(${press(5.5)})`;
+  // DM view revealed from the right after the Message click
+  dm.style.display = (t >= 5.7 && t < 12.9) ? 'block' : 'none';
+  if (t >= 5.7) clipReveal(dm, t, 5.7, 1e9, 'left');
+  const bub = (e, tIn) => { const p = sp(t, tIn); e.style.transform = `scale(${0.6 + 0.4 * p})`; e.style.transformOrigin = 'right bottom'; e.style.clipPath = `inset(0 0 0 ${(1 - clamp(p)) * 100}%)`; e.style.visibility = t < tIn ? 'hidden' : 'visible'; };
+  bub(b1, 6.1);
+  bub(b2, 9.0);
+  [chip1, chip2].forEach((e, k) => { const tIn = [8.5, 10.0][k]; e.style.clipPath = `inset(0 ${(1 - clamp(sp(t, tIn))) * 50}% 0 ${(1 - clamp(sp(t, tIn))) * 50}%)`; e.style.visibility = t < tIn ? 'hidden' : 'visible'; });
+  bub(b3, 11.0);
+  // typing bubble grows at 6.8, closes at 11.9
+  { const p = clamp(sp(t, 6.5)), q = clamp(sp(t, 11.9));
+    typing.style.transformOrigin = 'left center';
+    typing.style.transform = `scaleX(${p * (1 - q)})`;
+    typing.style.visibility = (t < 6.5 || q > 0.999) ? 'hidden' : 'visible'; }
+  showText(late1, t, 9.5, 12.4);
+  showText(late2, t, 11.0, 12.5);
+
+  // ----- scene 3: website -----
+  const s3on = t >= 12.9 && t < 22.6;
+  browser.style.display = s3on ? 'block' : 'none';
+  if (s3on) clipReveal(browser, t, 13.0, 22.0, 'down', 'center');
+  { const url = 'yourshop.in'; const n = Math.floor(clamp((t - 13.5) / 1.0) * url.length); addr.textContent = url.slice(0, n); urlLabel.textContent = url.slice(0, n); urlLabel.style.visibility = (t > 13.3 && t < 16.5) ? 'visible' : 'hidden'; }
+  nav.style.clipPath = `inset(0 ${(1 - clamp(sp(t, 14.0))) * 100}% 0 0)`;
+  showText(hero, t, 14.5, 22.0);
+  showText(heroSub, t, 15.0, 22.0);
+  pcards.forEach((e, i) => { if (s3on) clipReveal(e, t, 15.0 + i * 0.25, 22.0, 'up', 'center'); else e.style.visibility = 'hidden'; });
+  orderLabel.style.visibility = (t > 16.7 && t < 21.6) ? 'visible' : 'hidden';
+  orderLabel.style.transform = `scale(${press(17.6)})`;
+  { const p = clamp(sp(t, 18.0)); cartBadge.style.transform = `scale(${p})`; cartBadge.style.visibility = (t < 18.0 || t > 22.0) ? 'hidden' : 'visible'; }
+
+  // ----- scene 4: features -----
+  showText(brandLine, t, 22.5, 29.8);
+  panels.forEach((e, i) => { e.style.display = (t >= 22 && t < 30.4) ? 'block' : 'none'; clipReveal(e, t, 22.3 + i * 0.5, 29.8, 'down', 'center'); });
+  waBtn.style.transform = `scale(${press(25.0)})`;
+  { const p = sp(t, 25.5); waMsg.style.transformOrigin = 'right top'; waMsg.style.transform = `scale(${0.6 + 0.4 * p})`; waMsg.style.clipPath = `inset(0 0 0 ${(1 - clamp(p)) * 100}%)`; waMsg.style.visibility = t < 25.5 ? 'hidden' : 'visible'; }
+  waTick.style.clipPath = `inset(0 0 0 ${(1 - clamp(sp(t, 26.0))) * 100}%)`;
+  payBtn.style.transform = `scale(${press(28.5)})`;
+  payOk.style.clipPath = `inset(0 ${(1 - clamp(sp(t, 29.0))) * 100}% 0 0)`;
+
+  // ----- scene 5: price -----
+  showText(priceTop, t, 30.5, 35.6);
+  showText(rupee, t, 30.0, 35.8);
+  digits.forEach((d, k) => showText(d, t, 30.5 + k * 0.08, 35.9 + k * 0.05));
+  showText(perMonth, t, 31.0, 35.7);
+  showText(incl1, t, 32.0, 35.7);
+  showText(incl2, t, 33.0, 35.8);
+
+  // ----- scene 6: end card -----
+  { const p = clamp(sp(t, 36.5));
+    markSvg.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+    markSvg.style.visibility = t < 36.5 ? 'hidden' : 'visible'; }
+  showText(name, t, 37.0);
+  showText(tag, t, 38.0);
+  showText(cta, t, 40.5);
+
+  // ----- bars + direction-aware motion blur -----
+  bars.forEach((b, k) => {
+    const s = barState(t, k), s2 = barState(t - 1 / 60, k);
+    const vx = (s.x - s2.x) * 60, vy = (s.y - s2.y) * 60;
+    mbf[k].setAttribute('stdDeviation', `${Math.min(18, Math.abs(vx) / 260).toFixed(2)} ${Math.min(18, Math.abs(vy) / 260).toFixed(2)}`);
+    Object.assign(b.style, { left: (s.x - s.w / 2) + 'px', top: (s.y - s.h / 2) + 'px', width: s.w + 'px', height: s.h + 'px', transform: `skewX(${s.sk}deg)` });
+    b.style.visibility = (s.w < 0.5 || s.h < 0.5) ? 'hidden' : 'visible';
+  });
+  // bars sit under digits in scene 5 but in front elsewhere
+  // ----- cursor -----
+  const cp = cursorAt(t);
+  let cs = 1; CLICKS.forEach(tc => { cs = Math.min(cs, press(tc) * (1 - 0.12 * Math.sin(Math.PI * clamp((t - tc) / 0.18)))); });
+  Object.assign(cursor.style, { left: cp.x + 'px', top: cp.y + 'px', transform: `scale(${cs / Math.sqrt(c.z)})` });
+
+  // ----- captions -----
+  const cap = CAPS.find(([a, b]) => t >= a && t < b);
+  capBox.parentElement.style.visibility = cap ? 'visible' : 'hidden';
+  if (cap) { capBox.textContent = cap[2]; const p = clamp(sp(t, cap[0])); capBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 44;
+window.seek(0);
+</script>
+</body>
+</html>

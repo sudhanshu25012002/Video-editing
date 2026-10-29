@@ -30,6 +30,9 @@
   .card { position: absolute; background: var(--card); border-radius: 20px; box-shadow: 0 0 0 2px var(--line); }
   #logoTL { position: absolute; left: 44px; top: 36px; width: 72px; height: 72px; border-radius: 16px; }
   #caption { position: absolute; left: 0; right: 0; bottom: 44px; text-align: center; font-size: 28px; font-weight: 500; color: var(--ink); }
+  body.v { width: 1080px; height: 1920px; }
+  body.v #caption { bottom: 250px; font-size: 34px; padding: 0 60px; line-height: 1.35; }
+  body.v #caption span { white-space: normal; }
   #caption span { display: inline-block; background: rgba(255,252,246,0.92); padding: 10px 22px; border-radius: 12px; box-shadow: 0 0 0 1.5px var(--line); }
 </style>
 </head>
@@ -47,6 +50,9 @@
   </defs>
 </svg>
 <script>
+const V = location.hash === '#v'; // vertical 1080x1920
+const SW = V ? 1080 : 1920, SH = V ? 1920 : 1080;
+if (V) document.body.classList.add('v');
 // ---------- math ----------
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a, b, p) => a + (b - a) * p;
@@ -158,45 +164,48 @@ const chip2 = del_('abs', { left: '0', width: '420px', top: '384px', textAlign: 
 const b3 = del_('bubble', { right: '18px', top: '418px', background: INK, color: '#fff' }, 'Rehne do, kahin aur<br>se le liya.');
 const typing = del_('bubble', { left: '18px', top: '600px', width: '96px', height: '50px', padding: '0', background: '#EFE7DA' }, '');
 // big side text, scene 2
-const late1 = mtext(150, 380, 110, 'Reply <span class="acc">late,</span>');
-const late2 = mtext(150, 520, 110, 'order gone.');
+const late1 = mtext(150, V ? 1010 : 380, 110, 'Reply <span class="acc">late,</span>');
+const late2 = mtext(150, V ? 1140 : 520, 110, 'order gone.');
 
 // =====================================================================
 // SCENE 3 — WEBSITE (13–22s)
 // =====================================================================
-const BR = { x: 260, y: 120, w: 1400, h: 840 };
+const BR = V ? { x: 510, y: 120, w: 900, h: 1300 } : { x: 260, y: 120, w: 1400, h: 840 };
+const AD = V ? { l: 150, w: 600 } : { l: 300, w: 800 };
 const browser = el('div', 'abs card', { overflow: 'hidden' }); place(browser, BR.x, BR.y, BR.w, BR.h);
 function bel(cls, css, html) { const e = el('div', cls, css, html); world.removeChild(e); browser.appendChild(e); return e; }
 ['#E2D8C6', '#E2D8C6', '#E2D8C6'].forEach((c, i) => bel('abs', { left: (28 + i * 24) + 'px', top: '34px', width: '14px', height: '14px', borderRadius: '50%', background: c }));
-const addr = bel('abs', { left: '300px', top: '22px', width: '800px', height: '38px', borderRadius: '19px', background: '#F1E9DC', fontSize: '18px', color: MUTED, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '');
-bel('abs', { left: '0', top: '82px', width: '1400px', height: '2px', background: LINE });
-const nav = bel('abs', { left: '60px', top: '112px', width: '1280px', height: '40px' }, `
+const addr = bel('abs', { left: AD.l + 'px', top: '22px', width: AD.w + 'px', height: '38px', borderRadius: '19px', background: '#F1E9DC', fontSize: '18px', color: MUTED, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '');
+bel('abs', { left: '0', top: '82px', width: BR.w + 'px', height: '2px', background: LINE });
+const nav = bel('abs', { left: '60px', top: '112px', width: (BR.w - 120) + 'px', height: '40px' }, `
   <div class="txt" style="position:absolute;left:0;top:0;font-size:28px">your.shop</div>
   <div style="position:absolute;right:0;top:4px;font-size:20px;font-weight:600;color:${INK};display:flex;gap:40px">
     <span>Cakes</span><span>Cookies</span><span>Custom</span><span id="cartlink">Cart</span></div>`);
-const cartBadge = bel('abs', { left: '1352px', top: '104px', width: '26px', height: '26px', borderRadius: '13px', background: INK, color: '#fff', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '1');
-const hero = mtext(320, 310, 76, 'Order karo, <span class="acc">kabhi bhi.</span>');
-const heroSub = mtext(322, 410, 26, 'Fresh homemade cakes, online.', { weight: 500, color: MUTED });
+const cartBadge = bel('abs', { left: (BR.w - 48) + 'px', top: '104px', width: '26px', height: '26px', borderRadius: '13px', background: INK, color: '#fff', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '1');
+const hero = mtext(BR.x + 60, 310, V ? 62 : 76, 'Order karo, <span class="acc">kabhi bhi.</span>');
+const heroSub = mtext(BR.x + 62, V ? 395 : 410, 26, 'Fresh homemade cakes, online.', { weight: 500, color: MUTED });
+const CW = V ? 380 : 310;
+function cardPos(i) { return V ? { x: BR.x + 60 + (i % 2) * (CW + 20), y: 480 + Math.floor(i / 2) * 420 } : { x: 320 + i * 336, y: 500 }; }
 const products = ['Chocolate Cake', 'Red Velvet', 'Cookies Box', 'Brownies'];
 const pcards = products.map((name, i) => {
-  const x = 320 + i * 336;
-  const c = el('div', 'abs card'); place(c, x, 500, 310, 400);
-  c.innerHTML = `<div style="position:absolute;left:14px;top:14px;width:282px;height:200px;border-radius:12px;background:${tileShades[i]}">
+  const P = cardPos(i), x = P.x;
+  const c = el('div', 'abs card'); place(c, x, P.y, CW, 400);
+  c.innerHTML = `<div style="position:absolute;left:14px;top:14px;width:${CW - 28}px;height:200px;border-radius:12px;background:${tileShades[i]}"><div style="position:absolute;left:${(CW - 310) / 2}px;top:0;width:282px;height:200px">
       <div style="position:absolute;left:96px;top:96px;width:90px;height:46px;border-radius:8px;background:#C9A57E"></div>
       <div style="position:absolute;left:104px;top:72px;width:74px;height:30px;border-radius:8px 8px 3px 3px;background:#F7EFE3"></div>
-      <div style="position:absolute;left:132px;top:56px;width:18px;height:18px;border-radius:50%;background:#B8524A"></div></div>
+      <div style="position:absolute;left:132px;top:56px;width:18px;height:18px;border-radius:50%;background:#B8524A"></div></div></div>
     <div class="txt" style="position:absolute;left:22px;top:236px;font-size:24px">${name}</div>
-    <div style="position:absolute;left:20px;top:330px;width:270px;height:48px;border-radius:10px;box-shadow:inset 0 0 0 2px ${INK};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:19px">Order</div>`;
+    <div style="position:absolute;left:20px;top:330px;width:${CW - 40}px;height:48px;border-radius:10px;box-shadow:inset 0 0 0 2px ${INK};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:19px">Order</div>`;
   return c;
 });
-const urlLabel = el('div', 'btn', { color: '#fff', fontSize: '18px', fontWeight: 500, zIndex: 45 }, ''); place(urlLabel, BR.x + 300, BR.y + 22, 800, 38);
-const orderLabel = el('div', 'btn', { color: '#fff', fontSize: '19px', zIndex: 45 }, 'Order'); place(orderLabel, 656 + 20, 500 + 330, 270, 48);
+const urlLabel = el('div', 'btn', { color: '#fff', fontSize: '18px', fontWeight: 500, zIndex: 45 }, ''); place(urlLabel, BR.x + AD.l, BR.y + 22, AD.w, 38);
+const orderLabel = el('div', 'btn', { color: '#fff', fontSize: '19px', zIndex: 45 }, 'Order'); place(orderLabel, cardPos(1).x + 20, cardPos(1).y + 330, CW - 40, 48);
 
 // =====================================================================
 // SCENE 4 — THREE FEATURES (22–30s)
 // =====================================================================
-const brandLine = mtext(0, 150, 64, '<span class="acc">HeliosLabs</span> lekar aaya hai');
-const PANELS = [180, 720, 1260].map(x => ({ x, y: 300, w: 480, h: 560 }));
+const brandLine = mtext(0, V ? 150 : 150, 64, '<span class="acc">HeliosLabs</span> lekar aaya hai');
+const PANELS = V ? [280, 820, 1360].map(y => ({ x: 580, y, w: 760, h: 520 })) : [180, 720, 1260].map(x => ({ x, y: 300, w: 480, h: 560 }));
 const panelTitles = ['E-commerce website', 'WhatsApp ordering', 'Online checkout'];
 const panels = PANELS.map((P, i) => {
   const c = el('div', 'abs card', { overflow: 'hidden' }); place(c, P.x, P.y, P.w, P.h);
@@ -247,14 +256,14 @@ panels[2].appendChild(payOk);
 const priceTop = mtext(0, 250, 40, 'Plans sirf', { weight: 600, color: MUTED });
 const rupee = mtext(0, 330, 260, '₹');
 const digits = [0, 1, 2].map(() => mtext(0, 330, 260, '<span class="acc">9</span>'));
-const perMonth = mtext(0, 520, 44, '/month se shuru', { weight: 600, color: MUTED });
-const incl1 = mtext(0, 700, 40, '✓ Hosting', { weight: 600 });
-const incl2 = mtext(0, 700, 40, '✓ Maintenance', { weight: 600 });
+const perMonth = mtext(0, V ? 700 : 520, 44, '/month se shuru', { weight: 600, color: MUTED });
+const incl1 = mtext(0, V ? 800 : 700, 40, '✓ Hosting', { weight: 600 });
+const incl2 = mtext(0, V ? 800 : 700, 40, '✓ Maintenance', { weight: 600 });
 
 // =====================================================================
 // SCENE 6 — END CARD (36–44s)
 // =====================================================================
-const MK = 0.38, MX = 400, MY = 540; // world = MX + (x-460)*MK, MY + (y-948)*MK
+const MK = V ? 0.42 : 0.38, MX = 400, MY = V ? 480 : 540; // world = MX + (x-460)*MK, MY + (y-948)*MK
 const markSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 markSvg.setAttribute('width', 1932 * MK); markSvg.setAttribute('height', 1932 * MK);
 markSvg.setAttribute('viewBox', '0 0 1932 1932');
@@ -262,9 +271,9 @@ Object.assign(markSvg.style, { position: 'absolute', left: (MX - 460 * MK) + 'px
 const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
 markSvg.innerHTML = `<path d="${BRACE}" fill="${ACC}"/><path d="${BRACE}" fill="${ACC}" transform="rotate(180 967 948)"/>`;
 world.appendChild(markSvg);
-const name = mtext(MX + (1500 - 460) * MK + 40, 400, 150, 'HeliosLabs');
-const tag = mtext(MX + (1500 - 460) * MK + 46, 590, 42, 'Aapka business, aapki online dukaan.', { weight: 600, color: MUTED });
-const cta = mtext(MX + (1500 - 460) * MK + 46, 670, 42, '<span class="acc">DM karein</span> aur online journey shuru karein', { weight: 600 });
+const name = mtext(0, V ? 760 : 400, V ? 130 : 150, 'HeliosLabs');
+const tag = mtext(0, V ? 930 : 590, 42, 'Aapka business, aapki online dukaan.', { weight: 600, color: MUTED });
+const cta = mtext(0, V ? 1000 : 670, V ? 38 : 42, '<span class="acc">DM karein</span> aur online journey shuru karein', { weight: 600 });
 
 // ---------- cursor ----------
 const cursor = el('div', 'abs', { width: '40px', height: '40px', zIndex: 50, transformOrigin: '4px 4px' },
@@ -297,7 +306,7 @@ function measure() {
   L.dw = dw;
   digits.forEach((d, k) => d.style.left = L.dx[k] + 'px');
   priceTop.style.left = L.px + 'px';
-  perMonth.style.left = (L.dx[2] + dw + 16) + 'px';
+  perMonth.style.left = V ? (960 - W(perMonth) / 2) + 'px' : (L.dx[2] + dw + 16) + 'px';
   L.i1w = W(incl1); L.i2w = W(incl2);
   incl1.style.left = (960 - (L.i1w + 60 + L.i2w) / 2) + 'px';
   incl2.style.left = (960 - (L.i1w + 60 + L.i2w) / 2 + L.i1w + 60) + 'px';
@@ -305,10 +314,13 @@ function measure() {
   const nameW = Math.max(W(name), W(cta) + 6);
   const markL = 461, markR = 1470;
   const groupW = (markR - markL) * MK + 40 + nameW;
-  L.MX = 960 - groupW / 2 + (460 - markL) * MK;
+  L.MX = V ? 960 - ((markR + markL) / 2 - 460) * MK : 960 - groupW / 2 + (460 - markL) * MK;
   markSvg.style.left = (L.MX - 460 * MK) + 'px';
   const nx = L.MX + (markR - 460) * MK + 40;
-  name.style.left = nx + 'px'; tag.style.left = (nx + 6) + 'px'; cta.style.left = (nx + 6) + 'px';
+  if (V) { [name, tag, cta].forEach(m => m.style.left = (960 - W(m) / 2) + 'px'); }
+  else { name.style.left = nx + 'px'; tag.style.left = (nx + 6) + 'px'; cta.style.left = (nx + 6) + 'px'; }
+  late1.style.left = V ? (960 - W(late1) / 2) + 'px' : '150px';
+  late2.style.left = V ? (960 - W(late2) / 2) + 'px' : '150px';
 }
 measure();
 function markBar(k) { // logo bar k in world coords
@@ -328,8 +340,9 @@ function buildBarKeys() {
   const msgBtn = [0, 1, 2].map(k => S(PH.x + 218 + 30 + k * 60, PH.y + 142 + 22, 62, 44));
   const typeDots = [0, 1, 2].map(k => S(PH.x + 18 + 28 + k * 20, PH.y + 600 + 25, 12, 22));
   const flat = [0, 1, 2].map(k => S(PH.x + 18 + 28 + k * 20, PH.y + 600 + 25, 22, 4, 0));
-  const addrBar = [0, 1, 2].map(k => S(BR.x + 300 + 133 + k * 267, BR.y + 22 + 19, 268, 38, 0));
-  const orderBtn = [0, 1, 2].map(k => S(656 + 20 + 45 + k * 90, 500 + 330 + 24, 92, 48));
+  const aw = AD.w / 3, bw = (CW - 40) / 3, c1 = cardPos(1);
+  const addrBar = [0, 1, 2].map(k => S(BR.x + AD.l + aw / 2 + k * aw, BR.y + 22 + 19, aw + 1, 38, 0));
+  const orderBtn = [0, 1, 2].map(k => S(c1.x + 20 + bw / 2 + k * bw, c1.y + 330 + 24, bw + 2, 48));
   const strips = PANELS.map(P => S(P.x + P.w / 2, P.y + 5, P.w, 10, 0));
   const steps = [0, 1, 2].map(k => S(PANELS[2].x + 32 + 66 + k * 142, PANELS[2].y + 192, 132, 12, 0));
   const stepsEmpty = steps.map(s => S(s.x - 66, s.y, 0.01, 12, 0));
@@ -344,7 +357,7 @@ function buildBarKeys() {
     [3.0, msgBtn],                                // become the Message button
     [6.1, typeDots],                              // typing dots in the reply bubble
     [12.0, flat],                                 // collapse to a line
-    [12.5, flat.map((s, k) => S(960 + (k - 1) * 268, BR.y + 41, 268, 4, 0))], // stretch
+    [12.5, flat.map((s, k) => S(960 + (k - 1) * aw, BR.y + 41, aw + 1, 4, 0))], // stretch
     [13.0, addrBar],                              // become the address bar
     [16.5, orderBtn],                             // become the Order button
     [21.5, orderBtn.map(s => S(s.x, s.y - 140, s.w, s.h))], // lift out
@@ -376,6 +389,10 @@ const CK = [
   [23.8, 1300, 1200], [24.4, 980, 776], [26.0, 1400, 860], [28.0, 1500, 776], [29.5, 1700, 1200],
 ];
 const CLICKS = [4.0, 5.5, 17.6, 25.0, 28.5];
+if (V) CK.splice(0, CK.length,
+  [0, 1300, 2100], [3.0, 1300, 2100], [3.4, 980, 540], [5.0, 1060, 280], [6.8, 1300, 2100],
+  [15.5, 1300, 1900], [16.2, 1250, 1000], [17.2, 1160, 836], [19.0, 1300, 2100],
+  [23.8, 1300, 2000], [24.4, 980, 1292], [26.0, 1300, 1700], [28.0, 980, 1832], [29.5, 1300, 2200]);
 function cursorAt(t) {
   let i = 0;
   while (i + 1 < CK.length && CK[i + 1][0] <= t) i++;
@@ -395,6 +412,14 @@ const CAM = [
   [30.2, 960, 500, 1.12], [35.8, 960, 500, 1.16],
   [36.6, 960, 540, 1.14], [44.0, 960, 540, 1.22],
 ];
+if (V) CAM.splice(0, CAM.length,
+  [0, 960, 500, 1.0], [2.0, 960, 500, 1.04],
+  [3.6, 968, 560, 1.55], [5.4, 1040, 420, 1.8], [6.4, 960, 500, 1.6], [8.4, 960, 520, 1.62],
+  [9.6, 960, 760, 1.0], [12.6, 960, 760, 1.04], [13.2, 960, 770, 1.15],
+  [15.2, 960, 770, 1.18], [17.3, 1160, 830, 1.7], [18.8, 960, 520, 1.16], [21.6, 960, 540, 1.2],
+  [22.4, 960, 1070, 1.0], [24.6, 960, 1080, 1.3], [26.3, 960, 1620, 1.3], [29.6, 960, 1640, 1.36],
+  [30.2, 960, 600, 1.4], [35.8, 960, 600, 1.45],
+  [36.6, 960, 760, 1.3], [44.0, 960, 760, 1.38]);
 function camAt(t) {
   let i = 0;
   while (i + 1 < CAM.length && CAM[i + 1][0] <= t) i++;
@@ -426,7 +451,7 @@ const capBox = document.querySelector('#caption span');
 window.seek = function (t) {
   // camera
   const c = camAt(t);
-  world.style.transform = `translate(960px,540px) scale(${c.z}) translate(${-c.cx}px,${-c.cy}px)`;
+  world.style.transform = `translate(${SW / 2}px,${SH / 2}px) scale(${c.z}) translate(${-c.cx}px,${-c.cy}px)`;
 
   // ----- scene 0: hook -----
   showText(hook1, t, 0.0, 1.62);
