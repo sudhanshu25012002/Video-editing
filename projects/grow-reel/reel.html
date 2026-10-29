@@ -1,0 +1,324 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Grow Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  #world { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; }
+  #space { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; perspective: 1700px; perspective-origin: 540px 820px; }
+  #space3d { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .shape { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
+  .anchor { position: absolute; left: 100%; top: 50%; width: 1px; height: 1px; }
+  .mask { position: absolute; overflow: hidden; }
+  .mask > span { display: inline-block; white-space: nowrap; }
+  .txt { font-weight: 800; letter-spacing: -0.035em; white-space: nowrap; }
+  .pur { color: #5A17E6; } .amb { color: #D98E1F; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; }
+  #sub { position: absolute; left: 70px; right: 70px; top: 1500px; text-align: center; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 38px; font-weight: 600; line-height: 1.32; padding: 16px 28px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+  .chip { position: absolute; width: 150px; height: 46px; border-radius: 23px; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <div id="space"><div id="space3d"></div></div>
+  </div>
+  <div id="overlay"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs id="fdefs"></defs></svg>
+<script>
+// ===================== palette & math =====================
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { // damped spring, ~2% overshoot
+  if (dt <= 0) return 0; if (dt > 1.6) return 1;
+  const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt));
+}
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+const mixC = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], clamp(p)))).join(',')})`; };
+
+const world = document.getElementById('world'), space = document.getElementById('space3d'), overlay = document.getElementById('overlay');
+function el(parent, tag, cls, css, html) { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+// masked text line: x = 'c' centres it
+function mtext(x, y, size, html, o = {}) {
+  const m = el(o.parent || world, 'div', 'mask', { top: y + 'px', fontSize: size + 'px', lineHeight: '1.12', paddingBottom: '0.1em', zIndex: o.z || 20 });
+  const s = el(m, 'span', 'txt', { fontWeight: o.w || 800, color: o.color || INK }, html);
+  m.inner = s; m.cx = x === 'c'; if (x !== 'c') m.style.left = x + 'px';
+  return m;
+}
+function centre(m) { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }
+function showText(m, t, tIn, tOut = 1e9, dir = 1) {
+  const pin = sp(t, tIn), pout = sp(t, tOut);
+  m.inner.style.transform = `translateY(${((1 - pin) * 110 - pout * 110) * dir}%)`;
+  m.style.visibility = (t < tIn || pout > 0.995) ? 'hidden' : 'visible';
+}
+
+// ===================== shape pool (the morphing material) =====================
+// state: x,y centre; w,h; r radius; rot (rotateZ); rx (rotateX); z (translateZ); sk skew; c colour; o outline;
+// a/rad: orbit angle & radius around (x,y) so rotations move on arcs
+const NS = 16;
+const DEF = { e: 0, x: 540, y: 820, w: 0, h: 0, r: 0, rot: 0, rx: 0, z: 0, sk: 0, c: PUR, o: 0, a: 0, rad: 0 };
+const KF = Array.from({ length: NS }, () => [[-10, { ...DEF }]]);
+function K(i, t, p) { const last = KF[i][KF[i].length - 1][1]; KF[i].push([t, { ...last, ...p }]); }
+function KA(ids, t, fn) { ids.forEach((i, k) => K(i, t + (fn.d || 0) * k, typeof fn === 'function' ? fn(k) : fn)); }
+const fdefs = document.getElementById('fdefs');
+const shapes = [], blurs = [], anchors = [];
+// paint order: pages/layers (6-9) first, then rows, hand etc.
+const ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
+for (let i = 0; i < NS; i++) {
+  fdefs.insertAdjacentHTML('beforeend', `<filter id="b${i}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0 0"/></filter>`);
+}
+ORDER.forEach(i => {
+  const s = el(space, 'div', 'shape', { filter: `url(#b${i})` });
+  anchors[i] = el(s, 'div', 'anchor');
+  shapes[i] = s;
+});
+for (let i = 0; i < NS; i++) blurs[i] = document.querySelector(`#b${i} feGaussianBlur`);
+function stateAt(i, t) {
+  const L = KF[i]; let k = 0;
+  while (k + 1 < L.length && L[k + 1][0] <= t) k++;
+  if (k === 0) return L[0][1];
+  const a = L[k - 1][1], b = L[k][1], p = b.e ? expo(t, L[k][0], 0.5) : sp(t, L[k][0]);
+  const o = {};
+  for (const key in b) o[key] = key === 'c' ? null : lerp(a[key], b[key], p);
+  o.c = mixC(a.c, b.c, p);
+  o.w = Math.max(0, o.w); o.h = Math.max(0, o.h);
+  return o;
+}
+function pos(s) { const ar = s.a * Math.PI / 180; return { x: s.x + Math.sin(ar) * s.rad, y: s.y - Math.cos(ar) * s.rad }; }
+
+// ===================== SCENE A: hook + kinetic type (0–6.5) =====================
+const BASE = 1100;                         // chart baseline
+const barAt = (x, h, w = 150) => ({ x, y: BASE - h / 2, w, h });
+K(0, -1, { x: 540, y: 820, w: 140, h: 60, c: PUR });   // opening frame: one small purple bar
+K(15, -1, { x: 540, y: BASE, w: 0, h: 4, c: INK });
+K(15, 0.5, { w: 720 });
+K(0, 0.5, barAt(400, 100));
+K(0, 1.0, barAt(400, 220)); K(0, 1.5, barAt(400, 360)); K(0, 2.0, barAt(400, 500));
+K(1, -1, { x: 680, y: BASE, w: 150, h: 0, c: INK });
+K(1, 3.0, barAt(680, 70)); K(1, 3.5, barAt(680, 92));
+K(0, 4.0, barAt(400, 600)); K(0, 5.0, barAt(400, 680));
+const lblBiz = mtext(330, BASE + 18, 36, 'Business', { w: 700 });
+const lblSys = mtext(622, BASE + 18, 36, 'System', { w: 700 });
+const qMark = mtext(650, BASE - 230, 120, '<span class="amb">?</span>');
+const hA1 = mtext('c', 250, 92, 'Aapka business');
+const hA2 = mtext('c', 355, 92, '<span class="pur">grow</span> kar raha hai…');
+const hA3 = mtext('c', 250, 92, 'Aur aapka system?');
+
+// ===================== SCENE B: shape morph — the manual checklist (6.5–10) =====================
+const CARD = { x: 540, y: 830, w: 620, h: 560 };
+K(15, 6.5, { w: 0 });
+K(1, 6.5, { x: CARD.x, y: CARD.y, w: CARD.w, h: CARD.h, r: 28, c: WHT });
+K(0, 6.5, { x: CARD.x, y: CARD.y - CARD.h / 2 + 10, w: CARD.w, h: 20, r: 10 });
+const CHY = [700, 820, 940];
+[2, 3, 4].forEach((i, k) => { K(i, -1, { x: 300, y: CHY[k], w: 0, h: 0, r: 10, c: WHT, o: 4 }); K(i, 7.0 + k * 0.1, { w: 46, h: 46 }); });
+[5, 6, 7].forEach((i, k) => { K(i, -1, { x: 300, y: CHY[k], w: 0, h: 0, r: 6, c: PUR }); K(i, 8.0 + k * 0.5, { w: 28, h: 28 }); });
+const TASKS = ['Orders note karo', 'Payment check karo', 'Customer ko reply karo'];
+const taskText = TASKS.map((s, k) => mtext(350, CHY[k] - 28, 38, s, { w: 600, z: 25 }));
+const easy = mtext('c', 300, 140, 'Easy<span class="pur">.</span>');
+
+// ===================== SCENE C: overload (10–17.5) =====================
+const ROWY = k => 590 + k * 72;
+const RCOL = k => (k % 3 === 2 ? AMB : '#EFE7DA');
+K(1, 10.0, { y: 860, h: 640 });
+K(0, 10.0, { y: 860 - 320 + 10 });
+// checkboxes + ticks become the first rows; more rows keep arriving
+[2, 3, 4, 5, 6, 7].forEach((i, k) => K(i, 10.0 + k * 0.08, { x: 540, y: ROWY(k), w: 540, h: 56, r: 12, c: RCOL(k), o: 0 }));
+[8, 9, 10, 11, 12, 13].forEach((i, k) => {
+  const t = 11.0 + k * 0.75;
+  K(i, -1, { x: 540, y: ROWY(6 + k), w: 0, h: 56, r: 12, c: RCOL(6 + k) });
+  K(i, t, { w: 540 });
+});
+// jam: rows slip and tilt
+const JAM = [[-5, -20], [4, 26], [-3, 10], [6, -30], [-6, 18], [3, -12], [-4, 30], [5, -24], [-2, 14], [6, 22], [-5, -16], [4, 8]];
+[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].forEach((i, k) => K(i, 16.0 + k * 0.03, { rot: JAM[k][0], x: 540 + JAM[k][1] }));
+K(1, 16.0, { rot: -3 }); K(0, 16.0, { rot: -3 });
+const cA = mtext('c', 250, 100, 'Customers <span class="pur">↑</span>');
+const cB = mtext('c', 250, 100, 'Orders <span class="pur">↑</span>');
+const cC = mtext('c', 250, 100, 'Kaam <span class="pur">↑</span>');
+const cD = mtext('c', 250, 130, '<span class="amb">Problem.</span>');
+
+// ===================== SCENE D: 2D -> 3D tower (17.5–21.5) =====================
+const RX = 58, RZ = -40, TS = 340, TCOL = [INK, WHT, AMB, WHT, '#E9DDCA', PUR];
+const TOWER = [2, 3, 4, 5, 6, 7];
+TOWER.forEach((i, k) => K(i, 17.3 + k * 0.03, { x: 540, y: 960, w: TS, h: TS, r: 40, rot: RZ, rx: RX, z: k * 4, c: TCOL[k] }));
+[8, 9, 10, 11, 12, 13].forEach(i => K(i, 17.3, { x: 540, y: 960, w: 0, h: 0, rot: 0 }));
+K(1, 17.3, { x: 540, y: 960, w: 0, h: 0, rot: 0 });
+K(0, 17.3, { x: 540, y: 960, w: 0, h: 0, rot: 0 });
+// the tower grows one layer per beat
+[18.0, 18.5, 19.0, 19.5, 20.0].forEach((t, j) => TOWER.forEach((i, k) => { if (k > j) K(i, t, { z: (j + 1) * 62 + (k - j - 1) * 4 }); }));
+[[20.5, -28], [21.0, -40]].forEach(([t, r]) => TOWER.forEach(i => K(i, t, { rot: r })));
+const dA = mtext('c', 250, 92, 'Systems jo saath');
+const dB = mtext('c', 355, 92, '<span class="pur">grow</span> karein.');
+
+// ===================== SCENE E: UI — three products (21.5–28) =====================
+const CY = [470, 810, 1150], CH = 300;
+TOWER.forEach(i => K(i, 21.4, { rx: 0, rot: 0, z: 0 }));
+K(2, 21.5, { x: 540, y: CY[0], w: 900, h: CH, r: 28, c: WHT });
+[3, 4, 5, 6, 7].forEach(i => K(i, 21.5, { x: 540, y: CY[0], w: 0, h: 0, c: WHT }));
+K(3, 24.5, { y: CY[1] }); K(3, 24.6, { w: 900, h: CH, r: 28 });
+K(4, 25.3, { y: CY[2] }); K(4, 25.4, { w: 900, h: CH, r: 28 });
+const uiL = el(world, 'div', '', { position: 'absolute', inset: '0', zIndex: 15 });
+function cardHTML(k, title, body) {
+  const d = el(uiL, 'div', '', { position: 'absolute', left: '90px', top: (CY[k] - CH / 2) + 'px', width: '900px', height: CH + 'px', overflow: 'hidden' });
+  d.innerHTML = `<div class="txt" style="position:absolute;left:40px;top:34px;font-size:40px">${title}</div>` + body;
+  return d;
+}
+const uiCards = [
+  cardHTML(0, 'Websites', `
+    <div style="position:absolute;left:420px;top:40px;width:440px;height:220px;border-radius:16px;box-shadow:0 0 0 2px ${LIN}">
+      <div style="position:absolute;left:18px;top:18px;width:10px;height:10px;border-radius:5px;background:${LIN}"></div>
+      <div style="position:absolute;left:34px;top:18px;width:10px;height:10px;border-radius:5px;background:${LIN}"></div>
+      <div class="seq" style="position:absolute;left:90px;top:14px;width:260px;height:18px;border-radius:9px;background:#EFE7DA"></div>
+      <div class="seq" style="position:absolute;left:24px;top:60px;width:220px;height:24px;border-radius:6px;background:${INK}"></div>
+      <div class="seq" style="position:absolute;left:24px;top:98px;width:300px;height:14px;border-radius:6px;background:#D9CDB9"></div>
+      <div class="seq" style="position:absolute;left:24px;top:150px;width:130px;height:44px;border-radius:10px;background:${PUR}"></div></div>
+    <div style="position:absolute;left:40px;top:110px;font-size:26px;color:${MUT};font-weight:600;line-height:1.5">Aapki online pehchaan</div>`),
+  cardHTML(1, 'E-commerce platforms', `
+    ${[0, 1, 2].map(k => `<div style="position:absolute;left:${40 + k * 150}px;top:110px;width:130px;height:130px;border-radius:14px;background:${['#E9DDCA', '#E2D2BA', '#EFE4D3'][k]}"></div>`).join('')}
+    <div id="cartBtn" style="position:absolute;left:560px;top:150px;width:300px;height:64px;border-radius:14px;background:${INK};color:#fff;font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center">Add to cart</div>
+    <div id="cartBadge" style="position:absolute;left:836px;top:134px;width:40px;height:40px;border-radius:20px;background:${PUR};color:#fff;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center">1</div>`),
+  cardHTML(2, 'Custom software', `
+    <div style="position:absolute;left:40px;top:110px;font-size:26px;color:${MUT};font-weight:600">Aapke kaam ke hisaab se</div>
+    ${[0, 1, 2, 3, 4].map(k => `<div class="cbar" style="position:absolute;left:${480 + k * 78}px;bottom:40px;width:52px;border-radius:8px 8px 3px 3px;background:${k === 4 ? PUR : (k === 2 ? AMB : '#E2D2BA')}"></div>`).join('')}`),
+];
+const cartBadge = uiL.querySelector('#cartBadge'), cartBtn = uiL.querySelector('#cartBtn');
+const cbars = [...uiL.querySelectorAll('.cbar')];
+const seqEls = [...uiL.querySelectorAll('.seq')];
+const CARDIN = [21.7, 24.8, 25.6];
+
+// ===================== SCENE F: strongest moment (28–32.5) =====================
+[2, 3, 4].forEach(i => K(i, 28.0, { y: 760, w: 0, h: 0 }));
+K(8, 27.9, { x: 540, y: 740, w: 0, h: 0, r: 200, c: BEI, o: 12, rot: 0 });
+K(8, 28.0, { w: 400, h: 400 });
+K(9, 27.9, { x: 540, y: 740, w: 0, h: 0, rot: 45, r: 4, c: PUR, rad: 200, a: 0 });
+K(9, 28.0, { w: 40, h: 40 });
+[28.5, 29.0, 29.5].forEach((t, k) => K(9, t, { a: 360 * (k + 1) }));
+const rA = mtext('c', 1010, 96, 'Repetitive kaam');
+const rB = mtext('c', 1125, 96, 'nahi.', { color: MUT });
+K(10, 29.9, { x: 110, y: 1072, w: 0, h: 16, r: 3, c: INK });
+K(10, 30.0, { x: 540, w: 880 });
+K(8, 30.0, { w: 0, h: 0 }); K(9, 30.0, { w: 0, h: 0, rad: 0 });
+K(10, 30.6, { w: 0 });
+const gA = mtext('c', 300, 128, 'Business');
+const gB = mtext('c', 440, 128, '<span class="pur">grow.</span>');
+// the business bar returns from the baseline and takes over the frame
+K(0, 30.4, { x: 540, y: 1420, w: 180, h: 0, r: 0, rot: 0, c: PUR, e: 0 });
+K(0, 30.8, { y: 1110, h: 620 });
+K(0, 31.25, { x: 540, y: 960, w: 2400, h: 2400, e: 1 });
+
+// ===================== SCENE G: end title (32.5–38) =====================
+K(0, 32.5, { x: 540, y: 640, w: 600, h: 8, e: 1 });
+const MK = 0.4, MCX = 540, MCY = 640;
+const markBar = k => ({ x: MCX + ([849, 985, 1119.5][k] - 965.5) * MK, y: MCY + (913 - 948) * MK, w: 110 * MK, h: 160 * MK, sk: -9.93, r: 0 });
+[1, 2].forEach(i => K(i, 32.9, { x: 540, y: 640, w: 0, h: 8, c: PUR, rot: 0, rx: 0, z: 0, r: 0, sk: 0 }));
+[0, 1, 2].forEach((i, k) => K(i, 33.0, { ...markBar(k), e: 0 }));
+const markSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+markSvg.setAttribute('viewBox', '0 0 1932 1932'); markSvg.setAttribute('width', 1932 * MK); markSvg.setAttribute('height', 1932 * MK);
+markSvg.innerHTML = `<path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/>`;
+Object.assign(markSvg.style, { position: 'absolute', left: (MCX - 965.5 * MK) + 'px', top: (MCY - 948 * MK) + 'px', zIndex: 5 });
+world.appendChild(markSvg);
+const fA = mtext('c', 920, 128, 'HeliosLabs');
+const fB = mtext('c', 1090, 46, 'Technology that grows', { w: 600, color: MUT });
+const fC = mtext('c', 1150, 46, 'with your <span class="pur">business.</span>', { w: 600 });
+// back to the opening bar (loop)
+[0, 1, 2].forEach(i => K(i, 37.2, { x: 540, y: 820, w: 46, h: 60, sk: 0 }));
+K(0, 37.45, { w: 140, h: 60, e: 1 }); K(1, 37.45, { w: 0, h: 0 }); K(2, 37.45, { w: 0, h: 0 });
+
+// ===================== camera =====================
+const SCENES = [0, 6.5, 10, 17.5, 21.5, 28, 32.5, 37.2, 38];
+function camAt(t) {
+  let i = 0; while (i + 1 < SCENES.length && SCENES[i + 1] <= t) i++;
+  const a = SCENES[i], b = SCENES[Math.min(i + 1, SCENES.length - 1)], span = Math.max(0.01, b - a);
+  const push = a >= 37.2 ? 0 : 0.05 * clamp((t - a) / span);
+  const ex = (i > 0 ? 0.05 : 0) * (1 - expo(t, a, 0.45));
+  return { z: 1 + push + ex, cx: 540, cy: 840 };
+}
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.25, 3.0, 'Aapka business grow toh kar raha hai…'],
+  [3.0, 6.5, 'Lekin kya aapka system bhi uske saath grow kar raha hai?'],
+  [6.5, 10.0, 'Shuru mein sab kuch manually manage karna easy lagta hai.'],
+  [10.0, 13.5, 'Lekin jaise-jaise customers badhte hain, orders badhte hain,'],
+  [13.5, 17.5, 'aur kaam badhta hai… wahi purana system problem banne lagta hai.'],
+  [17.5, 21.5, 'Isliye zaroori hai aise systems jo aapke business ke saath grow karein.'],
+  [21.5, 24.5, 'HeliosLabs aapke business ke liye websites,'],
+  [24.5, 28.0, 'e-commerce platforms aur custom software develop karta hai.'],
+  [28.0, 32.5, 'Taaki aap repetitive kaam mein nahi, apne business ko grow karne mein time laga sakein.'],
+  [32.5, 37.1, 'HeliosLabs. Technology that grows with your business.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { world.style.transform = 'none'; [hA1, hA2, hA3, easy, cA, cB, cC, cD, dA, dB, rA, rB, gA, gB, fA, fB, fC].forEach(centre); measured = true; }
+  const c = camAt(t);
+  world.style.transform = `translate(540px,${c.cy}px) scale(${c.z}) translate(-540px,${-c.cy}px)`;
+
+  // A
+  showText(hA1, t, 0.5, 2.8); showText(hA2, t, 1.0, 2.85); showText(hA3, t, 3.0, 6.2);
+  showText(lblBiz, t, 0.5, 6.3); showText(lblSys, t, 3.0, 6.3); showText(qMark, t, 4.5, 6.2);
+  // B
+  showText(easy, t, 7.0, 9.8);
+  taskText.forEach((m, k) => showText(m, t, 7.2 + k * 0.1, 9.8 + k * 0.05));
+  // C
+  showText(cA, t, 10.5, 11.4); showText(cB, t, 11.5, 13.4); showText(cC, t, 13.5, 15.9); showText(cD, t, 16.0, 17.3);
+  // D
+  showText(dA, t, 18.0, 21.2); showText(dB, t, 18.5, 21.25);
+  // E
+  uiL.style.display = (t >= 21.5 && t < 28.2) ? 'block' : 'none';
+  uiCards.forEach((d, k) => {
+    const pIn = clamp(sp(t, CARDIN[k])), pOut = clamp(sp(t, 27.8));
+    d.style.clipPath = `inset(0 0 ${(1 - pIn) * 100 + pOut * 100}% 0)`;
+    d.style.visibility = t < CARDIN[k] ? 'hidden' : 'visible';
+  });
+  { const p = clamp(sp(t, 26.0)); cartBadge.style.transform = `scale(${p})`; cartBtn.style.transform = `scale(${1 - 0.05 * Math.sin(Math.PI * clamp((t - 25.85) / 0.18))})`; }
+  cbars.forEach((b, k) => { b.style.height = (150 * [0.35, 0.5, 0.42, 0.7, 0.95][k] * clamp(sp(t, 26.5 + k * 0.25))) + 'px'; });
+  seqEls.forEach((e, k) => { const p = clamp(sp(t, 22.0 + k * 0.5)); e.style.clipPath = `inset(0 ${(1 - p) * 100}% 0 0)`; });
+  seqEls[3].style.transform = `scale(${1 - 0.08 * Math.sin(Math.PI * clamp((t - 24.0) / 0.2))})`;
+  // F
+  showText(rA, t, 28.5, 30.5); showText(rB, t, 30.0, 30.55);
+  showText(gA, t, 30.5, 31.3); showText(gB, t, 30.75, 31.35);
+  // G
+  { const p = clamp(sp(t, 33.5)) * (1 - clamp(sp(t, 36.9)));
+    markSvg.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+    markSvg.style.visibility = (t < 33.5 || t > 37.4) ? 'hidden' : 'visible'; }
+  showText(fA, t, 34.0, 36.8); showText(fB, t, 34.5, 36.85); showText(fC, t, 34.8, 36.9);
+
+  // shapes
+  for (let i = 0; i < NS; i++) {
+    const s = stateAt(i, t), s2 = stateAt(i, t - 1 / 60), e = shapes[i];
+    const p = pos(s), p2 = pos(s2);
+    const vx = (p.x - p2.x) * 60, vy = (p.y - p2.y) * 60;
+    blurs[i].setAttribute('stdDeviation', `${Math.min(16, Math.abs(vx) / 280).toFixed(2)} ${Math.min(16, Math.abs(vy) / 280).toFixed(2)}`);
+    Object.assign(e.style, {
+      width: s.w + 'px', height: s.h + 'px', borderRadius: Math.min(s.r, s.w / 2, s.h / 2) + 'px', background: s.c,
+      boxShadow: s.o > 0.2 ? `inset 0 0 0 ${s.o}px ${INK}` : 'none',
+      transform: `translate3d(${p.x - s.w / 2}px,${p.y - s.h / 2}px,0) rotateX(${s.rx}deg) rotateZ(${s.rot + s.a}deg) translateZ(${s.z}px) skewX(${s.sk}deg)`,
+      visibility: (s.w < 0.5 || s.h < 0.5) ? 'hidden' : 'visible',
+    });
+  }
+  // subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 38;
+window.seek(0);
+</script>
+</body>
+</html>
