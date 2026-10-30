@@ -15,12 +15,14 @@ fs.writeFileSync(path.join(tmp, 'page.html'), html);
   const outDir = path.join(tmp, mode === 'beats' ? 'beats' : 'frames'); fs.mkdirSync(outDir, { recursive: true });
   if (mode === 'beats') times = Array.from({ length: D * 2 }, (_, i) => i * 0.5 + 0.4); // just after each beat
   else times = Array.from({ length: D * 180 }, (_, i) => i / 180); // 60fps x 3 subframes
+  const FROM = +(process.env.FROM || 0);
   const pages = [page0];
   for (let i = 1; i < N; i++) { const p = await browser.newPage({ viewport: { width: VW, height: VH } }); await p.goto('file://' + path.join(tmp, 'page.html') + HASH); pages.push(p); }
   let next = 0, done = 0;
   await Promise.all(pages.map(async p => {
     while (next < times.length) {
       const i = next++;
+      if (mode === 'full' && times[i] < FROM) continue;
       await p.evaluate(t => window.seek(t), times[i]);
       await p.screenshot({ path: path.join(outDir, String(i).padStart(5, '0') + '.jpg'), type: 'jpeg', quality: 92 });
       if (++done % 500 === 0) console.log(done, '/', times.length);

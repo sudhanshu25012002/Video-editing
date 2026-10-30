@@ -208,15 +208,15 @@ const rOn = E(R, { left: '570px', top: '1160px', width: '380px', height: '120px'
 
 // ===================== E: end title (50.4–56.5) =====================
 const EN = scene(7560);
-const MK = 0.42;
+const MK = 0.3;
 const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
 const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
 const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 mark.setAttribute('viewBox', '0 0 1932 1932'); mark.setAttribute('width', 1932 * MK); mark.setAttribute('height', 1932 * MK);
-mark.innerHTML = `<g class="br"><path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
-Object.assign(mark.style, { position: 'absolute', left: (540 - 965.5 * MK) + 'px', top: (700 - 948 * MK) + 'px' });
+mark.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+Object.assign(mark.style, { position: 'absolute', left: (540 - 965.5 * MK) + 'px', top: (640 - 948 * MK) + 'px' });
 EN.appendChild(mark);
-const markBr = mark.querySelector('.br'), markBars = [...mark.querySelectorAll('.bar')];
+const markBr = mark.querySelector('.br'), markBars = [...mark.querySelectorAll('.bar')], markBg = mark.querySelector('.bg');
 const e1 = T(EN, 'c', 980, 128, 'HeliosLabs');
 const e2 = T(EN, 'c', 1150, 46, 'We build digital solutions', { color: MUT, w: 700 });
 const e3 = T(EN, 'c', 1214, 46, 'for <span class="pur">growing businesses.</span>', { w: 700 });
@@ -347,7 +347,7 @@ window.seek = function (t) {
   { const a = clamp(sp(t, 49.88)), b = clamp(sp(t, 50.05)); rOff.style.transform = `translateY(${(1 - a) * 400}px)`; rOn.style.transform = `translateY(${(1 - b) * 400}px)`; rOff.style.visibility = t < 49.88 ? 'hidden' : 'visible'; rOn.style.visibility = t < 50.05 ? 'hidden' : 'visible'; }
 
   // ---- E: end
-  { const p = clamp(sp(t, 50.9)); markBr.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; markBars.forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, 50.6 + k * 0.1))})`); mark.style.visibility = t < 50.6 ? 'hidden' : 'visible'; }
+  { const p = clamp(sp(t, 50.9)); markBr.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; markBg.style.transform = `scale(${clamp(sp(t, 50.6 - 0.15))})`; markBars.forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, 50.6 + k * 0.1))})`); mark.style.visibility = t < 50.6 - 0.15 ? 'hidden' : 'visible'; }
   show(e1, t, 50.95); show(e2, t, 51.86); show(e3, t, 52.3);
 
   // ---- subtitles
