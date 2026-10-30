@@ -1,0 +1,235 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Busy Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .a { position: absolute; }
+  .layer { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .bub { position: absolute; width: 190px; height: 190px; border-radius: 95px; background: #FFFDF8; box-shadow: 0 16px 40px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 26px; }
+  .chip { position: absolute; height: 60px; padding: 0 24px; border-radius: 30px; background: #FFFDF8; box-shadow: 0 0 0 2px #E2D8C6; font-size: 26px; font-weight: 700; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 50; }
+  #sub { position: absolute; left: 70px; right: 70px; top: 1500px; text-align: center; z-index: 50; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 38px; font-weight: 600; line-height: 1.32; padding: 16px 28px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs><filter id="zb"><feGaussianBlur stdDeviation="0"/></filter></defs></svg>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inin = p => p * p * p;
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+
+// ===================== scenes as stacked layers; zoom-through transitions =====================
+// [start, end, focus x, focus y]  (a scene zooms into its focus point while the next opens from it)
+const SC = [[0, 4.95, 540, 860], [4.95, 10.8, 860, 1140], [10.8, 14.35, 540, 820], [14.35, 19.35, 540, 900], [19.35, 24.9, 540, 900], [24.9, 28.65, 540, 900], [28.65, 35.5, 540, 900]];
+const layers = SC.map((_, k) => { const L = E(stage, { zIndex: 1 + k }, '', 'layer'); stage.insertBefore(L, document.getElementById('logoTL')); return L; });
+const [L0, L1, L2, L3, L4, L5, L6] = layers;
+
+// ---- L0: one-person army
+const t0a = T(L0, 'c', 230, 92, 'Aap business');
+const t0b = T(L0, 'c', 340, 92, 'chala rahe ho…');
+const t0c = T(L0, 'c', 230, 100, 'Ya sab kuch');
+const t0d = T(L0, 'c', 345, 120, '<span class="amb">akele?</span>');
+const person = E(L0, { left: '440px', top: '700px', width: '200px', height: '320px' },
+  `<div style="position:absolute;left:50px;top:0;width:100px;height:100px;border-radius:50px;background:${INK}"></div><div style="position:absolute;left:0;top:120px;width:200px;height:200px;border-radius:100px 100px 30px 30px;background:${INK}"></div>`);
+const ORB = ['Orders', 'Payments', 'Replies', 'Bills', 'Delivery', 'Accounts'];
+const bubs = ORB.map((n, k) => E(L0, {}, `<div style="width:44px;height:44px;border-radius:22px;background:${[AMB, PUR, INK][k % 3]};margin-bottom:10px"></div>${n}`, 'bub'));
+
+// ---- L1: the manual to-do list + overload meter
+const L1t = T(L1, 'c', 230, 84, 'Sab kuch <span class="amb">manually</span>');
+const TODO = [['Orders note karna', 5.26], ['Payments track karna', 7.18], ['Customers ko reply', 8.73]];
+const rows = TODO.map(([n], k) => E(L1, { left: '90px', top: (440 + k * 190) + 'px', width: '660px', height: '160px' }, `
+  <div style="position:absolute;left:30px;top:48px;width:64px;height:64px;border-radius:16px;box-shadow:inset 0 0 0 5px ${INK}"></div>
+  <div style="position:absolute;left:120px;top:52px;font-size:40px;font-weight:800;letter-spacing:-0.02em">${n}</div>`, 'card'));
+const meter = E(L1, { left: '790px', top: '440px', width: '160px', height: '540px', borderRadius: '40px', background: '#EDE4D4', overflow: 'hidden' });
+const meterFill = E(meter, { left: '0', bottom: '0', width: '160px', background: AMB });
+const meterLbl = T(L1, 790, 1000, 30, 'Overload', { w: 700, color: AMB });
+const deco = [
+  E(L1, { left: '120px', top: '1030px', width: '500px', height: '8px', borderRadius: '4px', background: INK }),       // pen line (orders)
+  E(L1, { left: '120px', top: '1080px', width: '300px', height: '70px' }, `${[0, 1, 2].map(k => `<div style="position:absolute;left:${k * 70}px;top:${-k * 6}px;width:60px;height:60px;border-radius:30px;background:${AMB};box-shadow:inset 0 0 0 6px #C98A26;font-size:28px;font-weight:800;color:${INK};display:flex;align-items:center;justify-content:center">₹</div>`).join('')}`),
+  E(L1, { left: '360px', top: '1080px', width: '420px', height: '220px' }, `${['Price?', 'Kab tak?', 'Reply karo!'].map((m, k) => `<div class="mm" style="position:absolute;left:${k * 60}px;top:${k * 70}px;padding:14px 22px;border-radius:22px 22px 22px 6px;background:${k === 2 ? INK : '#F1E9DC'};color:${k === 2 ? '#fff' : INK};font-size:28px;font-weight:600;transform-origin:0 100%">${m}</div>`).join('')}`),
+];
+const mms = [...deco[2].querySelectorAll('.mm')];
+
+// ---- L2: growth flatlines
+const L2t = T(L2, 'c', 230, 84, 'Business <span class="pur">grow?</span>');
+const L2n = T(L2, 'c', 1120, 110, '<span class="amb">Nahi ho raha!</span>');
+const chart = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+chart.setAttribute('width', 900); chart.setAttribute('height', 600); Object.assign(chart.style, { position: 'absolute', left: '90px', top: '440px' });
+chart.innerHTML = `${[0, 1, 2, 3].map(k => `<path d="M0 ${120 + k * 140} H900" stroke="${LIN}" stroke-width="3"/>`).join('')}
+  <path class="ln" d="M20 500 L220 380 L380 420 L520 330 L620 340 L900 345" fill="none" stroke="${INK}" stroke-width="14" stroke-linejoin="round" stroke-linecap="round"/>
+  <g class="x" style="transform-box:fill-box;transform-origin:center"><circle cx="820" cy="250" r="56" fill="${AMB}"/><path d="M796 226 L844 274 M844 226 L796 274" stroke="#fff" stroke-width="14" stroke-linecap="round"/></g>`;
+L2.appendChild(chart); const ln2 = chart.querySelector('.ln'), x2 = chart.querySelector('.x'); const LN2 = ln2.getTotalLength();
+
+// ---- L3: not just hard work, smart systems
+const L3a = T(L3, 'c', 330, 110, 'Sach ye hai…');
+const L3b = T(L3, 'c', 560, 130, 'Sirf mehnat');
+const strike = E(L3, { left: '170px', top: '635px', width: '740px', height: '18px', borderRadius: '9px', background: AMB, transformOrigin: '0 50%', zIndex: 12 });
+const L3c = T(L3, 'c', 760, 72, 'nahi,', { color: MUT });
+const lock = E(L3, { left: '415px', top: '930px', width: '250px', height: '300px' },
+  `<svg width="250" height="300" viewBox="0 0 250 300"><path class="shk" d="M65 130 V85 a60 60 0 0 1 120 0 V130" fill="none" stroke="${PUR}" stroke-width="26" stroke-linecap="round" style="transform-box:fill-box;transform-origin:100% 100%"/>
+   <rect x="20" y="125" width="210" height="165" rx="34" fill="${PUR}"/><circle cx="125" cy="195" r="20" fill="#fff"/><rect x="117" y="200" width="16" height="44" rx="7" fill="#fff"/></svg>`);
+const shackle = lock.querySelector('.shk');
+const L3d = T(L3, 'c', 1270, 110, '<span class="pur">Smart systems</span>');
+
+// ---- L4: the system pipeline
+const L4a = T(L4, 'c', 230, 84, 'Repetitive kaam');
+const L4b = T(L4, 'c', 335, 110, '<span class="pur">easy.</span>');
+const NODES = [['Website', 19.45], ['Order\nmanagement', 20.3], ['Business\nautomation', 21.66]];
+const nodes = NODES.map(([n], k) => E(L4, { left: (70 + k * 330) + 'px', top: '560px', width: '280px', height: '280px', borderRadius: '40px', background: k === 2 ? PUR : WHT, color: k === 2 ? '#fff' : INK, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: '32px', fontWeight: 800, whiteSpace: 'pre-line', lineHeight: '1.2' }, n));
+const links = [0, 1].map(k => E(L4, { left: (350 + k * 330) + 'px', top: '694px', width: '50px', height: '12px', borderRadius: '6px', background: INK, transformOrigin: '0 50%' }));
+const belt = E(L4, { left: '70px', top: '980px', width: '940px', height: '16px', borderRadius: '8px', background: LIN });
+const TASKS = ['Orders', 'Payments', 'Replies', 'Bills', 'Reminders', 'Records'];
+const flowChips = TASKS.map(n => E(L4, {}, `<span class="d" style="width:18px;height:18px;border-radius:9px;background:${AMB}"></span>${n}`, 'chip'));
+
+// ---- L5: busy -> grow
+const L5a = T(L5, 'c', 230, 84, '<span class="amb">Busy</span> rehne ke bajaye');
+const L5b = T(L5, 'c', 340, 92, 'business <span class="pur">grow</span> karo.');
+const cal = Array.from({ length: 12 }, (_, k) => E(L5, { left: (110 + (k % 4) * 220) + 'px', top: (520 + Math.floor(k / 4) * 170) + 'px', width: '200px', height: '150px', borderRadius: '20px', background: AMB, color: INK, fontSize: '26px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }, 'Busy'));
+const gchart = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+gchart.setAttribute('width', 900); gchart.setAttribute('height', 560); Object.assign(gchart.style, { position: 'absolute', left: '90px', top: '500px' });
+gchart.innerHTML = `<path class="g" d="M20 520 C 220 500, 330 440, 450 360 S 700 120, 880 40" fill="none" stroke="${PUR}" stroke-width="18" stroke-linecap="round"/><path class="ar" d="M840 30 L888 36 L870 82" fill="none" stroke="${PUR}" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`;
+L5.appendChild(gchart); const g5 = gchart.querySelector('.g'), ar5 = gchart.querySelector('.ar'); const G5 = g5.getTotalLength();
+
+// ---- L6: STOP -> START, logo
+const stopStamp = E(L6, { left: '170px', top: '360px', width: '740px', height: '300px', borderRadius: '36px', boxShadow: `inset 0 0 0 16px ${AMB}`, color: AMB, fontSize: '200px', fontWeight: 800, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', transformOrigin: '50% 50%' }, 'STOP');
+const startStamp = E(L6, { left: '170px', top: '360px', width: '740px', height: '300px', borderRadius: '36px', background: PUR, color: '#fff', fontSize: '190px', fontWeight: 800, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center' }, 'START');
+const s6a = T(L6, 'c', 720, 56, 'managing everything manually.', { w: 700 });
+const s6b = T(L6, 'c', 720, 60, 'building <span class="pur">smarter.</span>', { w: 800 });
+const MK = 0.34;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+mark.setAttribute('viewBox', '0 0 1932 1932'); mark.setAttribute('width', 1932 * MK); mark.setAttribute('height', 1932 * MK);
+mark.innerHTML = `<g class="br"><path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+Object.assign(mark.style, { position: 'absolute', left: (540 - 965.5 * MK) + 'px', top: (1040 - 948 * MK) + 'px' });
+L6.appendChild(mark); const markBr = mark.querySelector('.br'), markBars = [...mark.querySelectorAll('.bar')];
+const s6c = T(L6, 'c', 1270, 100, 'HeliosLabs');
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.0, 1.9, 'Aap business chala rahe ho…'],
+  [1.9, 4.9, 'ya business ke saare kaam akele kar rahe ho?'],
+  [4.9, 7.0, 'Orders manually note karna,'],
+  [7.0, 8.6, 'payments track karna,'],
+  [8.6, 10.6, 'customers ko reply dena…'],
+  [10.6, 14.2, 'Aur phir kehte ho business grow nahi ho raha!'],
+  [14.2, 17.5, 'Sach ye hai, business ko sirf mehnat nahi,'],
+  [17.5, 19.3, 'smart systems chahiye.'],
+  [19.3, 22.5, 'Website, order management aur business automation se'],
+  [22.5, 24.8, 'repetitive kaam easy ho sakte hain.'],
+  [24.8, 28.5, 'Taaki aap busy rehne ke bajaye business grow kar sako.'],
+  [28.5, 31.0, 'Stop managing everything manually.'],
+  [31.0, 35.5, 'Start building smarter with HeliosLabs.'],
+];
+const subBox = document.querySelector('#sub span');
+const zf = document.querySelector('#zb feGaussianBlur');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- zoom-through layer transitions
+  let blurMax = 0;
+  SC.forEach(([s, e, fx, fy], k) => {
+    const L = layers[k];
+    const inP = k === 0 ? 1 : expo(t, s - 0.05, 0.55);                   // circle reveal from previous focus
+    const outP = k === SC.length - 1 ? 0 : inin(clamp((t - (e - 0.4)) / 0.45)); // zoom into own focus
+    const push = 1 + 0.04 * clamp((t - s) / Math.max(0.1, e - s));
+    const sc = push * (1 + 5 * outP) * (k === 0 ? 1 : lerp(1.15, 1, inP));
+    L.style.transformOrigin = `${fx}px ${fy}px`; L.style.transform = `scale(${sc})`;
+    if (k > 0) { const [, , px, py] = SC[k - 1]; L.style.clipPath = `circle(${2300 * inP}px at ${px}px ${py}px)`; }
+    L.style.visibility = (t < s - 0.05 || t > e + 0.1) ? 'hidden' : 'visible';
+    if (outP > 0.01 && outP < 1) blurMax = Math.max(blurMax, outP * 18);
+    L.style.filter = outP > 0.02 && outP < 1 ? `blur(${(outP * 14).toFixed(1)}px)` : 'none';
+  });
+
+  // ---- L0 one-person army
+  show(t0a, t, 0.15, 1.9); show(t0b, t, 0.5, 1.95); show(t0c, t, 2.05, 4.9); show(t0d, t, 3.74, 4.95);
+  pop(person, t, 0.1);
+  { const speed = 0.6 + 2.6 * clamp((t - 2.0) / 2.6); const ang0 = t * 0.6 + 2.6 * Math.pow(clamp((t - 2.0) / 2.6), 2) * 2.6;
+    bubs.forEach((b, k) => { const a = ang0 + k * Math.PI / 3; const r = 330, cx = 540 + Math.cos(a) * r - 95, cy = 860 + Math.sin(a) * r * 0.82 - 95;
+      b.style.left = cx + 'px'; b.style.top = cy + 'px'; const p = clamp(sp(t, 2.9 + k * 0.08)); b.style.transform = `scale(${p})`; b.style.visibility = p < 0.01 ? 'hidden' : 'visible'; }); }
+
+  // ---- L1 manual to-do + overload
+  show(L1t, t, 5.1, 10.7);
+  rows.forEach((r, k) => { const p = clamp(sp(t, TODO[k][1])); r.style.transform = `translateX(${(1 - p) * -900}px)`; });
+  { const f = [5.26, 7.18, 8.73].reduce((a, ts) => a + 0.31 * expo(t, ts, 0.5), 0); meterFill.style.height = (540 * f) + 'px'; meterFill.style.background = f > 0.85 ? '#D9711F' : AMB; }
+  show(meterLbl, t, 5.4, 10.7);
+  deco[0].style.transform = `scaleX(${clamp((t - 6.1) / 0.6)})`; deco[0].style.transformOrigin = '0 50%'; deco[0].style.visibility = t > 8.6 ? 'hidden' : 'visible';
+  pop(deco[1], t, 7.38, 8.65);
+  mms.forEach((m, k) => pop(m, t, 9.0 + k * 0.25)); deco[2].style.visibility = t < 8.9 ? 'hidden' : 'visible';
+
+  // ---- L2 growth flatlines
+  show(L2t, t, 10.95, 14.3);
+  { const d = clamp((t - 11.4) / 1.6); ln2.style.strokeDasharray = LN2; ln2.style.strokeDashoffset = LN2 * (1 - d); ln2.style.stroke = t > 13.22 ? AMB : INK; }
+  pop(x2, t, 13.22); show(L2n, t, 13.3, 14.35);
+
+  // ---- L3 smart systems
+  show(L3a, t, 14.4, 16.1); show(L3b, t, 16.1, 19.3); show(L3c, t, 17.0, 19.3);
+  strike.style.transform = `scaleX(${inout(clamp((t - 17.0) / 0.35))})`;
+  pop(lock, t, 17.3);
+  { const u = clamp(sp(t, 17.95)); shackle.style.transform = `translateY(${-34 * u}px) rotate(${-25 * u}deg)`; }
+  show(L3d, t, 17.92, 19.4);
+
+  // ---- L4 pipeline
+  nodes.forEach((n, k) => pop(n, t, NODES[k][1]));
+  links.forEach((l, k) => { l.style.transform = `scaleX(${inout(clamp((t - NODES[k + 1][1] + 0.2) / 0.35))})`; });
+  pop(belt, t, 22.2);
+  flowChips.forEach((c, k) => { const u = (t - 22.4 - k * 0.32) / 1.6; const vis = u > 0 && u < 1;
+    const x = lerp(-260, 1100, u), y = 950; c.style.left = x + 'px'; c.style.top = y + 'px'; c.style.visibility = vis ? 'visible' : 'hidden';
+    const done = x > 540; const d = c.querySelector('.d'); d.style.background = done ? PUR : AMB; c.style.boxShadow = `0 0 0 ${done ? 3 : 2}px ${done ? PUR : LIN}`; });
+  show(L4a, t, 22.56, 24.9); show(L4b, t, 23.52, 24.95);
+
+  // ---- L5 busy -> grow
+  show(L5a, t, 25.1, 28.6); show(L5b, t, 26.9, 28.65);
+  cal.forEach((c, k) => { const pin = clamp(sp(t, 25.05 + k * 0.05)); const flip = clamp(sp(t, 26.4 + (k % 4) * 0.08 + Math.floor(k / 4) * 0.05));
+    c.style.transform = `scale(${pin}) rotateX(${90 * flip}deg)`; c.style.visibility = (pin < 0.01 || flip > 0.98) ? 'hidden' : 'visible'; });
+  { const d = inout(clamp((t - 27.0) / 0.9)); g5.style.strokeDasharray = G5; g5.style.strokeDashoffset = G5 * (1 - d); ar5.style.opacity = d > 0.95 ? 1 : 0; }
+
+  // ---- L6 STOP / START
+  { const slam = clamp(sp(t, 28.72)), flip = clamp(sp(t, 31.16));
+    stopStamp.style.transform = `scale(${lerp(2.2, 1, slam)}) rotate(${lerp(-12, -4, slam)}deg) rotateX(${90 * flip}deg)`; stopStamp.style.visibility = (t < 28.72 || flip > 0.98) ? 'hidden' : 'visible';
+    startStamp.style.transform = `rotateX(${90 * (1 - clamp(sp(t, 31.3)))}deg)`; startStamp.style.visibility = t < 31.3 ? 'hidden' : 'visible'; }
+  show(s6a, t, 29.2, 31.1); show(s6b, t, 31.6);
+  { const p = clamp(sp(t, 33.0)); markBr.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; markBars.forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, 32.86 + k * 0.08))})`); mark.style.visibility = t < 32.86 ? 'hidden' : 'visible'; }
+  show(s6c, t, 33.2);
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 35.5;
+window.seek(0);
+</script>
+</body>
+</html>
