@@ -1,0 +1,367 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Owner Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  #world { position: absolute; left: 0; top: 0; width: 1080px; height: 18000px; transform-origin: 0 0; }
+  .a { position: absolute; }
+  .scene { position: absolute; left: 0; width: 1080px; height: 1920px; overflow: hidden; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 30px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .chip { position: absolute; height: 56px; padding: 0 22px; border-radius: 28px; background: #FFFDF8; box-shadow: 0 0 0 2px #E2D8C6; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 50; }
+  #sub { position: absolute; left: 70px; right: 70px; top: 1500px; text-align: center; z-index: 50; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 38px; font-weight: 600; line-height: 1.32; padding: 16px 28px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<svg width="0" height="0" style="position:absolute"><defs><filter id="mb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="0 0"/></filter></defs></svg>
+<script>
+// ===================== palette & helpers =====================
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+const mixC = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], clamp(p)))).join(',')})`; };
+const world = document.getElementById('world');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const SY = k => k * 1920;
+function scene(k) { return E(world, { top: SY(k) + 'px' }, '', 'scene'); }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+
+// ===================== k0: owner or employee (0–3.2) =====================
+const S0 = scene(0);
+const q1 = T(S0, 'c', 230, 96, 'Business <span class="pur">owner?</span>');
+const q2 = T(S0, 'c', 345, 96, 'Ya <span class="amb">employee?</span>');
+const lanyard = E(S0, { left: '536px', top: '470px', width: '8px', height: '150px', background: INK, transformOrigin: '50% 0' });
+const clip = E(S0, { left: '510px', top: '450px', width: '60px', height: '40px', borderRadius: '12px', background: INK });
+const badgeWrap = E(S0, { left: '270px', top: '600px', width: '540px', height: '700px', perspective: '1400px', transformOrigin: '50% -130px' });
+const badge = E(badgeWrap, { left: '0', top: '0', width: '540px', height: '700px', transformStyle: 'preserve-3d' });
+const face = (bg, label, sub) => `<div style="position:absolute;inset:0;border-radius:36px;background:${WHT};box-shadow:0 30px 70px rgba(28,23,38,0.14),0 0 0 3px ${LIN};backface-visibility:hidden;overflow:hidden">
+  <div style="position:absolute;left:0;top:0;width:540px;height:150px;background:${bg}"></div><div style="position:absolute;left:220px;top:40px;width:100px;height:26px;border-radius:13px;background:${BEI}"></div>
+  <div style="position:absolute;left:170px;top:210px;width:200px;height:200px;border-radius:100px;background:${TILE[1]}"></div>
+  <div style="position:absolute;left:0;width:540px;top:450px;text-align:center;font-size:76px;font-weight:800;letter-spacing:0.04em;color:${bg}">${label}</div>
+  <div style="position:absolute;left:0;width:540px;top:560px;text-align:center;font-size:28px;font-weight:600;color:${MUT}">${sub}</div></div>`;
+const fFront = E(badge, { inset: '0', backfaceVisibility: 'hidden' }, face(PUR, 'OWNER', 'your.shop'));
+const fBack = E(badge, { inset: '0', transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }, face(AMB, 'EMPLOYEE', 'your.shop'));
+
+// ===================== k1: the morning task rush (3.2–12.5) =====================
+const S1 = scene(1);
+const dayTrack = E(S1, { left: '120px', top: '250px', width: '840px', height: '10px', borderRadius: '5px', background: LIN });
+const dayFill = E(S1, { left: '120px', top: '250px', height: '10px', borderRadius: '5px', background: AMB });
+const sun = E(S1, { left: '0px', top: '205px', width: '100px', height: '100px', borderRadius: '50px', background: AMB, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800, color: INK });
+const CHIPS = [['Shop', AMB], ['Messages', AMB], ['Orders', AMB], ['Reminder', AMB], ['Records', AMB]];
+const chips1 = CHIPS.map(([n, c], k) => E(S1, { left: (110 + (k % 3) * 290) + 'px', top: (330 + Math.floor(k / 3) * 72) + 'px' }, `<span style="width:16px;height:16px;border-radius:8px;background:${c}"></span>${n}`, 'chip'));
+const CHIPIN = [5.2, 6.7, 8.3, 10.4, 12.1];
+const panel = E(S1, { left: '130px', top: '520px', width: '820px', height: '840px' }, '', 'card');
+const pane = (html) => E(panel, { inset: '0' }, html);
+const P1 = pane(`<div style="position:absolute;left:40px;top:36px;font-size:32px;font-weight:800">Shop kholo</div>
+  <svg style="position:absolute;left:110px;top:130px" width="600" height="600" viewBox="0 0 600 600">
+   <path d="M20 170 L80 60 H520 L580 170 Z" fill="${INK}"/><path d="M80 60 H160 L140 170 H20 Z M240 60 H320 L320 170 H240 Z M400 60 H480 L520 170 H420 Z" fill="${AMB}"/>
+   <rect x="40" y="170" width="520" height="400" rx="10" fill="${TILE[0]}"/><rect x="110" y="230" width="380" height="340" rx="8" fill="${BEI}"/>
+   <rect x="200" y="300" width="200" height="90" rx="14" fill="${PUR}"/><text x="300" y="360" text-anchor="middle" font-family="Inter" font-weight="800" font-size="44" fill="#fff">OPEN</text></svg>
+  <div class="shutter" style="position:absolute;left:220px;top:360px;width:380px;height:340px;background:repeating-linear-gradient(${MUT} 0 18px, #A79E8F 18px 24px);border-radius:8px"></div>`);
+const shutter = P1.querySelector('.shutter');
+const MSGS = ['Cake order chahiye', 'Price kya hai?', 'Delivery kab hogi?'];
+const P2 = pane(`<div style="position:absolute;left:40px;top:36px;font-size:32px;font-weight:800">Messages check karo</div>` +
+  MSGS.map((m, k) => `<div class="m" style="position:absolute;left:${60 + (k % 2) * 140}px;top:${150 + k * 180}px;padding:24px 30px;border-radius:30px 30px 30px 8px;background:${k === 1 ? INK : '#F1E9DC'};color:${k === 1 ? '#fff' : INK};font-size:34px;font-weight:600;transform-origin:0 100%">${m}</div>`).join(''));
+const msgs = [...P2.querySelectorAll('.m')];
+const ORD = ['Cake ×2 — Sharma ji', 'Cookies ×1 — Riya', 'Brownies ×3 — Amit'];
+const P3 = pane(`<div style="position:absolute;left:40px;top:36px;font-size:32px;font-weight:800">Orders note karo</div>
+  <div style="position:absolute;left:60px;top:130px;width:700px;height:640px;border-radius:16px;background:#FFF8EA;box-shadow:inset 6px 0 0 ${AMB}">
+   ${[0, 1, 2, 3, 4, 5].map(k => `<div style="position:absolute;left:40px;top:${110 + k * 90}px;width:620px;height:2px;background:#E7DCC7"></div>`).join('')}
+   ${ORD.map((o, k) => `<div class="o" style="position:absolute;left:52px;top:${60 + k * 90}px;font-size:36px;font-weight:600;font-style:italic;color:#2C2440">${o}</div>`).join('')}</div>`);
+const ords = [...P3.querySelectorAll('.o')];
+const P4 = pane(`<div style="position:absolute;left:40px;top:36px;font-size:32px;font-weight:800">Payment reminder bhejo</div>
+  <div class="rb" style="position:absolute;right:50px;top:200px;padding:26px 30px;border-radius:30px 30px 8px 30px;background:${PUR};color:#fff;font-size:32px;font-weight:600;line-height:1.35;transform-origin:100% 100%">Namaste! Aapka ₹1,200<br>payment pending hai 🙏</div>
+  <div style="position:absolute;left:40px;top:700px;width:740px;height:90px;border-radius:45px;background:#F1E9DC"></div>
+  <div class="ri" style="position:absolute;left:80px;top:726px;font-size:30px;font-weight:600"></div>
+  <div class="rs" style="position:absolute;left:690px;top:710px;width:80px;height:70px;border-radius:35px;background:${PUR};color:#fff;font-size:34px;display:flex;align-items:center;justify-content:center">➤</div>`);
+const rb = P4.querySelector('.rb'), ri = P4.querySelector('.ri'), rs = P4.querySelector('.rs');
+const P5 = pane(`<div style="position:absolute;left:40px;top:36px;font-size:32px;font-weight:800">Record dhoondo</div>
+  ${[0, 1, 2, 3, 4, 5].map(k => `<div class="f" style="position:absolute;left:${80 + k * 18}px;top:${200 + k * 80}px;width:600px;height:110px;border-radius:14px;background:${['#E9DDCA', '#E2D2BA', '#EFE4D3', '#E5D6C0', '#E9DDCA', '#E2D2BA'][k]};box-shadow:0 -2px 0 ${LIN}">
+     <div style="position:absolute;left:24px;top:22px;font-size:26px;font-weight:700;color:#6E6559">${['Customers A–C', 'Customers D–G', 'Customers H–K', 'Customers L–O', 'Customers P–S', 'Customers T–Z'][k]}</div></div>`).join('')}
+  <svg class="mag" style="position:absolute;left:0;top:0" width="160" height="160" viewBox="0 0 160 160"><circle cx="64" cy="64" r="46" fill="rgba(255,253,246,0.5)" stroke="${INK}" stroke-width="14"/><path d="M100 100 L148 148" stroke="${INK}" stroke-width="18" stroke-linecap="round"/></svg>`);
+const files = [...P5.querySelectorAll('.f')], mag = P5.querySelector('.mag');
+const PANES = [[P1, 3.3], [P2, 5.2], [P3, 6.7], [P4, 8.3], [P5, 10.4]];
+
+// ===================== k2: the day disappears (12.5–17.1) =====================
+const S2 = scene(2);
+const s2bg = E(S2, { inset: '0', background: BEI });
+const clock = E(S2, { left: '290px', top: '520px', width: '500px', height: '500px', borderRadius: '250px', background: WHT, boxShadow: `inset 0 0 0 14px ${INK}` },
+  `${Array.from({ length: 12 }, (_, k) => `<div style="position:absolute;left:244px;top:28px;width:12px;height:36px;border-radius:6px;background:${INK};transform-origin:6px 222px;transform:rotate(${k * 30}deg)"></div>`).join('')}
+   <div class="hh" style="position:absolute;left:240px;top:120px;width:20px;height:140px;border-radius:10px;background:${INK};transform-origin:10px 130px"></div>
+   <div class="mh" style="position:absolute;left:243px;top:60px;width:14px;height:200px;border-radius:7px;background:${PUR};transform-origin:7px 190px"></div>
+   <div style="position:absolute;left:226px;top:226px;width:48px;height:48px;border-radius:24px;background:${INK}"></div>`);
+const hh = clock.querySelector('.hh'), mh = clock.querySelector('.mh');
+const pile = Array.from({ length: 20 }, (_, k) => E(S2, { left: (60 + (k % 4) * 245) + 'px', top: (1100 + Math.floor(k / 4) * 66) + 'px', height: '52px', fontSize: '22px' }, `<span style="width:14px;height:14px;border-radius:7px;background:${AMB}"></span>${CHIPS[k % 5][0]}`, 'chip'));
+const d1 = T(S2, 'c', 230, 92, 'Poora din…');
+const d2 = T(S2, 'c', 345, 92, '<span class="amb">nikal gaya.</span>');
+const dayLbl = T(S2, 'c', 1040, 40, '9 AM → 9 PM', { w: 700 });
+
+// ===================== k3: the question (17.6–26) =====================
+const S3 = scene(3);
+E(S3, { inset: '0', background: INK });
+const qmark = E(S3, { left: '390px', top: '360px', width: '300px', height: '400px', fontSize: '380px', fontWeight: 800, color: AMB, textAlign: 'center', lineHeight: '400px' }, '?');
+const k3a = T(S3, 'c', 230, 84, 'Lekin ek sawaal…', { color: WHT });
+const k3b = T(S3, 'c', 230, 78, 'Business shuru', { color: WHT });
+const k3c = T(S3, 'c', 330, 78, '<span class="amb">kyun</span> kiya tha?', { color: WHT });
+const optA = E(S3, { left: '110px', top: '560px', width: '860px', height: '250px', borderRadius: '32px', background: '#2A2238', boxShadow: '0 0 0 3px #3A3150' },
+  `<div style="position:absolute;left:44px;top:46px;font-size:30px;font-weight:700;color:#B8AFC9">Option A</div><div style="position:absolute;left:44px;top:100px;font-size:56px;font-weight:800;color:#fff;letter-spacing:-0.03em">Har din manual kaam</div>`);
+const optB = E(S3, { left: '110px', top: '880px', width: '860px', height: '250px', borderRadius: '32px', background: '#2A2238', boxShadow: '0 0 0 3px #3A3150' },
+  `<div style="position:absolute;left:44px;top:46px;font-size:30px;font-weight:700;color:#B8AFC9">Option B</div><div style="position:absolute;left:44px;top:100px;font-size:56px;font-weight:800;color:#fff;letter-spacing:-0.03em">Business grow ↗</div>
+   <div class="ok" style="position:absolute;right:44px;top:86px">${check(84)}</div>`);
+const okB = optB.querySelector('.ok');
+const cur = E(S3, { width: '70px', height: '70px', zIndex: 9 }, `<svg width="70" height="70" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${WHT}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ===================== k4: the real problem (26.5–34.6) =====================
+const S4 = scene(4);
+const p1 = T(S4, 'c', 230, 84, 'Problem ye <span class="pur">nahi</span>…');
+const smallShop = E(S4, { left: '330px', top: '420px', width: '420px', height: '360px' },
+  `<svg width="420" height="300" viewBox="0 0 420 300"><path d="M10 90 L50 20 H370 L410 90 Z" fill="${INK}"/><path d="M50 20 H110 L95 90 H10 Z M170 20 H250 L250 90 H170 Z M310 20 H370 L410 90 H325 Z" fill="${AMB}"/><rect x="30" y="90" width="360" height="200" rx="8" fill="${TILE[0]}"/><rect x="170" y="160" width="80" height="130" rx="6" fill="${PUR}"/></svg>
+   <div style="position:absolute;left:0;width:420px;top:310px;text-align:center;font-size:32px;font-weight:700">Chhota business?</div>`);
+const okSmall = E(S4, { left: '330px', top: '820px', width: '420px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', fontSize: '34px', fontWeight: 800, color: PUR }, `${check(60)}Koi problem nahi`);
+const p2 = T(S4, 'c', 230, 84, 'Asli problem:');
+const p3 = T(S4, 'c', 335, 92, '<span class="amb">Manual processes</span>');
+// hand-cranked loop of paper
+const loop = E(S4, { left: '140px', top: '560px', width: '800px', height: '560px', borderRadius: '280px', boxShadow: `inset 0 0 0 8px ${LIN}` });
+const crank = E(S4, { left: '440px', top: '740px', width: '200px', height: '200px', borderRadius: '100px', background: WHT, boxShadow: `inset 0 0 0 10px ${INK}` },
+  `<div class="arm" style="position:absolute;left:94px;top:20px;width:12px;height:84px;border-radius:6px;background:${INK};transform-origin:6px 80px"></div><div style="position:absolute;left:84px;top:84px;width:32px;height:32px;border-radius:16px;background:${AMB}"></div>`);
+const arm = crank.querySelector('.arm');
+const papers = Array.from({ length: 5 }, (_, k) => E(S4, { width: '120px', height: '150px', borderRadius: '10px', background: WHT, boxShadow: '0 6px 16px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6' },
+  `${[0, 1, 2, 3].map(j => `<div style="position:absolute;left:16px;top:${26 + j * 26}px;width:${88 - (j % 2) * 24}px;height:8px;border-radius:4px;background:#E2D8C6"></div>`).join('')}`));
+const jam = T(S4, 'c', 1200, 52, '<span class="amb">Stuck.</span>');
+
+// ===================== k5: smart systems (35.1–43.3) =====================
+const S5 = scene(5);
+const s5t = T(S5, 'c', 230, 88, 'Smart <span class="pur">systems</span>');
+const TILES = [['Website', 'yourshop.in · 24×7 orders'], ['Order management system', 'Har order ek jagah'], ['Business management software', 'Customers, payments, records']];
+const tiles = TILES.map(([a, b], k) => E(S5, { left: '110px', top: (400 + k * 240) + 'px', width: '860px', height: '210px' }, `
+  <div style="position:absolute;left:30px;top:30px;width:150px;height:150px;border-radius:24px;background:${k === 0 ? PUR : (k === 1 ? INK : '#F1E9DC')}">
+    ${k === 0 ? `<div style="position:absolute;left:22px;top:30px;width:106px;height:12px;border-radius:6px;background:#fff"></div><div style="position:absolute;left:22px;top:58px;width:50px;height:62px;border-radius:8px;background:#B79DF5"></div><div style="position:absolute;left:78px;top:58px;width:50px;height:62px;border-radius:8px;background:#B79DF5"></div>` : ''}
+    ${k === 1 ? [0, 1, 2].map(j => `<div style="position:absolute;left:24px;top:${30 + j * 34}px;width:22px;height:22px;border-radius:11px;background:${PUR}"></div><div style="position:absolute;left:56px;top:${36 + j * 34}px;width:70px;height:10px;border-radius:5px;background:#fff"></div>`).join('') : ''}
+    ${k === 2 ? [0.5, 0.8, 0.6, 0.95].map((h, j) => `<div style="position:absolute;left:${24 + j * 28}px;bottom:24px;width:20px;height:${100 * h}px;border-radius:6px;background:${j === 3 ? PUR : '#C9B9A2'}"></div>`).join('') : ''}
+  </div>
+  <div style="position:absolute;left:210px;top:52px;font-size:40px;font-weight:800;letter-spacing:-0.02em">${a}</div>
+  <div style="position:absolute;left:210px;top:110px;font-size:26px;font-weight:600;color:${MUT}">${b}</div>`, 'card'));
+const TILEIN = [35.68, 36.52, 39.04];
+const auto = E(S5, { left: '110px', top: '1130px', width: '860px', height: '290px', borderRadius: '30px', background: '#EDE4D4' });
+const gear = E(S5, { left: '850px', top: '1150px', width: '96px', height: '96px' },
+  `<svg width="96" height="96" viewBox="0 0 100 100"><g fill="${PUR}">${Array.from({ length: 8 }, (_, k) => `<rect x="44" y="2" width="12" height="22" rx="3" transform="rotate(${k * 45} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="32"/></g><circle cx="50" cy="50" r="12" fill="#EDE4D4"/></svg>`);
+const chips5 = CHIPS.slice(1).concat([['Follow-ups', AMB], ['Invoices', AMB]]).map(([n], k) => E(S5, {}, `<span class="dot" style="width:16px;height:16px;border-radius:8px;background:${AMB}"></span>${n}`, 'chip'));
+const chipDots = chips5.map(c => c.querySelector('.dot'));
+
+// ===================== k6: time spent (43.8–48) =====================
+const S6 = scene(6);
+const t1 = T(S6, 'c', 230, 84, 'Aapka time:');
+const tBar = E(S6, { left: '110px', top: '1000px', width: '860px', height: '120px', borderRadius: '60px', background: '#EDE4D4', overflow: 'hidden' });
+const tRun = E(tBar, { left: '0', top: '0', height: '120px', background: INK, color: '#fff', fontSize: '30px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' }, 'Chalana');
+const tGrow = E(tBar, { top: '0', height: '120px', background: PUR, color: '#fff', fontSize: '30px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap' }, 'Badhana ↗');
+const chart = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+chart.setAttribute('width', 860); chart.setAttribute('height', 460); Object.assign(chart.style, { position: 'absolute', left: '110px', top: '440px' });
+chart.innerHTML = `<path d="M0 440 H860" stroke="${LIN}" stroke-width="4"/><path class="ln" d="M20 400 C 200 390, 300 360, 420 300 S 680 120, 840 40" fill="none" stroke="${PUR}" stroke-width="14" stroke-linecap="round"/>`;
+S6.appendChild(chart); const ln = chart.querySelector('.ln'); const LNL = ln.getTotalLength();
+
+// ===================== k7: more work vs better systems (48.4–53.3) =====================
+const S7 = scene(7);
+const b1 = T(S7, 'c', 230, 84, 'Smart owners…');
+const b2 = T(S7, 'c', 335, 84, 'Better <span class="pur">systems.</span>');
+const beam = E(S7, { left: '140px', top: '720px', width: '800px', height: '20px', borderRadius: '10px', background: INK, transformOrigin: '400px 10px' });
+const post = E(S7, { left: '525px', top: '730px', width: '30px', height: '520px', borderRadius: '10px', background: INK });
+E(S7, { left: '400px', top: '1240px', width: '280px', height: '30px', borderRadius: '15px', background: INK });
+const panL = E(S7, { width: '300px', height: '260px' }, `
+  <div style="position:absolute;left:148px;top:0;width:4px;height:120px;background:${MUT}"></div>
+  <div style="position:absolute;left:0;top:240px;width:300px;height:20px;border-radius:10px;background:${MUT}"></div>
+  ${[0, 1, 2, 3, 4].map(k => `<div style="position:absolute;left:${30 + (k % 2) * 40}px;top:${196 - k * 30}px;width:200px;height:28px;border-radius:14px;background:${AMB};box-shadow:0 0 0 2px #fff"></div>`).join('')}
+  <div style="position:absolute;left:0;width:300px;top:276px;text-align:center;font-size:30px;font-weight:800;color:${AMB}">Zyada kaam</div>`);
+const panR = E(S7, { width: '300px', height: '260px' }, `
+  <div style="position:absolute;left:148px;top:0;width:4px;height:120px;background:${MUT}"></div>
+  <div style="position:absolute;left:0;top:240px;width:300px;height:20px;border-radius:10px;background:${MUT}"></div>
+  <div class="sys" style="position:absolute;left:80px;top:100px;width:140px;height:140px;border-radius:24px;background:${PUR};transform-origin:50% 100%">${[0, 1, 2].map(j => `<div style="position:absolute;left:24px;top:${28 + j * 32}px;width:92px;height:14px;border-radius:7px;background:#B79DF5"></div>`).join('')}</div>
+  <div style="position:absolute;left:0;width:300px;top:276px;text-align:center;font-size:30px;font-weight:800;color:${PUR}">Better systems</div>`);
+const sysBlock = panR.querySelector('.sys');
+
+// ===================== k8: end title (53.8–59.5) =====================
+const S8 = scene(8);
+const MK = 0.42;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+mark.setAttribute('viewBox', '0 0 1932 1932'); mark.setAttribute('width', 1932 * MK); mark.setAttribute('height', 1932 * MK);
+mark.innerHTML = `<g class="br"><path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+Object.assign(mark.style, { position: 'absolute', left: (540 - 965.5 * MK) + 'px', top: (700 - 948 * MK) + 'px' });
+S8.appendChild(mark);
+const markBr = mark.querySelector('.br'), markBars = [...mark.querySelectorAll('.bar')];
+const e1 = T(S8, 'c', 980, 128, 'HeliosLabs');
+const e2 = T(S8, 'c', 1150, 46, 'We build technology', { color: MUT, w: 700 });
+const e3 = T(S8, 'c', 1214, 46, 'that <span class="pur">works for your business.</span>', { w: 700 });
+
+// ===================== camera: vertical glide down the day =====================
+const STARTS = [0, 3.0, 12.3, 17.35, 26.25, 34.85, 43.55, 48.15, 53.6];
+function cam(t) {
+  let y = 960, z = 1.0;
+  for (let k = 1; k < STARTS.length; k++) { const p = inout(clamp((t - STARTS[k]) / 0.7)); y = lerp(y, SY(k) + 960, p); }
+  let k = 0; while (k + 1 < STARTS.length && t >= STARTS[k + 1]) k++;
+  const end = k + 1 < STARTS.length ? STARTS[k + 1] : 59.5;
+  z = 1 + 0.045 * clamp((t - STARTS[k] - 0.7) / Math.max(0.1, end - STARTS[k] - 0.7)) * (k === 8 ? 1.5 : 1);
+  const back = k > 0 ? 0.045 * (1 - inout(clamp((t - STARTS[k]) / 0.7))) : 0;
+  return { x: 540, y, z: z + back };
+}
+const mbf = document.querySelector('#mb feGaussianBlur');
+
+// ===================== subtitles (voiceover time) =====================
+const SUBS = [
+  [0.0, 3.0, 'Business owner ho ya apne business ke employee?'],
+  [3.0, 6.5, 'Subah shop kholte hi customers ke messages check karo.'],
+  [6.5, 8.2, 'Phir orders note karo.'],
+  [8.2, 10.2, 'Kisi ko payment reminder bhejo.'],
+  [10.2, 12.3, 'Kisi customer ka record dhoondo.'],
+  [12.3, 17.3, 'Aur dekhte hi dekhte poora din inhi chhote-chhote kaamon mein nikal jaata hai.'],
+  [17.4, 19.5, 'Lekin ek sawaal hai…'],
+  [19.5, 21.8, 'Aapne business shuru kyun kiya tha?'],
+  [21.8, 26.3, 'Har din manual kaam karne ke liye ya business grow karne ke liye?'],
+  [26.3, 29.4, 'Problem ye nahi hai ki aapka business chhota hai.'],
+  [29.4, 34.8, 'Problem ye hai ki aapka business abhi bhi manual processes par chal raha hai.'],
+  [34.8, 39.0, 'Ek proper website, order management system ya business management software'],
+  [39.0, 43.5, 'aapke repetitive kaamon ko organise aur automate kar sakta hai.'],
+  [43.5, 48.2, 'Taaki aapka time business chalane mein nahi, business badhane mein lage.'],
+  [48.2, 53.5, 'Smart business owners sirf zyada kaam nahi karte, woh better systems banate hain.'],
+  [53.5, 59.5, 'HeliosLabs. We build technology that works for your business.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  const c = cam(t), c2 = cam(t - 1 / 60);
+  world.style.transform = `translate(${540 - c.x * c.z}px,${960 - c.y * c.z}px) scale(${c.z})`;
+  const by = Math.min(30, Math.abs(c.y - c2.y) * c.z * 60 / 240);
+  mbf.setAttribute('stdDeviation', `0 ${by.toFixed(2)}`); world.style.filter = by > 0.3 ? 'url(#mb)' : 'none';
+
+  // ---- k0 badge flip
+  show(q1, t, 0.3, 2.9); show(q2, t, 2.2, 2.95);
+  { const drop = clamp(sp(t, 0.1)); badgeWrap.style.transform = `translateY(${(1 - drop) * -900}px) rotate(${6 * Math.exp(-1.5 * t) * Math.sin(t * 5)}deg)`;
+    lanyard.style.transform = `scaleY(${drop})`;
+    const flip = 180 * clamp(sp(t, 2.25));
+    badge.style.transform = `rotateY(${flip}deg)`; }
+
+  // ---- k1 task rush
+  { const p = (t - 3.3) / 9.2, sx = 120 + 840 * clamp(p) - 50; sun.style.left = sx + 'px'; dayFill.style.width = (840 * clamp(p)) + 'px';
+    const hr = 9 + Math.floor(clamp(p) * 4); sun.textContent = `${hr > 12 ? hr - 12 : hr}${hr >= 12 ? 'PM' : 'AM'}`; }
+  chips1.forEach((ch, k) => pop(ch, t, CHIPIN[k]));
+  PANES.forEach(([P, tIn], k) => { const tOut = k < 4 ? PANES[k + 1][1] : 12.4; const a = clamp(sp(t, tIn)), b = clamp(sp(t, tOut));
+    P.style.transform = `translateY(${(1 - a) * 900 - b * 900}px)`; P.style.visibility = (t < tIn || (b > 0.99 && t > tOut)) ? 'hidden' : 'visible'; });
+  { const p = inout(clamp((t - 3.64) / 0.7)); shutter.style.clipPath = `inset(0 0 ${p * 100}% 0)`; }
+  msgs.forEach((m, k) => { const p = clamp(sp(t, 5.3 + k * 0.25)); m.style.transform = `scale(${p})`; });
+  ords.forEach((o, k) => { const p = clamp((t - (6.9 + k * 0.42)) / 0.45); o.style.clipPath = `inset(0 ${(1 - p) * 100}% 0 0)`; });
+  { const msg = 'Payment reminder…'; ri.textContent = t < 9.54 ? msg.slice(0, Math.floor(clamp((t - 8.5) / 0.9) * msg.length)) : '';
+    rs.style.transform = `scale(${1 - 0.1 * Math.sin(Math.PI * clamp((t - 9.5) / 0.2))})`;
+    const p = clamp(sp(t, 9.54)); rb.style.transform = `translateY(${(1 - p) * 420}px) scale(${0.5 + 0.5 * p})`; rb.style.visibility = t < 9.54 ? 'hidden' : 'visible'; }
+  { const sx = lerp(560, 400, inout(clamp((t - 10.8) / 0.9))), sy = lerp(180, 420, inout(clamp((t - 10.8) / 0.9)));
+    mag.style.transform = `translate(${sx}px,${sy}px)`;
+    files.forEach((f, k) => f.style.transform = k === 3 ? `translateX(${180 * clamp(sp(t, 11.7))}px)` : 'none'); }
+
+  // ---- k2 the day disappears
+  { const p = clamp((t - 12.7) / 4.2), e = inout(p);
+    s2bg.style.background = mixC(BEI, '#2A2238', clamp((t - 13.6) / 3.0));
+    hh.style.transform = `rotate(${270 + 360 * e}deg)`; mh.style.transform = `rotate(${12 * 360 * e}deg)`;
+    pile.forEach((pc, k) => pop(pc, t, 12.8 + k * 0.16));
+    const night = clamp((t - 14.5) / 1.5);
+    [d1, d2].forEach(m => m.inner.style.color = mixC(INK, '#FFFDF8', night));
+    d2.inner.firstChild.style && (d2.inner.querySelector('span').style.color = AMB);
+    dayLbl.inner.style.color = mixC(INK, '#FFFDF8', night); }
+  show(d1, t, 13.8, 17.2); show(d2, t, 16.4, 17.25); show(dayLbl, t, 13.0, 17.2);
+
+  // ---- k3 the question
+  pop(qmark, t, 18.6, 19.7);
+  show(k3a, t, 17.65, 19.6); show(k3b, t, 19.8, 26.2); show(k3c, t, 20.6, 26.25);
+  { const a = clamp(sp(t, 22.1)), b = clamp(sp(t, 22.3));
+    optA.style.transform = `translateX(${(1 - a) * -1100}px) scale(${1 + 0.03 * Math.sin(Math.PI * clamp((t - 22.7) / 0.4))})`; optB.style.transform = `translateX(${(1 - b) * 1100}px)`;
+    const hA = clamp(sp(t, 22.7)) * (1 - clamp(sp(t, 24.5))), hB = clamp(sp(t, 24.96));
+    optA.style.boxShadow = `0 0 0 ${3 + 4 * hA}px ${hA > 0.05 ? AMB : '#3A3150'}`; optA.style.filter = `opacity(${1 - 0.5 * hB})`;
+    optB.style.boxShadow = `0 0 0 ${3 + 5 * hB}px ${hB > 0.05 ? PUR : '#3A3150'}`; optB.style.background = mixC('#2A2238', '#3B1F8A', hB);
+    pop(okB, t, 25.0);
+    const p1_ = expo(t, 22.5, 0.6), p2_ = expo(t, 24.6, 0.5);
+    const cx = lerp(lerp(1000, 760, p1_), 760, p2_), cy = lerp(lerp(1300, 690, p1_), 1010, p2_);
+    cur.style.left = cx + 'px'; cur.style.top = cy + 'px'; cur.style.transform = `scale(${1 - 0.15 * Math.sin(Math.PI * clamp((t - 24.96) / 0.2))})`; cur.style.visibility = (t > 22.5 && t < 26.2) ? 'visible' : 'hidden'; }
+
+  // ---- k4 the real problem
+  show(p1, t, 26.6, 29.4);
+  { const a = clamp(sp(t, 27.0)), out = clamp(sp(t, 29.5)); smallShop.style.transform = `translateY(${(1 - a) * 300}px) scale(${1 - out})`; smallShop.style.visibility = (t < 27 || out > 0.99) ? 'hidden' : 'visible'; }
+  pop(okSmall, t, 28.62, 29.5);
+  show(p2, t, 29.75, 34.6); show(p3, t, 32.7, 34.65);
+  { const on = clamp(sp(t, 30.0)); loop.style.transform = `scale(${on})`; crank.style.transform = `scale(${on})`;
+    const speed = t < 34.1 ? (t - 30) : 4.1 + 0.05 * (1 - Math.exp(-(t - 34.1) * 8));  // slows to a jam
+    arm.style.transform = `rotate(${speed * 120}deg)`;
+    papers.forEach((pp, k) => { const u = ((Math.max(0, speed) * 0.08 + k / 5) % 1) * Math.PI * 2;
+      const x = 540 + Math.cos(u) * 360 - 60, y = 840 + Math.sin(u) * 230 - 75; pp.style.left = x + 'px'; pp.style.top = y + 'px';
+      pp.style.transform = `scale(${clamp(sp(t, 30.3 + k * 0.12))}) rotate(${(k % 2 ? 6 : -6) + (t > 34.1 ? (k - 2) * 4 * clamp(sp(t, 34.1)) : 0)}deg)`; }); }
+  show(jam, t, 34.15, 34.7);
+
+  // ---- k5 smart systems
+  show(s5t, t, 35.2, 43.4);
+  tiles.forEach((tl, k) => { const p = clamp(sp(t, TILEIN[k])); tl.style.transform = `translateX(${(1 - p) * (k % 2 ? 1100 : -1100)}px)`; });
+  pop(auto, t, 39.9);
+  gear.style.transform = `rotate(${Math.max(0, t - 42.18) * 220}deg) scale(${clamp(sp(t, 41.9))})`;
+  chips5.forEach((ch, k) => {
+    // fly in loose (repetitive), then line up neatly (organise), then get ticked (automate)
+    const loose = { x: 140 + ((k * 197) % 640), y: 1150 + ((k * 89) % 180), r: ((k * 37) % 30) - 15 };
+    const neat = { x: 150 + (k % 3) * 270, y: 1170 + Math.floor(k / 3) * 110, r: 0 };
+    const pin = clamp(sp(t, 40.08 + k * 0.08)), org = clamp(sp(t, 41.24 + k * 0.05));
+    const x = lerp(loose.x, neat.x, org), y = lerp(loose.y - (1 - pin) * 900, neat.y, org), r = lerp(loose.r, 0, org);
+    ch.style.left = x + 'px'; ch.style.top = y + 'px'; ch.style.transform = `rotate(${r}deg)`; ch.style.visibility = t < 40.08 ? 'hidden' : 'visible';
+    const done = t > 42.3 + k * 0.14; chipDots[k].style.background = done ? PUR : AMB; chipDots[k].innerHTML = done ? '<span style="color:#fff;font-size:12px;line-height:16px;display:block;text-align:center">✓</span>' : '';
+    ch.style.boxShadow = `0 0 0 ${done ? 3 : 2}px ${done ? PUR : LIN}`; });
+
+  // ---- k6 time
+  show(t1, t, 43.9, 48.1);
+  { const pin = clamp(sp(t, 44.0)), shift = clamp(sp(t, 46.0)); const run = lerp(0.8, 0.25, shift);
+    tBar.style.transform = `scaleX(${pin})`; tRun.style.width = (860 * run) + 'px'; tGrow.style.left = (860 * run) + 'px'; tGrow.style.width = (860 * (1 - run)) + 'px';
+    ln.style.strokeDasharray = LNL; ln.style.strokeDashoffset = LNL * (1 - inout(clamp((t - 46.98) / 0.9))); }
+
+  // ---- k7 balance
+  show(b1, t, 48.5, 53.4); show(b2, t, 51.86, 53.45);
+  { const tilt = lerp(-12, 12, clamp(sp(t, 51.95))) * clamp(sp(t, 48.6)) ;
+    beam.style.transform = `rotate(${tilt}deg)`;
+    const a = tilt * Math.PI / 180; const lx = 540 - Math.cos(a) * 360, ly = 730 - Math.sin(a) * 360, rx = 540 + Math.cos(a) * 360, ry = 730 + Math.sin(a) * 360;
+    panL.style.left = (lx - 150) + 'px'; panL.style.top = ly + 'px'; panR.style.left = (rx - 150) + 'px'; panR.style.top = ry + 'px';
+    sysBlock.style.transform = `scale(${clamp(sp(t, 51.86))})`; }
+
+  // ---- k8 end
+  { const p = clamp(sp(t, 54.1)); markBr.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; markBars.forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, 53.8 + k * 0.1))})`); mark.style.visibility = t < 53.8 ? 'hidden' : 'visible'; }
+  show(e1, t, 54.2); show(e2, t, 55.1); show(e3, t, 55.5);
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 59.5;
+window.seek(0);
+</script>
+</body>
+</html>
