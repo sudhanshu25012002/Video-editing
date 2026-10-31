@@ -1,0 +1,255 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Offer Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #2A2238; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #2A2238; }
+  .a { position: absolute; }
+  .layer { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; border-radius: 0; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .num { font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 50; }
+  #sub { position: absolute; left: 70px; right: 70px; top: 1500px; text-align: center; z-index: 50; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 38px; font-weight: 600; line-height: 1.32; padding: 16px 28px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { // the full logo: purple rounded square + white mark
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s;
+}
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+
+// ===================== card-deck scenes: each slides up over the previous =====================
+const SC = [0, 6.45, 10.4, 13.4, 22.65, 27.85, 30.55, 35.95, 40.65];
+const layers = SC.map((s, k) => { const L = E(stage, { zIndex: 1 + k }, '', 'layer'); stage.insertBefore(L, document.getElementById('logoTL')); return L; });
+const [L0, L1, L2, L3, L4, L5, L6, L7, L8] = layers;
+
+// ---- L0: the old way costs ₹20–30k
+const a1 = T(L0, 'c', 230, 76, 'Online store ke liye');
+const tag20 = E(L0, { left: '110px', top: '420px', width: '860px', height: '260px', borderRadius: '36px', background: WHT, boxShadow: '0 24px 60px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:44px;top:34px;font-size:30px;font-weight:700;color:${MUT}">Developer ka quote</div><div class="n num" style="position:absolute;left:44px;top:80px;font-size:140px;color:${AMB}"></div>`);
+const tag30 = E(L0, { left: '110px', top: '730px', width: '860px', height: '260px', borderRadius: '36px', background: WHT, boxShadow: '0 24px 60px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:44px;top:34px;font-size:30px;font-weight:700;color:${MUT}">Agency ka quote</div><div class="n num" style="position:absolute;left:44px;top:80px;font-size:140px;color:${AMB}"></div>`);
+const n20 = tag20.querySelector('.n'), n30 = tag30.querySelector('.n');
+const lines0 = ['Design', 'Development', 'Payment setup', 'Hosting'].map((s, k) => E(L0, { left: (110 + (k % 2) * 440) + 'px', top: (1040 + Math.floor(k / 2) * 90) + 'px', width: '420px', height: '70px', borderRadius: '18px', background: '#EDE4D4', fontSize: '28px', fontWeight: 700, display: 'flex', alignItems: 'center', paddingLeft: '28px', boxSizing: 'border-box', color: '#6E6559' }, s));
+const slash = E(L0, { left: '80px', top: '700px', width: '920px', height: '30px', borderRadius: '15px', background: PUR, transformOrigin: '0 50%', zIndex: 20 });
+const a2 = T(L0, 'c', 1250, 96, '<span class="pur">Zaroorat nahi!</span>', { z: 21 });
+
+// ---- L1: HeliosLabs builds your store
+const L1logo = logoSVG(220); L1logo.style.left = '430px'; L1logo.style.top = '190px'; L1.appendChild(L1logo);
+const b1 = T(L1, 'c', 440, 60, 'ke saath apni khud ki');
+const b2 = T(L1, 'c', 520, 84, '<span class="pur">e-commerce website</span>');
+const store = E(L1, { left: '150px', top: '680px', width: '780px', height: '740px' }, '', 'card');
+store.innerHTML = `<div style="position:absolute;left:0;top:0;width:780px;height:78px;border-bottom:2px solid ${LIN}"></div>
+  <div style="position:absolute;left:180px;top:18px;width:420px;height:42px;border-radius:21px;background:#F1E9DC;font-size:22px;font-weight:600;color:${MUT};display:flex;align-items:center;justify-content:center">yourstore.in</div>
+  <div class="s1" style="position:absolute;left:36px;top:104px;font-size:34px;font-weight:800">your.store</div>
+  <div class="s2" style="position:absolute;left:36px;top:170px;width:708px;height:150px;border-radius:20px;background:#F6EEE2"><div style="position:absolute;left:30px;top:34px;font-size:40px;font-weight:800;letter-spacing:-0.03em">New collection</div><div style="position:absolute;left:30px;top:92px;width:150px;height:34px;border-radius:17px;background:${PUR}"></div></div>
+  ${[0, 1, 2].map(k => `<div class="pc" style="position:absolute;left:${36 + k * 242}px;top:350px;width:224px;height:340px;border-radius:18px;background:#FBF6EE;overflow:hidden">
+     <div style="position:absolute;left:12px;top:12px;width:200px;height:180px;border-radius:12px;background:${TILE[k]}"></div>
+     <div style="position:absolute;left:16px;top:206px;width:${140 - k * 20}px;height:16px;border-radius:8px;background:#D9CDB9"></div>
+     <div style="position:absolute;left:16px;top:236px;width:70px;height:16px;border-radius:8px;background:${INK}"></div>
+     <div style="position:absolute;left:12px;top:276px;width:200px;height:48px;border-radius:12px;background:${INK}"></div></div>`).join('')}`;
+const sParts = [store.querySelector('.s1'), store.querySelector('.s2'), ...store.querySelectorAll('.pc')];
+
+// ---- L2: ₹30,000 rolls down to ₹999/month
+const c1 = T(L2, 'c', 330, 84, 'Sirf');
+const bigNum = E(L2, { left: '0', top: '560px', width: '1080px', textAlign: 'center', fontSize: '250px', color: PUR }, '', 'a num');
+const perM = T(L2, 'c', 870, 72, 'per month', { color: MUT });
+const coin = E(L2, { left: '470px', top: '1080px', width: '140px', height: '140px', borderRadius: '70px', background: AMB, boxShadow: 'inset 0 0 0 12px #C98A26', fontSize: '64px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK }, '₹');
+
+// ---- L3: features checklist
+const d0 = T(L3, 'c', 200, 72, 'Sab kuch <span class="pur">included</span>');
+const FEAT = [['Custom store', 13.86], ['Product setup', 14.88], ['Razorpay payment integration', 15.98], ['UPI payments', 17.58], ['Card payments', 18.58], ['Automated order management', 19.6], ['PDF invoices', 21.34]];
+const feats = FEAT.map(([n], k) => E(L3, { left: '90px', top: (330 + k * 140) + 'px', width: '900px', height: '120px' }, `
+  <div class="ck" style="position:absolute;left:28px;top:24px;width:72px;height:72px;border-radius:36px;box-shadow:inset 0 0 0 5px ${LIN}"></div>
+  <div class="cf" style="position:absolute;left:28px;top:24px">${check(72)}</div>
+  <div style="position:absolute;left:128px;top:34px;font-size:40px;font-weight:800;letter-spacing:-0.02em">${n}</div>`, 'card'));
+
+// ---- L4: zero platform commission
+const z1 = T(L4, 'c', 230, 76, 'Sabse badi baat…');
+const zero = E(L4, { left: '0', top: '360px', width: '1080px', textAlign: 'center', fontSize: '380px', color: PUR, lineHeight: '1' }, '0%', 'a num');
+const z2 = T(L4, 'c', 760, 64, 'platform commission');
+const wallet = E(L4, { left: '300px', top: '1080px', width: '480px', height: '300px', borderRadius: '40px', background: INK, color: '#fff' },
+  `<div style="position:absolute;left:40px;top:40px;font-size:32px;font-weight:700;color:#B8AFC9">Aapki earning</div><div style="position:absolute;left:40px;top:96px;font-size:72px;font-weight:800;color:${AMB}">100% aapki</div>`);
+const coins = Array.from({ length: 5 }, () => E(L4, { width: '90px', height: '90px', borderRadius: '45px', background: AMB, boxShadow: 'inset 0 0 0 9px #C98A26', fontSize: '42px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK, zIndex: 5 }, '₹'));
+
+// ---- L5: we help you set up
+const h1 = T(L5, 'c', 230, 76, 'Store setup mein');
+const h2 = T(L5, 'c', 330, 84, '<span class="pur">hum help karenge.</span>');
+const helper = E(L5, { left: '110px', top: '520px', width: '860px', height: '760px' }, '', 'card');
+helper.innerHTML = `<svg style="position:absolute;left:330px;top:50px" width="200" height="200" viewBox="0 0 200 200"><path d="M40 110 V95 a60 60 0 0 1 120 0 V110" fill="none" stroke="${PUR}" stroke-width="16"/><rect x="24" y="100" width="40" height="64" rx="14" fill="${PUR}"/><rect x="136" y="100" width="40" height="64" rx="14" fill="${PUR}"/><path d="M156 164 Q156 190 120 190" fill="none" stroke="${PUR}" stroke-width="10"/></svg>
+  <div style="position:absolute;left:0;width:860px;top:270px;text-align:center;font-size:34px;font-weight:800">HeliosLabs setup team</div>
+  <div style="position:absolute;left:60px;top:350px;width:740px;height:28px;border-radius:14px;background:#EDE4D4"><div class="bar" style="position:absolute;left:0;top:0;height:28px;border-radius:14px;background:${PUR}"></div></div>
+  ${['Products', 'Payments', 'Store live'].map((s, k) => `<div class="st" style="position:absolute;left:${60 + k * 250}px;top:430px;display:flex;align-items:center;gap:12px;font-size:30px;font-weight:700">${check(48)}${s}</div>`).join('')}`;
+const hBar = helper.querySelector('.bar'), hSteps = [...helper.querySelectorAll('.st')];
+
+// ---- L6: trust badges
+const TR = [['No long-term commitment', 30.81], ['Cancel anytime', 32.42], ['7-day money-back guarantee', 33.66]];
+const r0 = T(L6, 'c', 230, 76, 'Zero risk');
+const badges = TR.map(([s], k) => E(L6, { left: '110px', top: (400 + k * 300) + 'px', width: '860px', height: '250px', borderRadius: '36px', background: k === 2 ? PUR : WHT, color: k === 2 ? '#fff' : INK, boxShadow: '0 24px 60px rgba(28,23,38,0.10), 0 0 0 3px #E2D8C6' }, `
+  <svg style="position:absolute;left:44px;top:55px" width="130" height="140" viewBox="0 0 130 140"><path d="M65 6 L120 26 V70 C120 104 96 126 65 136 C34 126 10 104 10 70 V26 Z" fill="${k === 2 ? '#fff' : PUR}"/><path d="M40 72 L58 90 L92 52" fill="none" stroke="${k === 2 ? PUR : '#fff'}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div style="position:absolute;left:210px;top:${k === 2 ? 58 : 88}px;font-size:${k === 2 ? 52 : 50}px;font-weight:800;letter-spacing:-0.025em;line-height:1.15;width:610px">${s}</div>`));
+
+// ---- L7: open your shop, visit helioslabs.in
+const o1 = T(L7, 'c', 230, 72, 'Apni online dukaan');
+const o2 = T(L7, 'c', 320, 84, '<span class="pur">shuru karni hai?</span>');
+const shop = E(L7, { left: '240px', top: '470px', width: '600px', height: '520px' },
+  `<svg width="600" height="520" viewBox="0 0 600 520"><path d="M20 170 L80 60 H520 L580 170 Z" fill="${INK}"/><path d="M80 60 H160 L140 170 H20 Z M240 60 H320 L320 170 H240 Z M400 60 H480 L520 170 H420 Z" fill="${AMB}"/>
+   <rect x="40" y="170" width="520" height="340" rx="10" fill="${TILE[0]}"/><rect x="220" y="300" width="160" height="210" rx="8" fill="${PUR}"/></svg>`);
+const sign = E(L7, { left: '400px', top: '660px', width: '280px', height: '110px', borderRadius: '18px', background: WHT, boxShadow: `0 0 0 6px ${INK}`, fontSize: '56px', fontWeight: 800, color: PUR, display: 'flex', alignItems: 'center', justifyContent: 'center', transformOrigin: '50% 0' }, 'OPEN');
+const url = E(L7, { left: '110px', top: '1080px', width: '860px', height: '130px', borderRadius: '65px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<svg style="position:absolute;left:40px;top:38px" width="54" height="54" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="none" stroke="${INK}" stroke-width="4"/><path d="M6 24 H42 M24 6 C14 16 14 32 24 42 M24 6 C34 16 34 32 24 42" fill="none" stroke="${INK}" stroke-width="3"/></svg>
+   <div class="u" style="position:absolute;left:120px;top:36px;font-size:48px;font-weight:800;letter-spacing:-0.02em"></div>
+   <div class="go" style="position:absolute;right:20px;top:20px;width:170px;height:90px;border-radius:45px;background:${PUR};color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center">Visit</div>`);
+const uTxt = url.querySelector('.u'), uGo = url.querySelector('.go');
+const cur = E(L7, { width: '64px', height: '64px', zIndex: 9 }, `<svg width="64" height="64" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ---- L8: end card
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '250px'; L8.appendChild(endLogo);
+const e1 = T(L8, 'c', 590, 110, 'HeliosLabs');
+const priceCard = E(L8, { left: '160px', top: '780px', width: '760px', height: '360px', borderRadius: '44px', background: PUR, color: '#fff' },
+  `<div style="position:absolute;left:0;width:760px;top:40px;text-align:center;font-size:36px;font-weight:700;color:#DCCCFB">Plans start at just</div>
+   <div class="num" style="position:absolute;left:0;width:760px;top:96px;text-align:center;font-size:150px;line-height:1">₹999</div>
+   <div style="position:absolute;left:0;width:760px;top:262px;text-align:center;font-size:40px;font-weight:700;color:#DCCCFB">per month</div>`);
+const e2 = T(L8, 'c', 1200, 64, '<span class="pur">helioslabs.in</span>');
+
+// ===================== subtitles (voiceover time) =====================
+const SUBS = [
+  [0.0, 3.4, 'Aapko online store shuru karne ke liye'],
+  [3.4, 6.4, '₹20,000–₹30,000 kharch karne ki zaroorat nahi hai!'],
+  [6.5, 10.4, 'HeliosLabs ke saath apni khud ki e-commerce website shuru kijiye,'],
+  [10.4, 13.4, 'sirf ₹999 per month mein.'],
+  [13.4, 19.5, 'Apna custom store, product setup, Razorpay payment integration, UPI aur card payments,'],
+  [19.5, 22.6, 'automated order management aur PDF invoices.'],
+  [22.6, 25.8, 'Aur sabse badi baat, zero platform commission!'],
+  [25.8, 27.8, 'Aapki earning, aapki.'],
+  [27.8, 30.5, 'We will also help you set up your store.'],
+  [30.5, 33.5, 'No long-term commitment. Cancel anytime,'],
+  [33.5, 35.9, 'plus 7-day money-back guarantee.'],
+  [35.9, 38.6, 'Toh apni online dukaan shuru karni hai?'],
+  [38.6, 40.6, 'Visit helioslabs.in.'],
+  [40.6, 45.8, 'Plans start at just ₹999 per month!'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- card-deck transitions: new card slides up from the bottom; the one underneath sinks back
+  SC.forEach((s, k) => {
+    const L = layers[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    const inP = k === 0 ? 1 : clamp(sp(t, s));
+    const under = clamp(sp(t, next));
+    const push = 1 + 0.03 * clamp((t - s) / Math.max(0.1, (next < 1e8 ? next : 45.8) - s));
+    L.style.transform = `translateY(${(1 - inP) * 1950}px) rotate(${(1 - inP) * (k % 2 ? 4 : -4)}deg) scale(${push * (1 - 0.08 * under)})`;
+    L.style.borderRadius = `${under * 60 + (1 - inP) * 60}px`;
+    L.style.filter = under > 0.01 ? `brightness(${1 - 0.25 * under})` : 'none';
+    L.style.visibility = (t < s - 0.02 || t > next + 1.2) ? 'hidden' : 'visible';
+  });
+
+  // ---- L0
+  show(a1, t, 0.15, 6.4);
+  { const p = expo(t, 2.06, 0.9); n20.textContent = inr(20000 * p); pop(tag20, t, 1.9); }
+  { const p = expo(t, 3.48, 0.9); n30.textContent = inr(30000 * p); pop(tag30, t, 3.3); }
+  lines0.forEach((l, k) => pop(l, t, 4.2 + k * 0.15));
+  slash.style.transform = `rotate(-14deg) scaleX(${inout(clamp((t - 5.56) / 0.3))})`; slash.style.visibility = t < 5.56 ? 'hidden' : 'visible';
+  [tag20, tag30].forEach(tg => tg.style.filter = t > 5.7 ? `grayscale(${clamp((t - 5.7) / 0.3)})` : 'none');
+  show(a2, t, 5.7);
+
+  // ---- L1
+  animLogo(L1logo, t, 6.68);
+  show(b1, t, 7.82); show(b2, t, 8.64);
+  pop(store, t, 8.7);
+  sParts.forEach((e, k) => { const p = clamp(sp(t, 8.9 + k * 0.15)); e.style.transform = `translateY(${(1 - p) * -80}px)`; e.style.clipPath = `inset(${(1 - p) * 100}% 0 0 0)`; });
+
+  // ---- L2: the price drops
+  show(c1, t, 10.5);
+  { const p = expo(t, 10.84, 0.9); bigNum.textContent = inr(lerp(30000, 999, p)); bigNum.style.color = p > 0.97 ? PUR : AMB;
+    bigNum.style.transform = `scale(${t < 10.84 ? 0.9 : 1 + 0.06 * Math.sin(Math.PI * clamp((t - 11.7) / 0.35))})`; bigNum.style.visibility = t < 10.6 ? 'hidden' : 'visible'; }
+  show(perM, t, 12.3);
+  { const p = clamp(sp(t, 11.75)); coin.style.transform = `translateY(${(1 - p) * -500}px) rotateY(${(t - 11.75) * 540 * (1 - p)}deg)`; coin.style.visibility = t < 11.75 ? 'hidden' : 'visible'; }
+
+  // ---- L3: features
+  show(d0, t, 13.5);
+  feats.forEach((f, k) => { const tw = FEAT[k][1]; const p = clamp(sp(t, tw - 0.2)); f.style.transform = `translateX(${(1 - p) * (k % 2 ? 1100 : -1100)}px)`;
+    const cf = f.querySelector('.cf'); const c = clamp(sp(t, tw + 0.15)); cf.style.transform = `scale(${c})`; f.style.boxShadow = `0 24px 60px rgba(28,23,38,0.10), 0 0 0 ${c > 0.5 ? 3 : 2}px ${c > 0.5 ? PUR : LIN}`; });
+
+  // ---- L4: zero commission
+  show(z1, t, 22.8);
+  { const p = clamp(sp(t, 24.54)); zero.style.transform = `scale(${lerp(2.4, 1, p)})`; zero.style.visibility = t < 24.54 ? 'hidden' : 'visible'; }
+  show(z2, t, 24.8);
+  pop(wallet, t, 26.0);
+  coins.forEach((c, k) => { const t0 = 26.3 + k * 0.18, d = t - t0; const y = d < 0 ? -200 : Math.min(1120, -200 + 0.5 * 5200 * d * d); c.style.left = (330 + k * 90) + 'px'; c.style.top = y + 'px'; c.style.visibility = (d < 0 || y >= 1120) ? 'hidden' : 'visible'; });
+
+  // ---- L5: setup help
+  show(h1, t, 28.0); show(h2, t, 28.4);
+  pop(helper, t, 28.1);
+  { const f = inout(clamp((t - 28.48) / 1.4)); hBar.style.width = (740 * f) + 'px'; hSteps.forEach((s, k) => { const c = clamp(sp(t, 28.9 + k * 0.45)); s.style.transform = `scale(${c})`; }); }
+
+  // ---- L6: trust badges stamp in
+  show(r0, t, 30.7);
+  badges.forEach((b, k) => { const p = clamp(sp(t, TR[k][1])); b.style.transform = `scale(${lerp(1.6, 1, p)}) rotate(${(1 - p) * (k % 2 ? 6 : -6)}deg)`; b.style.visibility = t < TR[k][1] ? 'hidden' : 'visible'; });
+
+  // ---- L7: open the shop, visit the site
+  show(o1, t, 36.16); show(o2, t, 36.5);
+  pop(shop, t, 36.3);
+  { const drop = clamp(sp(t, 37.24)); const sw = drop * 14 * Math.exp(-2.5 * Math.max(0, t - 37.24)) * Math.cos(7 * Math.max(0, t - 37.24));
+    sign.style.transform = `translateY(${(1 - drop) * -600}px) rotate(${sw}deg)`; sign.style.visibility = t < 37.24 ? 'hidden' : 'visible'; }
+  pop(url, t, 38.6);
+  { const s = 'helioslabs.in'; uTxt.textContent = s.slice(0, Math.floor(clamp((t - 38.85) / 1.1) * s.length));
+    uGo.style.transform = `scale(${1 - 0.08 * Math.sin(Math.PI * clamp((t - 40.1) / 0.2))})`;
+    const p = expo(t, 39.6, 0.5); cur.style.left = lerp(1000, 880, p) + 'px'; cur.style.top = lerp(1400, 1150, p) + 'px';
+    cur.style.transform = `scale(${1 - 0.15 * Math.sin(Math.PI * clamp((t - 40.1) / 0.2))})`; cur.style.visibility = (t > 39.6 && t < 40.8) ? 'visible' : 'hidden'; }
+
+  // ---- L8: end card
+  animLogo(endLogo, t, 40.8);
+  show(e1, t, 41.0);
+  { const p = clamp(sp(t, 41.6)); priceCard.style.transform = `translateY(${(1 - p) * 500}px) scale(${1 + 0.05 * Math.sin(Math.PI * clamp((t - 41.84) / 0.4))})`; priceCard.style.visibility = t < 41.6 ? 'hidden' : 'visible'; }
+  show(e2, t, 42.4);
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 45.8;
+window.seek(0);
+</script>
+</body>
+</html>
