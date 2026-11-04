@@ -1,0 +1,371 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Parent Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .a { position: absolute; }
+  .scene { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .bar { position: absolute; top: 0; width: 136px; height: 1920px; z-index: 300; backface-visibility: hidden; }
+  .bub { position: absolute; padding: 16px 24px; background: #FFFDF8; font-size: 32px; font-weight: 800; box-shadow: 0 10px 30px rgba(28,23,38,0.15); white-space: nowrap; z-index: 8; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+// ---------- character rig: jointed SVG person (hips, knees, shoulders, elbows, head, face) ----------
+const ROLE = {
+  customer: { skin: '#C98B5E', hair: '#2B1E1A', shirt: PUR, sleeve: PUR, pants: INK, shoe: '#3A2A22' },
+  waiter: { skin: '#A8714A', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: INK, shoe: '#111' },
+  chef: { skin: '#8D5A3B', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: '#3A3150', shoe: '#111' },
+  father: { skin: '#B07A52', hair: '#241914', shirt: AMB, sleeve: AMB, pants: INK, shoe: '#3A2A22' },
+  child: { skin: '#C48A5C', hair: '#1E1612', shirt: WHT, sleeve: WHT, pants: '#3A3150', shoe: '#111' },
+  teacher: { skin: '#D19A6E', hair: '#2A1C16', shirt: PUR, sleeve: PUR, pants: INK, shoe: '#3A2A22' },
+  staff: { skin: '#A26B45', hair: '#1C1410', shirt: '#E9E2D6', sleeve: '#E9E2D6', pants: '#3A3150', shoe: '#111' },
+};
+function makePerson(parent, role, SC, z = 4) {
+  const c = ROLE[role], NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', 300 * SC); svg.setAttribute('height', 560 * SC); svg.setAttribute('viewBox', '-40 -100 300 560');
+  Object.assign(svg.style, { position: 'absolute', overflow: 'visible', zIndex: z });
+  const leg = s => { const hx = s === 'L' ? 90 : 130; return `<g class="hip${s}"><rect x="${hx - 12}" y="262" width="24" height="100" rx="12" fill="${c.pants}"/><g class="knee${s}"><rect x="${hx - 11}" y="348" width="22" height="90" rx="11" fill="${c.pants}"/><ellipse cx="${hx}" cy="440" rx="21" ry="10" fill="${c.shoe}"/></g></g>`; };
+  const arm = s => { const sx = s === 'L' ? 62 : 158; return `<g class="sh${s}"><rect x="${sx - 10}" y="130" width="20" height="88" rx="10" fill="${c.sleeve}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/><g class="el${s}"><rect x="${sx - 9}" y="206" width="18" height="74" rx="9" fill="${c.skin}"/><circle cx="${sx}" cy="284" r="12" fill="${c.skin}"/></g></g>`; };
+  const extra = role === 'waiter' ? `<path d="M72 134 L102 134 L110 196 L118 134 L148 134 L146 272 H74 Z" fill="${INK}"/><path d="M98 122 L110 129 L98 136 Z M122 122 L110 129 L122 136 Z" fill="${INK}"/><rect x="74" y="236" width="72" height="40" rx="6" fill="#EFE7DA"/>`
+    : role === 'chef' ? `${[160, 190, 220].map(y => `<circle cx="98" cy="${y}" r="4" fill="${INK}"/><circle cx="122" cy="${y}" r="4" fill="${INK}"/>`).join('')}<path d="M96 124 L110 146 L124 124 Z" fill="${AMB}"/>`
+    : role === 'child' ? `<path d="M104 128 L116 128 L120 200 L110 214 L100 200 Z" fill="${PUR}"/><path d="M80 128 L104 128 L96 146 Z M140 128 L116 128 L124 146 Z" fill="#E9E2D6"/>`
+    : role === 'staff' ? `<path d="M90 128 L110 196 L130 128" fill="none" stroke="${PUR}" stroke-width="5"/><rect x="98" y="192" width="24" height="32" rx="4" fill="#fff" stroke="${PUR}" stroke-width="3"/>`
+    : role === 'teacher' ? `<path d="M88 128 Q110 156 132 128" fill="none" stroke="${AMB}" stroke-width="4"/><circle cx="110" cy="152" r="6" fill="${AMB}"/>`
+    : role === 'father' ? `<path d="M92 126 L110 146 L128 126" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="5"/>`
+    : `<path d="M96 126 L110 142 L124 126" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="4"/>`;
+  const hair = role === 'chef' ? `<rect x="78" y="-12" width="64" height="46" rx="8" fill="#fff" stroke="${LIN}" stroke-width="3"/>${[82, 110, 138].map(x => `<circle cx="${x}" cy="-14" r="24" fill="#fff" stroke="${LIN}" stroke-width="3"/>`).join('')}<rect x="76" y="20" width="68" height="16" rx="6" fill="#fff" stroke="${LIN}" stroke-width="3"/>`
+    : role === 'waiter' ? `<path d="M68 64 Q66 24 110 24 Q154 24 152 64 Q146 42 124 40 Q96 38 84 50 Q74 56 68 64 Z" fill="${c.hair}"/>`
+    : role === 'teacher' ? `<circle cx="110" cy="22" r="22" fill="${c.hair}"/><path d="M66 90 Q58 26 110 24 Q162 26 154 90 Q150 56 138 44 Q112 58 84 46 Q72 58 66 90 Z" fill="${c.hair}"/>`
+    : role === 'child' ? `<path d="M68 66 Q64 22 110 22 Q156 22 152 66 Q144 50 130 46 L124 54 L116 44 L104 54 L96 44 Q78 48 68 66 Z" fill="${c.hair}"/>`
+    : role === 'father' ? `<path d="M68 62 Q66 22 110 22 Q154 22 152 62 Q146 40 110 38 Q76 40 68 62 Z" fill="${c.hair}"/><path d="M94 86 Q110 80 126 86 Q118 92 110 88 Q102 92 94 86 Z" fill="${c.hair}"/>`
+    : `<path d="M68 68 Q64 22 110 22 Q156 22 152 68 Q150 44 132 40 Q116 52 90 44 Q74 50 68 68 Z" fill="${c.hair}"/>`;
+  svg.innerHTML = leg('R') + `<path d="M70 252 H150 L152 300 H68 Z" fill="${c.pants}"/>` + leg('L').replace('<g class="hipL">', '<g class="hipL">') + arm('R') +
+    `<path d="M58 130 Q110 116 162 130 L150 280 H70 Z" fill="${c.shirt}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/>${extra}
+     <g class="head"><rect x="100" y="98" width="20" height="34" fill="${c.skin}"/><circle cx="68" cy="74" r="9" fill="${c.skin}"/><circle cx="152" cy="74" r="9" fill="${c.skin}"/>
+       <circle cx="110" cy="70" r="42" fill="${c.skin}"/>${hair}
+       <g class="eo"><ellipse class="e1" cx="95" cy="72" rx="5" ry="5.5" fill="${INK}"/><ellipse class="e2" cx="125" cy="72" rx="5" ry="5.5" fill="${INK}"/></g>
+       <path class="eh" d="M88 74 Q95 66 102 74 M118 74 Q125 66 132 74" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+       <circle cx="86" cy="88" r="7" fill="#E8645A" opacity="0.22"/><circle cx="134" cy="88" r="7" fill="#E8645A" opacity="0.22"/>
+       <path class="ms" d="M97 90 Q110 102 123 90" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><ellipse class="mo" cx="110" cy="95" rx="9" ry="8" fill="#7A2E2E"/></g>` + arm('L');
+  parent.appendChild(svg);
+  const q = s => svg.querySelector(s), parts = { hipL: q('.hipL'), hipR: q('.hipR'), kneeL: q('.kneeL'), kneeR: q('.kneeR'), shL: q('.shL'), shR: q('.shR'), elL: q('.elL'), elR: q('.elR'), head: q('.head') };
+  const piv = { hipL: [90, 270], hipR: [130, 270], kneeL: [90, 356], kneeR: [130, 356], shL: [62, 140], shR: [158, 140], elL: [62, 214], elR: [158, 214], head: [110, 112] };
+  const eo = q('.eo'), eh = q('.eh'), ms = q('.ms'), mo = q('.mo'), e1 = q('.e1'), e2 = q('.e2');
+  const P = { x: 0, y: 0, sc: SC };
+  return {
+    svg, P,
+    set(p, t) { P.x = p.x; P.y = p.y; svg.style.left = (p.x - 40 * SC) + 'px'; svg.style.top = (p.y - 100 * SC) + 'px';
+      Object.keys(parts).forEach(k => parts[k].setAttribute('transform', `rotate(${(p[k] || 0).toFixed(2)} ${piv[k][0]} ${piv[k][1]})`));
+      const happy = p.eyes === 'happy', blink = !happy && ((t + (p.seed || 0)) % 3.1) < 0.12;
+      eo.style.display = happy ? 'none' : 'inline'; eh.style.display = happy ? 'inline' : 'none'; [e1, e2].forEach(e => e.setAttribute('ry', blink ? 0.8 : 5.5));
+      const open = p.mouth === 'open'; ms.style.display = open ? 'none' : 'inline'; mo.style.display = open ? 'inline' : 'none'; if (open) mo.setAttribute('ry', 5 + 3 * Math.abs(Math.sin(t * 14))); },
+    hand(s, p) { const S = s === 'L' ? [62, 140] : [158, 140], a1 = (p['sh' + s] || 0) * Math.PI / 180, a2 = a1 + (p['el' + s] || 0) * Math.PI / 180;
+      const lx = S[0] - 74 * Math.sin(a1) - 70 * Math.sin(a2), ly = S[1] + 74 * Math.cos(a1) + 70 * Math.cos(a2); return [p.x + lx * SC, p.y + ly * SC]; },
+  };
+}
+const STAND = sc => 1390 - 450 * sc, SEAT = sc => 1176 - 270 * sc;
+const walkPose = (ph, amp = 1) => ({ hipL: 16 * amp * Math.sin(ph), hipR: -16 * amp * Math.sin(ph), kneeL: -8 * amp * Math.max(0, Math.sin(ph)), kneeR: 8 * amp * Math.max(0, -Math.sin(ph)),
+  shL: 10 + 10 * amp * Math.sin(ph), shR: -10 + 10 * amp * Math.sin(ph), elL: -10, elR: 10, head: 2 * Math.sin(ph) * amp, bob: -7 * amp * Math.abs(Math.sin(ph)) });
+const seatedPose = { hipL: -90, hipR: -84, kneeL: 90, kneeR: 84, shL: -40, elL: -50, shR: -60, elR: -30 };
+const mixPose = (a, b, p) => { const o = { ...a }; Object.keys(b).forEach(k => { if (typeof b[k] === 'number') o[k] = lerp(a[k] || 0, b[k], p); else o[k] = p > 0.5 ? b[k] : a[k]; }); return o; };
+const stage = document.getElementById('stage');
+const home = `<div style="position:absolute;left:0;top:0;width:1080px;height:1060px;background:#EFE3CF"></div><div style="position:absolute;left:0;top:1060px;width:1080px;height:860px;background:#E3D3BA"></div>
+  <div style="position:absolute;left:0;top:1050px;width:1080px;height:14px;background:#D2BE9E"></div>
+  <div style="position:absolute;left:40px;top:880px;width:1000px;height:180px;border-radius:40px 40px 10px 10px;background:#D9C7A8"></div><div style="position:absolute;left:20px;top:940px;width:80px;height:140px;border-radius:30px;background:#CDB995"></div><div style="position:absolute;left:980px;top:940px;width:80px;height:140px;border-radius:30px;background:#CDB995"></div>`;
+const office = `<div style="position:absolute;left:0;top:0;width:1080px;height:1060px;background:#ECE4D6"></div><div style="position:absolute;left:0;top:1060px;width:1080px;height:860px;background:#DCCFB9"></div>
+  <div style="position:absolute;left:120px;top:640px;width:840px;height:300px;border-radius:16px;background:#FFFDF8;box-shadow:0 0 0 10px #C9B89C"></div>
+  <svg style="position:absolute;left:170px;top:680px" width="740" height="220" viewBox="0 0 740 220"><path d="M20 40 H300 M20 90 H240 M20 140 H320 M420 50 Q500 10 560 60 T700 50 M420 150 L520 100 L600 140 L700 80" fill="none" stroke="#B9C2D6" stroke-width="10" stroke-linecap="round"/></svg>`;
+const phoneProp = (w, h) => `<div style="position:absolute;left:0;top:0;width:${w}px;height:${h}px;border-radius:${w * 0.18}px;background:${INK}"></div><div class="ps" style="position:absolute;left:${w * 0.08}px;top:${w * 0.08}px;width:${w * 0.84}px;height:${h - w * 0.16}px;border-radius:${w * 0.12}px;background:${PUR}"></div>`;
+
+// ===================== scenes; split-flap blinds between them =====================
+const SC = [0, 4.05, 13.6, 24.3, 29.2, 33.3, 39.6, 46.1, 49.95, 56.8, 60.3];
+const scenes = SC.map((s, k) => E(stage, { zIndex: 1 + k }, '', 'scene'));
+const [S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10] = scenes;
+const bars = Array.from({ length: 8 }, (_, i) => E(stage, { left: (i * 135) + 'px', background: i % 2 ? '#4E12CC' : PUR, transformOrigin: '50% 50%' },
+  `<div style="position:absolute;left:0;top:958px;width:136px;height:4px;background:rgba(0,0,0,0.25)"></div>`, 'bar'));
+
+// ---- S0: father pays fees every month
+S0.insertAdjacentHTML('beforeend', home);
+const s0a = T(S0, 'c', 230, 74, 'Har mahine <span class="pur">coaching fees</span>');
+const cal = E(S0, { left: '620px', top: '340px', width: '320px', height: '250px', zIndex: 3 }, `<div style="position:absolute;left:0;top:0;width:320px;height:70px;background:${INK};color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center">2026</div><div class="mo" style="position:absolute;left:0;top:70px;width:320px;height:180px;display:flex;align-items:center;justify-content:center;font-size:80px;font-weight:800;color:${PUR}"></div>`, 'card');
+const calMo = cal.querySelector('.mo');
+const pay0 = E(S0, { left: '600px', top: '640px', width: '360px', height: '400px', zIndex: 3 }, `<div style="position:absolute;left:30px;top:30px;font-size:24px;font-weight:800;color:${MUT}">COACHING FEES</div><div style="position:absolute;left:30px;top:70px;font-size:64px;font-weight:800">₹4,500</div><div style="position:absolute;left:30px;top:160px;font-size:24px;font-weight:700;color:${MUT}">Aarav · Class 10</div>
+  <div class="pb" style="position:absolute;left:30px;top:270px;width:300px;height:96px;border-radius:24px;background:${PUR};color:#fff;font-size:34px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px"></div>`, 'card');
+const pb0 = pay0.querySelector('.pb');
+const fa0 = makePerson(S0, 'father', 1.45, 4);
+
+// ---- S1: does the parent actually know?
+S1.insertAdjacentHTML('beforeend', home);
+const s1a = T(S1, 'c', 230, 74, 'Kya unhe <span class="pur">pata hai</span>…?');
+const QS = [['📅', 'Kitni classes attend ki?', 8.12], ['📝', 'Kitne tests diye?', 10.2], ['📈', 'Performance kaisi hai?', 12.28]];
+const qcs = QS.map(([em, s, ts], k) => { const c = E(S1, { left: '110px', top: (350 + k * 150) + 'px', width: '860px', height: '124px', zIndex: 6 }, `
+  <div style="position:absolute;left:20px;top:17px;width:90px;height:90px;border-radius:22px;background:#F1E9DC;font-size:52px;display:flex;align-items:center;justify-content:center">${em}</div>
+  <div style="position:absolute;left:136px;top:38px;font-size:40px;font-weight:800">${s}</div><div style="position:absolute;right:24px;top:24px;width:76px;height:76px;border-radius:38px;background:${AMB};font-size:48px;font-weight:800;display:flex;align-items:center;justify-content:center">?</div>`, 'card'); c.ts = ts; return c; });
+const fa1 = makePerson(S1, 'father', 1.25, 4), ch1 = makePerson(S1, 'child', 0.92, 4);
+const qm1 = [0, 1, 2].map(k => E(S1, { fontSize: '90px', fontWeight: 800, color: AMB, zIndex: 7 }, '?'));
+
+// ---- S2: institute — separate registers and sheets
+S2.insertAdjacentHTML('beforeend', office);
+const s2a = T(S2, 'c', 210, 66, 'Sab kuch <span class="amb">alag-alag</span>');
+const REC = [['📋', 'Attendance', 20.0], ['💰', 'Fees record', 21.42], ['📊', 'Test results', 22.9]];
+const recs = REC.map(([em, s, ts], k) => { const c = E(S2, { left: (60 + k * 330) + 'px', top: '320px', width: '300px', height: '250px', zIndex: 6 }, `
+  <div style="position:absolute;left:0;top:30px;width:300px;text-align:center;font-size:84px">${em}</div><div style="position:absolute;left:0;top:150px;width:300px;text-align:center;font-size:32px;font-weight:800">${s}</div>
+  <div style="position:absolute;left:100px;top:200px;padding:4px 16px;border-radius:14px;background:#FDF1DC;color:#B4740F;font-size:20px;font-weight:800">alag</div>`, 'card'); c.ts = ts; return c; });
+const brk = [0, 1].map(k => E(S2, { left: (352 + k * 330) + 'px', top: '420px', width: '46px', height: '46px', borderRadius: '23px', background: '#C0392B', color: '#fff', fontSize: '28px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 7 }, '✕'));
+const desk = E(S2, { left: '100px', top: '1120px', width: '880px', height: '60px', borderRadius: '14px', background: '#8C5A3C', zIndex: 6 }, `<div style="position:absolute;left:40px;top:60px;width:800px;height:220px;background:#7A4D33"></div>`);
+const regs = [0, 1, 2].map(k => E(S2, { left: '520px', top: '1050px', width: '170px', height: '70px', borderRadius: '8px', background: ['#8C3B2E', '#2E5C8C', '#3B7A4D'][k], boxShadow: 'inset 10px 0 0 rgba(0,0,0,0.2)', zIndex: 7, color: '#fff', fontSize: '20px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }, ['ATTENDANCE', 'FEES', 'TESTS'][k]));
+const xl2 = E(S2, { left: '560px', top: '600px', width: '420px', height: '320px', zIndex: 5 }, `<div style="position:absolute;left:0;top:0;width:420px;height:56px;background:#1F7A4D;color:#fff;font-size:22px;font-weight:800;display:flex;align-items:center;padding-left:18px;box-sizing:border-box">students_2026_final.xlsx</div>
+  ${Array.from({ length: 5 }, (_, r) => Array.from({ length: 3 }, (_, c) => `<div style="position:absolute;left:${14 + c * 132}px;top:${70 + r * 48}px;width:126px;height:42px;background:${r ? '#fff' : '#E6EFE9'};box-shadow:0 0 0 1px #D5DED8;font-size:17px;font-weight:600;display:flex;align-items:center;padding-left:8px;box-sizing:border-box">${r ? ['Aarav', 'Diya', 'Kabir', 'Meera'][r - 1] + ['', ' · 10A', ' · ?'][c] : ['Name', 'Batch', 'Marks'][c]}</div>`).join('')).join('')}`, 'card');
+const te2 = makePerson(S2, 'teacher', 1.2, 5), st2 = makePerson(S2, 'staff', 1.25, 5);
+const ph2 = E(S2, { width: '40px', height: '74px', zIndex: 8 }, phoneProp(40, 74));
+const bub2 = E(S2, { borderRadius: '24px 24px 6px 24px', transformOrigin: '100% 100%' }, 'Hello? Haan ji…', 'bub');
+
+// ---- S3: parents keep calling
+const s3a = T(S3, 'c', 210, 70, 'Baar-baar <span class="amb">call</span>…');
+S3.insertAdjacentHTML('beforeend', `<div style="position:absolute;left:0;top:0;width:540px;height:1920px;background:#EFE3CF"></div><div style="position:absolute;left:540px;top:0;width:540px;height:1920px;background:#ECE4D6"></div>
+  <div style="position:absolute;left:538px;top:330px;width:4px;height:1120px;background:${LIN}"></div>
+  <div style="position:absolute;left:0;width:540px;top:330px;text-align:center;font-size:26px;font-weight:800;color:${MUT};letter-spacing:0.08em">PARENT</div><div style="position:absolute;left:540px;width:540px;top:330px;text-align:center;font-size:26px;font-weight:800;color:${MUT};letter-spacing:0.08em">INSTITUTE</div>`);
+const fa3 = makePerson(S3, 'father', 1.2, 4);
+const ph3 = E(S3, { width: '44px', height: '80px', zIndex: 8 }, phoneProp(44, 80));
+const cnt3 = E(S3, { left: '340px', top: '400px', width: '400px', height: '120px', borderRadius: '60px', background: INK, color: '#fff', fontSize: '44px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', zIndex: 9 }, '');
+const desks3 = [0, 1, 2].map(k => E(S3, { left: (600 + (k % 2) * 220) + 'px', top: (640 + k * 230) + 'px', width: '200px', height: '150px', zIndex: 5 }, `<svg width="200" height="150" viewBox="0 0 200 150"><rect x="20" y="70" width="160" height="70" rx="16" fill="${INK}"/><path d="M30 70 Q30 30 100 30 Q170 30 170 70 L150 70 Q150 50 100 50 Q50 50 50 70 Z" fill="${INK}"/>${[0, 1, 2].map(i => `<rect x="${60 + i * 30}" y="90" width="20" height="14" rx="4" fill="#5A5170"/>`).join('')}</svg><div class="rw" style="position:absolute;left:150px;top:0;font-size:40px;font-weight:800;color:${AMB}">((·</div>`));
+const st3 = makePerson(S3, 'staff', 1.0, 6);
+
+// ---- S4: reveal
+const s4a = T(S4, 'c', 380, 66, 'Humne develop kiya');
+const s4b = T(S4, 'c', 480, 96, '<span class="pur">Coaching Management</span>');
+s4b.style.fontSize = '86px';
+const s4c = T(S4, 'c', 590, 96, '<span class="pur">System</span>');
+const lap4 = E(S4, { left: '190px', top: '820px', width: '700px', height: '470px' }, `<div style="position:absolute;left:30px;top:0;width:640px;height:420px;border-radius:24px;background:${INK}"><div style="position:absolute;left:18px;top:18px;width:604px;height:384px;border-radius:12px;background:${WHT};overflow:hidden">
+  <div style="position:absolute;left:0;top:0;width:140px;height:384px;background:${PUR}"></div>${[0, 1, 2, 3].map(k => `<div style="position:absolute;left:${170 + (k % 2) * 210}px;top:${30 + Math.floor(k / 2) * 170}px;width:190px;height:150px;border-radius:16px;background:${['#EFE7FD', '#FDF1DC', '#EFE7FD', '#FDF1DC'][k]}"></div>`).join('')}</div></div>
+  <div style="position:absolute;left:0;top:420px;width:700px;height:34px;border-radius:0 0 30px 30px;background:#3A3150"></div>`);
+
+// ---- S5: institute dashboard
+const s5a = T(S5, 'c', 210, 70, 'Ek <span class="pur">dashboard</span> se');
+const dash = E(S5, { left: '60px', top: '330px', width: '960px', height: '760px' }, '', 'card');
+const TILE5 = [['👩‍🎓', 'Students', 248, '', 35.34], ['🗂️', 'Batches', 12, '', 36.26], ['💰', 'Fees collected', 482000, '₹', 37.06], ['✅', 'Attendance', 92, '%', 37.72]];
+dash.innerHTML = `<div style="position:absolute;left:0;top:0;width:960px;height:90px;background:${INK}"></div><div style="position:absolute;left:30px;top:26px;font-size:30px;font-weight:800;color:#fff">Bright Future Classes · Admin</div>
+  ${TILE5.map(([em, n], k) => `<div class="t5" style="position:absolute;left:${30 + (k % 2) * 460}px;top:${120 + Math.floor(k / 2) * 310}px;width:440px;height:290px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:28px;top:26px;font-size:54px">${em}</div><div style="position:absolute;left:28px;top:108px;font-size:28px;font-weight:800;color:${MUT}">${n}</div>
+    <div class="v" style="position:absolute;left:28px;top:150px;font-size:76px;font-weight:800;font-variant-numeric:tabular-nums"></div></div>`).join('')}`;
+const t5s = [...dash.querySelectorAll('.t5')], t5v = t5s.map(e => e.querySelector('.v'));
+const te5 = makePerson(S5, 'teacher', 0.82, 6);
+
+// ---- S6: student / parent portal
+const s6a = T(S6, 'c', 200, 64, 'Students & parents ka <span class="pur">portal</span>');
+const ph6 = E(S6, { left: '250px', top: '300px', width: '580px', height: '1160px', borderRadius: '72px', background: INK, boxShadow: '0 40px 90px rgba(28,23,38,0.3)' });
+const scr6 = E(ph6, { left: '22px', top: '22px', width: '536px', height: '1116px', borderRadius: '52px', background: WHT, overflow: 'hidden' });
+scr6.innerHTML = `<div style="position:absolute;left:0;top:0;width:536px;height:170px;background:${PUR}"></div>
+  <div style="position:absolute;left:30px;top:60px;width:80px;height:80px;border-radius:40px;background:${AMB};font-size:40px;display:flex;align-items:center;justify-content:center">🧒</div>
+  <div style="position:absolute;left:130px;top:64px;font-size:34px;font-weight:800;color:#fff">Aarav Sharma</div><div style="position:absolute;left:130px;top:108px;font-size:22px;font-weight:600;color:rgba(255,255,255,0.8)">Class 10 · Batch A</div>
+  <div class="c1" style="position:absolute;left:24px;top:194px;width:488px;height:230px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:24px;top:24px;font-size:24px;font-weight:800;color:${MUT}">ATTENDANCE</div><div style="position:absolute;left:24px;top:70px;font-size:26px;font-weight:700">This month</div><div style="position:absolute;left:24px;top:110px;font-size:22px;font-weight:600;color:${MUT}">23 / 25 classes</div>
+    <div class="rg" style="position:absolute;left:300px;top:30px;width:170px;height:170px;border-radius:85px"></div><div class="rp" style="position:absolute;left:300px;top:92px;width:170px;text-align:center;font-size:40px;font-weight:800"></div></div>
+  <div class="c2" style="position:absolute;left:24px;top:444px;width:488px;height:300px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:24px;top:24px;font-size:24px;font-weight:800;color:${MUT}">TEST RESULTS</div>
+    ${[['Maths', 92], ['Physics', 86], ['Chemistry', 78]].map(([n, v], k) => `<div style="position:absolute;left:24px;top:${82 + k * 68}px;font-size:24px;font-weight:700">${n}</div><div style="position:absolute;left:180px;top:${86 + k * 68}px;width:230px;height:24px;border-radius:12px;background:#EDE4D4"><div class="tb" data-v="${v}" style="height:24px;border-radius:12px;background:${k ? AMB : PUR}"></div></div><div style="position:absolute;left:424px;top:${80 + k * 68}px;font-size:26px;font-weight:800">${v}</div>`).join('')}</div>
+  <div class="c3" style="position:absolute;left:24px;top:764px;width:488px;height:320px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:24px;top:24px;font-size:24px;font-weight:800;color:${MUT}">ANNOUNCEMENTS</div>
+    ${['📢 Mock test on Sunday, 10 AM', '📢 Holiday on Friday', '📢 New batch timings from Monday'].map((s, k) => `<div class="an" style="position:absolute;left:24px;top:${78 + k * 76}px;width:440px;height:62px;border-radius:16px;background:#fff;box-shadow:0 0 0 2px ${LIN};font-size:21px;font-weight:700;display:flex;align-items:center;padding-left:16px;box-sizing:border-box">${s}</div>`).join('')}</div>`;
+const rg6 = scr6.querySelector('.rg'), rp6 = scr6.querySelector('.rp'), tb6 = [...scr6.querySelectorAll('.tb')], an6 = [...scr6.querySelectorAll('.an')], cs6 = ['.c1', '.c2', '.c3'].map(s => scr6.querySelector(s));
+
+// ---- S7: automatic fee reminder
+S7.insertAdjacentHTML('beforeend', home);
+const s7a = T(S7, 'c', 230, 70, 'Automatic <span class="pur">reminders</span>');
+const nt7 = E(S7, { left: '470px', top: '420px', width: '560px', height: '330px', zIndex: 6 }, `<div style="display:flex;align-items:center;gap:12px;padding:24px 26px 0;font-size:22px;font-weight:800;color:${MUT}"><div style="width:40px;height:40px;border-radius:10px;background:${PUR}"></div>BRIGHT FUTURE · now</div>
+  <div style="padding:14px 26px 0;font-size:32px;font-weight:800;line-height:1.3">🔔 Fees due on 10 Nov</div><div style="padding:4px 26px 0;font-size:26px;font-weight:600;color:${MUT}">Aarav · ₹4,500</div>
+  <div class="pb" style="position:absolute;left:26px;bottom:24px;width:508px;height:80px;border-radius:22px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px"></div>`, 'card');
+const pb7 = nt7.querySelector('.pb');
+const fa7 = makePerson(S7, 'father', 1.45, 4);
+const ph7 = E(S7, { width: '50px', height: '90px', zIndex: 8 }, phoneProp(50, 90));
+
+// ---- S8: progress matters
+S8.insertAdjacentHTML('beforeend', home);
+const s8a = T(S8, 'c', 220, 70, 'Education sirf');
+const s8b = T(S8, 'c', 310, 70, '<span class="amb">classes</span> nahi…');
+const s8c = T(S8, 'c', 220, 70, 'Progress pata hona');
+const s8d = T(S8, 'c', 310, 80, '<span class="pur">zaroori hai</span>');
+const prog = E(S8, { left: '170px', top: '440px', width: '740px', height: '380px', zIndex: 6 }, `<div style="position:absolute;left:30px;top:24px;font-size:26px;font-weight:800;color:${MUT}">AARAV KI PROGRESS</div>
+  <svg style="position:absolute;left:30px;top:80px" width="680" height="270" viewBox="0 0 680 270"><path d="M0 250 H680" stroke="${LIN}" stroke-width="4"/><path class="pl" d="M20 220 L140 190 L260 200 L380 140 L500 100 L640 40" fill="none" stroke="${PUR}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1"/></svg>
+  <div class="st" style="position:absolute;left:630px;top:70px;font-size:64px">⭐</div>`, 'card');
+const pl8 = prog.querySelector('.pl'), star8 = prog.querySelector('.st');
+const fa8 = makePerson(S8, 'father', 1.3, 4), ch8 = makePerson(S8, 'child', 0.95, 5);
+const ph8 = E(S8, { width: '46px', height: '84px', zIndex: 8 }, phoneProp(46, 84));
+const hi8 = E(S8, { fontSize: '70px', zIndex: 9 }, '✨');
+
+// ---- S9: CTA
+const s9a = T(S9, 'c', 300, 70, 'Aap coaching institute');
+const s9b = T(S9, 'c', 395, 84, '<span class="pur">chalate hain?</span>');
+const cbox = E(S9, { left: '90px', top: '640px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:52px;font-size:58px;font-weight:800;letter-spacing:0.05em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const s9c = T(S9, 'c', 860, 56, 'Comment <span class="pur">"INSTITUTE"</span>', { w: 700 });
+const fa9 = makePerson(S9, 'father', 1.0, 4), ch9 = makePerson(S9, 'child', 0.75, 4);
+
+// ---- S10: end
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; S10.appendChild(endLogo);
+const e1 = T(S10, 'c', 740, 120, 'HeliosLabs');
+const e2 = T(S10, 'c', 900, 50, 'Comment <span class="pur">"INSTITUTE"</span>', { w: 700 });
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.0, 3.95, 'Ek parent har mahine apne bachche ki coaching fees pay karta hai…'],
+  [3.95, 6.05, 'Lekin agar main aapse poochun,'],
+  [6.05, 10.0, 'kya unhe pata hai ki unka bachcha kitni classes attend kar raha hai?'],
+  [10.0, 11.75, 'Kitne tests diye hain?'],
+  [11.75, 13.6, 'Aur uski performance kaisi hai?'],
+  [13.6, 19.95, 'Bahut saare coaching institutes mein ye information alag-alag registers aur Excel sheets mein maintain hoti hai.'],
+  [19.95, 24.3, 'Attendance alag, fees ka record alag, test results alag.'],
+  [24.3, 29.15, 'Parents ko updates chahiye toh unhe baar-baar institute call karna padta hai.'],
+  [29.15, 33.3, 'Is problem ke liye humne ek Coaching Management System develop kiya.'],
+  [33.3, 39.6, 'Ab institute ek dashboard se students, batches, fees aur attendance manage kar sakta hai.'],
+  [39.6, 46.1, 'Students aur parents apne portal par attendance, test results aur important announcements check kar sakte hain.'],
+  [46.1, 49.95, 'Fees due hone par automatic reminders bhi bheje ja sakte hain.'],
+  [49.95, 53.15, 'Education sirf classes lene ke baare mein nahi hai…'],
+  [53.15, 56.8, 'Parents ko apne bachche ki progress pata hona bhi zaroori hai.'],
+  [56.8, 58.9, 'Aap coaching institute chalate hain?'],
+  [58.9, 62.3, 'Comment "INSTITUTE".'],
+];
+const subBox = document.querySelector('#sub span');
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- split-flap blinds: panels flip shut left→right just before each cut, then flip open
+  let cov = [];
+  bars.forEach((b, i) => { let a = 90;
+    SC.slice(1).forEach(T0 => { const c0 = T0 - 0.38 + i * 0.022, o0 = T0 + 0.03 + i * 0.022;
+      if (t >= c0 && t < o0) a = 90 * (1 - inout(clamp((t - c0) / 0.2)));
+      if (t >= o0 && t < o0 + 0.25) a = -90 * inout(clamp((t - o0) / 0.2)); });
+    b.style.transform = `perspective(1400px) rotateY(${a}deg)`; b.style.visibility = Math.abs(a) > 89.5 ? 'hidden' : 'visible'; b.style.filter = `brightness(${1 - Math.abs(a) / 300})`; });
+  scenes.forEach((S, k) => { const next = k + 1 < SC.length ? SC[k + 1] : 1e9; S.style.display = (t >= SC[k] && t < next) ? 'block' : 'none'; });
+
+  // ---- S0
+  show(s0a, t, 1.0);
+  { pop(cal, t, 0.4); const mi = Math.min(10, Math.floor(clamp((t - 1.02) / 1.4) * 10)); calMo.textContent = MONTHS[mi]; calMo.style.transform = `translateY(${t > 1.02 && t < 2.42 ? -6 * Math.sin(t * 40) : 0}px)`;
+    pop(pay0, t, 2.3); const paid = t > 3.1; pb0.innerHTML = paid ? `${check(44, AMB)}Paid` : 'Pay now'; pb0.style.background = paid ? INK : PUR; pb0.style.transform = `scale(${press(t, 3.1)})`;
+    const p = { x: 120, y: STAND(1.45), shL: 8, shR: -8, seed: 0.5, head: 3 };
+    const reach = inout(clamp((t - 2.7) / 0.35)) * (1 - inout(clamp((t - 3.5) / 0.35))); p.shR = lerp(-8, -82, reach); p.elR = lerp(0, -15, reach); p.head = lerp(3, 8, reach);
+    if (t > 3.2) p.eyes = 'happy'; fa0.set(p, t); }
+  // ---- S1
+  show(s1a, t, 6.18);
+  qcs.forEach((c, k) => { const p = clamp(sp(t, c.ts)); c.style.transform = `translateX(${(1 - p) * (k % 2 ? 1100 : -1100)}px)`; c.style.visibility = t < c.ts ? 'hidden' : 'visible'; });
+  { const sc = 1.25, p = { x: 140, y: STAND(sc), shL: 8, shR: -8, head: 5, seed: 1.1 };
+    const scr = inout(clamp((t - 8.0) / 0.3)); if (scr > 0) { p.shL = lerp(8, 170, scr); p.elL = lerp(0, 59, scr) + 8 * Math.sin(t * 18) * scr; p.head = lerp(5, -6, scr); p.mouth = t > 8.2 && t < 8.7 ? 'open' : 'smile'; }
+    fa1.set(p, t);
+    qm1.forEach((q, k) => { pop(q, t, [8.3, 10.3, 12.4][k], 1e9, `rotate(${(k - 1) * 14 + 6 * Math.sin(t * 4 + k)}deg)`); q.style.left = (210 + k * 70) + 'px'; q.style.top = (700 - k * 30 - 10 * Math.sin(t * 3 + k)) + 'px'; });
+    const c = { x: 560, y: STAND(0.92), shL: 8, shR: -8, head: -4, seed: 2.3 };
+    const sh = inout(clamp((t - 12.3) / 0.25)) * (1 - inout(clamp((t - 13.2) / 0.25))); c.shL = lerp(8, 40, sh); c.elL = lerp(0, -95, sh); c.shR = lerp(-8, -40, sh); c.elR = lerp(0, 95, sh); c.head = lerp(-4, 10, sh);
+    if (sh > 0.3) c.mouth = 'open'; ch1.set(c, t); }
+  // ---- S2
+  show(s2a, t, 16.26);
+  recs.forEach((c, k) => pop(c, t, c.ts)); brk.forEach((b, k) => pop(b, t, 23.54 + k * 0.12));
+  regs.forEach((r, k) => { const f = inout(clamp((t - 16.26) / 0.5)); r.style.transform = `translate(${f * (k - 1) * 190}px, ${-k * 14 * (1 - f)}px) rotate(${f * (k - 1) * 6}deg)`; });
+  { const p = clamp(sp(t, 18.08)); xl2.style.transform = `scale(${p}) rotate(3deg)`; xl2.style.visibility = t < 18.08 ? 'hidden' : 'visible'; xl2.style.opacity = 1 - clamp((t - 19.9) / 0.3); }
+  { const p = { x: 170, y: STAND(1.2) - 40, shL: 30, elL: -60 + 20 * Math.sin(t * 5), shR: -40, elR: -50 + 25 * Math.max(0, Math.sin(t * 3)), head: 4 * Math.sin(t * 1.3), seed: 0.8 }; te2.set(p, t);
+    const s = { x: 760, y: STAND(1.25), shL: 8, shR: -170, elR: -59, head: -6, seed: 1.7, mouth: Math.sin(t * 9) > 0.2 && t > 14.5 && t < 19.5 ? 'open' : 'smile' }; st2.set(s, t);
+    const [hx, hy] = st2.hand('R', s); ph2.style.left = (hx - 14) + 'px'; ph2.style.top = (hy - 60) + 'px'; pop(bub2, t, 14.6, 19.6); bub2.style.left = '560px'; bub2.style.top = '760px'; }
+  // ---- S3
+  show(s3a, t, 26.5);
+  { const n = t < 25.0 ? 0 : t < 26.5 ? 1 : t < 27.02 ? 2 : t < 27.7 ? 3 : 4; cnt3.innerHTML = `📞 Call × <span style="color:${AMB}">${n}</span>`; pop(cnt3, t, 25.0); cnt3.style.transform += ` scale(${1 + 0.1 * Math.sin(Math.PI * clamp((t - [25.0, 26.5, 27.02, 27.7][Math.max(0, n - 1)]) / 0.25))})`;
+    const p = { x: 70, y: STAND(1.2), shL: 8, shR: -170, elR: -59, head: -5 + 3 * Math.sin(t * 2), seed: 0.2, mouth: t > 27.7 ? 'open' : 'smile' }; fa3.set(p, t);
+    const [hx, hy] = fa3.hand('R', p); ph3.style.left = (hx - 16) + 'px'; ph3.style.top = (hy - 64) + 'px';
+    desks3.forEach((d, k) => { const ring = t > 24.6 + k * 0.4; d.style.transform = `rotate(${ring ? 5 * Math.sin(t * 40 + k) : 0}deg)`; d.querySelector('.rw').style.opacity = ring && Math.sin(t * 8 + k) > 0 ? 1 : 0.2; });
+    const s = { x: 760, y: STAND(1.0), shL: 150 + 10 * Math.sin(t * 6), elL: 20, shR: -150 - 10 * Math.sin(t * 6), elR: -20, head: 6 * Math.sin(t * 4), seed: 1.4, mouth: 'open' }; st3.set(s, t); }
+  // ---- S4
+  show(s4a, t, 30.46); show(s4b, t, 31.0); show(s4c, t, 31.76);
+  { const p = clamp(sp(t, 32.3)); lap4.style.transform = `translateY(${(1 - p) * 1000}px)`; lap4.style.visibility = t < 32.3 ? 'hidden' : 'visible'; }
+  // ---- S5
+  show(s5a, t, 34.5);
+  { const p = clamp(sp(t, 33.6)); dash.style.transform = `translateY(${(1 - p) * 1300}px)`; }
+  t5s.forEach((e, k) => { const ts = TILE5[k][4], on = t > ts; e.style.boxShadow = `0 0 0 ${on ? 4 : 2}px ${on ? PUR : LIN}`; e.style.transform = `scale(${1 + 0.04 * Math.sin(Math.PI * clamp((t - ts) / 0.3))})`;
+    const v = TILE5[k][2] * expo(t, ts, 0.8); t5v[k].textContent = t < ts ? '—' : TILE5[k][3] === '₹' ? '₹' + (v / 100000).toFixed(1) + 'L' : Math.round(v) + TILE5[k][3]; });
+  { const p = { x: 40, y: STAND(0.82), shL: 8, shR: -8, seed: 0.9 }; const pt = inout(clamp((t - 34.4) / 0.3)); p.shR = lerp(-8, -150, pt); p.elR = lerp(0, 20, pt); p.eyes = t > 37.8 ? 'happy' : 'open'; te5.set(p, t); te5.svg.style.visibility = t < 33.8 ? 'hidden' : 'visible'; }
+  // ---- S6
+  show(s6a, t, 40.4);
+  { const p = clamp(sp(t, 39.8)); ph6.style.transform = `translateY(${(1 - p) * 1300}px)`; }
+  cs6.forEach((c, k) => { const p = clamp(sp(t, [41.4, 42.6, 43.6][k])); c.style.transform = `translateX(${(1 - p) * 600}px)`; });
+  { const f = inout(clamp((t - 41.8) / 0.9)); rg6.style.background = `conic-gradient(${PUR} ${f * 0.92 * 360}deg, #EDE4D4 0)`; rg6.style.webkitMask = rg6.style.mask = 'radial-gradient(circle, transparent 60px, #000 61px)'; rp6.textContent = Math.round(92 * f) + '%'; }
+  tb6.forEach((b, k) => b.style.width = (230 * (+b.dataset.v / 100) * inout(clamp((t - 42.9 - k * 0.12) / 0.6))) + 'px');
+  an6.forEach((a, k) => pop(a, t, 44.2 + k * 0.25));
+  // ---- S7
+  show(s7a, t, 47.32);
+  { const p = clamp(sp(t, 47.8)); nt7.style.transform = `translateY(${(1 - p) * -700}px)`; nt7.style.visibility = t < 47.8 ? 'hidden' : 'visible';
+    const paid = t > 48.85; pb7.innerHTML = paid ? `${check(40, AMB)}Paid` : 'Pay now'; pb7.style.background = paid ? INK : PUR; pb7.style.transform = `scale(${press(t, 48.82)})`;
+    const f = { x: 90, y: STAND(1.45), shL: 8, shR: -8, seed: 0.6 }; const hold = inout(clamp((t - 46.6) / 0.35)); f.shR = lerp(-8, -55, hold); f.elR = lerp(0, -100, hold);
+    f.head = t > 47.8 ? 8 : 3; if (t > 48.9) f.eyes = 'happy'; fa7.set(f, t);
+    const [hx, hy] = fa7.hand('R', f); ph7.style.left = (hx - 10) + 'px'; ph7.style.top = (hy - 80) + 'px'; ph7.style.transform = `rotate(-10deg)`; }
+  // ---- S8
+  show(s8a, t, 50.04, 53.2); show(s8b, t, 51.22, 53.25); show(s8c, t, 53.34); show(s8d, t, 54.6);
+  { const p = clamp(sp(t, 53.6)); prog.style.transform = `scale(${0.6 + 0.4 * p})`; prog.style.opacity = p; prog.style.visibility = t < 53.6 ? 'hidden' : 'visible'; pl8.style.strokeDashoffset = 1 - inout(clamp((t - 54.6) / 1.0)); pop(star8, t, 55.6);
+    const f = { x: 160, y: STAND(1.3), shL: 8, shR: -8, seed: 0.3 };
+    const look = inout(clamp((t - 50.4) / 0.4)); f.shR = lerp(-8, -55, look); f.elR = lerp(0, -100, look); f.head = 8 * look;
+    const hf = inout(clamp((t - 55.6) / 0.25)); if (hf > 0) { f.shR = lerp(f.shR, -150, hf); f.elR = lerp(f.elR, 10, hf); f.eyes = 'happy'; }
+    fa8.set(f, t); const [hx, hy] = fa8.hand('R', { ...f }); ph8.style.left = (hx - 12) + 'px'; ph8.style.top = (hy - 76) + 'px'; ph8.style.visibility = hf > 0.3 ? 'hidden' : 'visible';
+    const c = { x: 600, y: STAND(0.95), shL: 8, shR: -8, head: -6, seed: 1.9, eyes: t > 54.6 ? 'happy' : 'open', mouth: t > 55.6 ? 'open' : 'smile' };
+    if (hf > 0) { c.shL = lerp(8, 150, hf); c.elL = lerp(0, -10, hf); }
+    ch8.set(c, t); pop(hi8, t, 55.85, 56.7); hi8.style.left = '500px'; hi8.style.top = '820px'; }
+  // ---- S9
+  show(s9a, t, 57.0); show(s9b, t, 57.6); pop(cbox, t, 58.4);
+  { const s = 'INSTITUTE'; cm.textContent = s.slice(0, Math.floor(clamp((t - 59.06) / 0.65) * s.length)); sd.style.transform = `scale(${press(t, 59.9)})`; }
+  show(s9c, t, 59.2);
+  { const f = { x: 250, y: STAND(1.0), shL: 8, shR: -8, seed: 0.4, eyes: 'happy' }; const w = Math.max(0, Math.sin(Math.PI * clamp((t - 57.2) / 2.5))); f.shR = lerp(-8, -155, Math.min(1, w * 2)); f.elR = 20 * Math.sin(t * 14) * w; fa9.set(f, t);
+    const c = { x: 600, y: STAND(0.75), shL: 8, shR: -8, seed: 1.2, eyes: 'happy' }; c.shL = lerp(8, 155, Math.min(1, w * 2)); c.elL = -20 * Math.sin(t * 14) * w; ch9.set(c, t); }
+  // ---- S10
+  animLogo(endLogo, t, 60.45); show(e1, t, 60.7); show(e2, t, 61.0);
+
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 62.3;
+window.seek(0);
+</script>
+</body>
+</html>
