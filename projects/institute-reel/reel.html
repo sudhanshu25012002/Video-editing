@@ -1,0 +1,351 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Institute Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #2A2238; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #2A2238; perspective: 2600px; }
+  .a { position: absolute; }
+  .page { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; transform-origin: 0 50%; backface-visibility: hidden; }
+  .ruled { background-color: #F7F1E4; background-image: repeating-linear-gradient(transparent 0 66px, #DCE3EE 66px 69px); }
+  .ruled::before { content: ''; position: absolute; left: 110px; top: 0; bottom: 0; width: 4px; background: #E9A8A0; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .tag { position: absolute; height: 54px; padding: 0 22px; border-radius: 27px; background: #1C1726; color: #FFFDF8; font-size: 24px; font-weight: 800; letter-spacing: 0.12em; display: flex; align-items: center; }
+  .bub { position: absolute; padding: 18px 24px; border-radius: 24px 24px 24px 6px; font-size: 28px; font-weight: 600; white-space: nowrap; transform-origin: 0 100%; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const cap = (s, c = PUR) => `<svg width="${s}" height="${s}" viewBox="0 0 100 100"><path d="M50 18 L96 38 L50 58 L4 38 Z" fill="${c}"/><path d="M24 48 V68 C24 78 76 78 76 68 V48 L50 60 Z" fill="${c}"/><path d="M90 40 V66" stroke="${c}" stroke-width="5"/><circle cx="90" cy="70" r="6" fill="${AMB}"/></svg>`;
+const avatar = (s, c) => `<svg width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="${c}"/><circle cx="50" cy="40" r="17" fill="#FFFDF8"/><path d="M20 84 C26 62 74 62 80 84 Z" fill="#FFFDF8"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+
+// ===================== pages: each turns away (3D) to reveal the next =====================
+const SC = [0, 5.0, 13.0, 21.6, 28.55, 34.75, 38.2, 43.85, 50.45, 57.8, 62.95, 67.7, 74.0];
+const RULED = [true, true, true, true, true, false, false, false, false, false, false, false, false];
+const pages = SC.map((s, k) => { const P = E(stage, { zIndex: 200 - k }, '', 'page' + (RULED[k] ? ' ruled' : '')); stage.insertBefore(P, document.getElementById('logoTL')); return P; });
+const shade = pages.map(P => E(P, { inset: '0', background: '#1C1726', opacity: 0, zIndex: 100 }));
+const [P0, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12] = pages;
+const chapter = (P, txt, y = 200) => E(P, { left: '0', top: y + 'px', width: '1080px', display: 'flex', justifyContent: 'center' }, `<div class="tag" style="position:relative">${txt}</div>`);
+
+// ---- P0: case study
+const sticky = E(P0, { left: '360px', top: '330px', width: '360px', height: '150px', background: AMB, transform: 'rotate(-4deg)', boxShadow: '0 12px 24px rgba(28,23,38,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', fontWeight: 800, letterSpacing: '0.1em' }, 'CASE STUDY');
+const capE = E(P0, { left: '390px', top: '540px', width: '300px', height: '300px' }, cap(300));
+const t0a = T(P0, 'c', 880, 104, 'Coaching Institute');
+const t0b = T(P0, 'c', 1020, 64, '💡 <span class="amb">Interesting problem</span>');
+
+// ---- P1: hundreds of students, registers + Excel
+const p1tag = chapter(P1, 'THE PROBLEM');
+const p1a = T(P1, 'c', 290, 72, '<span class="pur">Hundreds</span> of students');
+const AV = Array.from({ length: 40 }, (_, k) => E(P1, { left: (150 + (k % 8) * 100) + 'px', top: (430 + Math.floor(k / 8) * 100) + 'px', width: '84px', height: '84px' }, avatar(84, [PUR, AMB, INK, '#8C6FE8', '#C98A26'][k % 5])));
+const regs = E(P1, { left: '130px', top: '960px', width: '360px', height: '400px' }, [0, 1, 2, 3].map(k => `<div style="position:absolute;left:${k * 6}px;top:${300 - k * 70}px;width:340px;height:80px;border-radius:10px;background:${['#8C3B2E', '#2E4A8C', '#3B6B3E', '#7A5A2E'][k]};box-shadow:inset 18px 0 0 rgba(0,0,0,0.18)"><div style="position:absolute;left:40px;top:28px;width:150px;height:22px;border-radius:4px;background:#F3ECDF"></div></div>`).join('') + `<div style="position:absolute;left:0;width:360px;top:-60px;text-align:center;font-size:32px;font-weight:800">Registers</div>`);
+const xls = E(P1, { left: '560px', top: '900px', width: '400px', height: '460px' }, '', 'card');
+xls.innerHTML = `<div style="position:absolute;left:0;top:0;width:400px;height:64px;background:#2E7D4F;color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;padding-left:22px">Excel sheet</div>
+  ${Array.from({ length: 30 }, (_, k) => `<div style="position:absolute;left:${(k % 3) * 133}px;top:${64 + Math.floor(k / 3) * 39}px;width:133px;height:39px;box-shadow:inset -1px -1px 0 #D5DCD0"></div>`).join('')}`;
+
+// ---- P2: manual tracking sheet
+const p2tag = chapter(P2, 'THE PROBLEM');
+const p2a = T(P2, 'c', 290, 72, 'Sab kuch <span class="amb">manually</span> track');
+const sheet = E(P2, { left: '70px', top: '420px', width: '940px', height: '900px' }, '', 'card');
+const COLS = ['Student', 'Fees', 'Attendance', 'Syllabus'];
+const ROWS = [['Rahul', 'Pending', '62%', 0.4], ['Priya', 'Paid', '91%', 0.8], ['Aman', 'Pending', '58%', 0.3], ['Sneha', 'Paid', '88%', 0.7], ['Karan', 'Pending', '71%', 0.5], ['Isha', 'Paid', '95%', 0.9]];
+sheet.innerHTML = COLS.map((c, k) => `<div style="position:absolute;left:${[30, 270, 480, 700][k]}px;top:30px;font-size:26px;font-weight:800;color:${MUT}">${c}</div>`).join('') +
+  ROWS.map((r, i) => `<div class="row" style="position:absolute;left:20px;top:${90 + i * 130}px;width:900px;height:110px;border-radius:16px;background:#FFF8EA">
+    <div style="position:absolute;left:10px;top:36px;font-size:32px;font-weight:700;font-style:italic">${r[0]}</div>
+    <div class="fee" style="position:absolute;left:250px;top:28px;padding:10px 18px;border-radius:12px;font-size:26px;font-weight:800">${r[1]}</div>
+    <div class="att" style="position:absolute;left:460px;top:28px;padding:10px 18px;border-radius:12px;font-size:28px;font-weight:800">${r[2]}</div>
+    <div style="position:absolute;left:680px;top:46px;width:190px;height:18px;border-radius:9px;background:#EDE4D4"><div class="syl" style="position:absolute;left:0;top:0;height:18px;border-radius:9px;background:${PUR}"></div></div>
+    <div class="tk" style="position:absolute;left:-4px;top:30px;width:40px;height:40px;font-size:36px;font-weight:800;color:${PUR}">✓</div></div>`).join('');
+const rowsE = [...sheet.querySelectorAll('.row')], fees = [...sheet.querySelectorAll('.fee')], atts = [...sheet.querySelectorAll('.att')], syls = [...sheet.querySelectorAll('.syl')], tks = [...sheet.querySelectorAll('.tk')];
+const pencil = E(P2, { width: '120px', height: '120px', zIndex: 20 }, `<svg width="120" height="120" viewBox="0 0 120 120"><path d="M16 104 L28 76 L88 16 L104 32 L44 92 Z" fill="${AMB}"/><path d="M16 104 L28 76 L44 92 Z" fill="#F3D9B0"/><path d="M16 104 L22 90 L30 98 Z" fill="${INK}"/><path d="M88 16 L104 32 L110 26 C114 22 114 16 110 12 L108 10 C104 6 98 6 94 10 Z" fill="#E9A8A0"/></svg>`);
+
+// ---- P3: parents ask, records take time
+const p3tag = chapter(P3, 'THE PROBLEM');
+const p3a = T(P3, 'c', 290, 72, '<span class="pur">Parents</span> poochte…');
+const pph = E(P3, { left: '120px', top: '420px', width: '500px', height: '760px', borderRadius: '54px', background: WHT, boxShadow: '0 0 0 10px #1C1726', overflow: 'hidden' },
+  `<div style="position:absolute;left:0;top:0;width:500px;height:110px;background:#F1E9DC"></div><div style="position:absolute;left:28px;top:44px;font-size:28px;font-weight:800">Parents · Messages</div>`);
+const PM = [['Fees kitni pending hai?', 22.7], ['Rahul ki progress kaisi hai?', 23.86], ['Attendance report bhejo', 24.72]];
+const pms = PM.map(([m], k) => E(pph, { left: '22px', top: (150 + k * 150) + 'px', background: k === 1 ? INK : '#F1E9DC', color: k === 1 ? '#fff' : INK, fontSize: '26px' }, m, 'bub'));
+const flip3 = E(P3, { left: '660px', top: '560px', width: '320px', height: '420px', perspective: '900px' }, [0, 1, 2, 3, 4].map(k => `<div class="pg" style="position:absolute;left:0;top:0;width:300px;height:400px;border-radius:8px;background:${k % 2 ? '#FFF8EA' : '#F7EEDB'};box-shadow:0 0 0 2px ${LIN};transform-origin:0 50%;backface-visibility:hidden">${[0, 1, 2, 3, 4, 5].map(j => `<div style="position:absolute;left:24px;top:${40 + j * 56}px;width:${220 - (j % 3) * 40}px;height:12px;border-radius:6px;background:#DCCFB8"></div>`).join('')}</div>`).join(''));
+const pgs3 = [...flip3.querySelectorAll('.pg')];
+const glass = E(P3, { left: '740px', top: '1040px', width: '160px', height: '220px' }, `<svg width="160" height="220" viewBox="0 0 160 220"><rect x="20" y="8" width="120" height="16" rx="6" fill="${INK}"/><rect x="20" y="196" width="120" height="16" rx="6" fill="${INK}"/>
+  <path d="M34 24 H126 C126 70 92 92 80 110 C92 128 126 150 126 196 H34 C34 150 68 128 80 110 C68 92 34 70 34 24 Z" fill="none" stroke="${INK}" stroke-width="7"/><path class="sandT" d="M46 34 H114 C112 64 90 86 80 102 C70 86 48 64 46 34 Z" fill="${AMB}"/><path class="sandB" d="M50 188 C52 160 70 140 80 130 C90 140 108 160 110 188 Z" fill="${AMB}"/></svg>`);
+const p3b = T(P3, 'c', 1300, 60, '<span class="amb">Kaafi time</span> lag jaata tha', { w: 800 });
+
+// ---- P4: the ask
+const p4tag = chapter(P4, 'THE ASK');
+const quote = E(P4, { left: '90px', top: '300px', width: '900px', height: '520px' }, `
+  <div style="position:absolute;left:40px;top:10px;font-size:200px;font-weight:800;color:${PUR};line-height:1">“</div>
+  <div class="q" style="position:absolute;left:60px;top:150px;width:780px;font-size:50px;font-weight:800;letter-spacing:-0.02em;line-height:1.25"></div>`, 'card');
+const qText = quote.querySelector('.q');
+const QW = 'Humein ek aisa system chahiye jahan institute ka saara management ek hi jagah ho.'.split(' ');
+const QT = [29.7, 29.9, 30.04, 30.44, 30.78, 31.5, 31.58, 32.24, 32.36, 32.8, 33.4, 33.78, 33.96, 34.3];
+const bits4 = ['Registers', 'Excel', 'Fees', 'Attendance', 'Messages'].map((n, k) => E(P4, { height: '60px', padding: '0 24px', borderRadius: '30px', background: k % 2 ? INK : '#FFFDF8', color: k % 2 ? '#fff' : INK, boxShadow: '0 0 0 2px #E2D8C6', fontSize: '26px', fontWeight: 700, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }, n));
+const box4 = E(P4, { left: '390px', top: '1000px', width: '300px', height: '260px', borderRadius: '40px', background: PUR, color: '#fff', fontSize: '34px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }, 'Ek hi<br>jagah');
+
+// ---- P5: reveal
+const p5tag = chapter(P5, 'THE SOLUTION', 260);
+const p5a = T(P5, 'c', 360, 70, 'So, we built a');
+const p5b = T(P5, 'c', 460, 92, '<span class="pur">Custom Institute</span>');
+const p5c = T(P5, 'c', 565, 92, '<span class="pur">Management System</span>');
+const laptop = E(P5, { left: '110px', top: '780px', width: '700px', height: '520px' }, `
+  <div style="position:absolute;left:40px;top:0;width:620px;height:400px;border-radius:24px;background:${INK};padding:16px;box-sizing:border-box"><div style="width:100%;height:100%;border-radius:12px;background:#FFFDF8;position:relative">
+    <div style="position:absolute;left:0;top:0;width:140px;height:100%;background:#F1E9DC;border-radius:12px 0 0 12px"></div>
+    ${[0, 1, 2, 3].map(k => `<div style="position:absolute;left:170px;top:${24 + k * 82}px;width:${380 - k * 40}px;height:58px;border-radius:12px;background:${k === 0 ? PUR : '#EDE4D4'}"></div>`).join('')}</div></div>
+  <div style="position:absolute;left:0;top:400px;width:700px;height:30px;border-radius:0 0 30px 30px;background:#3A3150"></div>`);
+const mphone = E(P5, { left: '700px', top: '900px', width: '260px', height: '460px', borderRadius: '40px', background: WHT, boxShadow: '0 0 0 8px #1C1726', overflow: 'hidden' },
+  `<div style="position:absolute;left:0;top:0;width:260px;height:80px;background:${PUR}"></div>${[0, 1, 2].map(k => `<div style="position:absolute;left:18px;top:${100 + k * 100}px;width:224px;height:80px;border-radius:14px;background:#F1E9DC"></div>`).join('')}`);
+
+// ---- P6: student portal
+const p6tag = chapter(P6, '1 · STUDENT PORTAL');
+const p6a = T(P6, 'c', 290, 68, 'Student <span class="pur">portal</span>');
+const portal = E(P6, { left: '250px', top: '420px', width: '580px', height: '1000px', borderRadius: '60px', background: WHT, boxShadow: '0 0 0 12px #1C1726', overflow: 'hidden' });
+portal.innerHTML = `<div style="position:absolute;left:0;top:0;width:580px;height:170px;background:${PUR}"></div>
+  <div style="position:absolute;left:30px;top:50px">${avatar(84, '#8C6FE8')}</div><div style="position:absolute;left:134px;top:58px;font-size:32px;font-weight:800;color:#fff">Rahul Sharma</div><div style="position:absolute;left:134px;top:102px;font-size:22px;font-weight:600;color:#DCCCFB">Batch A · JEE 2027</div>
+  <div class="c1" style="position:absolute;left:24px;top:200px;width:532px;height:220px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:30px;top:30px;font-size:28px;font-weight:800">Attendance</div><div class="ring" style="position:absolute;left:330px;top:24px;width:170px;height:170px;border-radius:85px"></div>
+    <div class="pct" style="position:absolute;left:330px;top:84px;width:170px;text-align:center;font-size:40px;font-weight:800"></div><div style="position:absolute;left:30px;top:84px;font-size:24px;font-weight:600;color:${MUT}">This month</div></div>
+  <div class="c2" style="position:absolute;left:24px;top:440px;width:532px;height:150px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:30px;top:30px;font-size:28px;font-weight:800">Fees</div><div style="position:absolute;left:30px;top:80px;font-size:24px;font-weight:600;color:${MUT}">Term 2</div>
+    <div style="position:absolute;right:30px;top:46px;display:flex;align-items:center;gap:12px;font-size:30px;font-weight:800;color:${PUR}">${check(52)}Paid</div></div>
+  <div class="c3" style="position:absolute;left:24px;top:610px;width:532px;height:340px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:30px;top:26px;font-size:28px;font-weight:800">Academic updates</div>
+    ${['Physics test · 82/100', 'Chemistry notes uploaded', 'Maths syllabus 70% done'].map((s, k) => `<div class="up" style="position:absolute;left:30px;top:${86 + k * 80}px;width:472px;height:64px;border-radius:14px;background:#fff;box-shadow:0 0 0 2px ${LIN};font-size:24px;font-weight:700;display:flex;align-items:center;padding-left:20px;box-sizing:border-box">${s}</div>`).join('')}</div>`;
+const pc1 = portal.querySelector('.c1'), pc2 = portal.querySelector('.c2'), pc3 = portal.querySelector('.c3'), pring = portal.querySelector('.ring'), ppct = portal.querySelector('.pct'), pups = [...portal.querySelectorAll('.up')];
+
+// ---- P7: admin dashboard
+const p7tag = chapter(P7, '2 · ADMIN DASHBOARD');
+const p7a = T(P7, 'c', 290, 68, 'Admin <span class="pur">dashboard</span>');
+const dash = E(P7, { left: '50px', top: '430px', width: '980px', height: '880px' }, '', 'card');
+const TABS = [['Students', 46.1], ['Batches', 46.8], ['Teachers', 47.98], ['Fee records', 48.78]];
+const TABDATA = [
+  [['Rahul Sharma', 'Batch A'], ['Priya Verma', 'Batch B'], ['Aman Gupta', 'Batch A'], ['Sneha Rao', 'Batch C']],
+  [['Batch A · JEE', '42 students'], ['Batch B · NEET', '38 students'], ['Batch C · Foundation', '51 students'], ['Batch D · Crash', '27 students']],
+  [['Mr. Verma', 'Physics'], ['Ms. Iyer', 'Chemistry'], ['Mr. Khan', 'Maths'], ['Ms. Das', 'Biology']],
+  [['Rahul Sharma', 'Paid ✓'], ['Priya Verma', 'Paid ✓'], ['Aman Gupta', 'Pending'], ['Sneha Rao', 'Paid ✓']],
+];
+dash.innerHTML = `<div style="position:absolute;left:0;top:0;width:260px;height:880px;background:${INK}"></div><div style="position:absolute;left:30px;top:36px;font-size:30px;font-weight:800;color:#fff">Admin</div>
+  ${TABS.map(([n], k) => `<div class="tab" style="position:absolute;left:18px;top:${110 + k * 92}px;width:224px;height:72px;border-radius:16px;font-size:26px;font-weight:700;display:flex;align-items:center;padding-left:22px;box-sizing:border-box;color:#fff">${n}</div>`).join('')}
+  <div class="ttl" style="position:absolute;left:300px;top:36px;font-size:36px;font-weight:800"></div>
+  ${[0, 1, 2, 3].map(k => `<div class="dr" style="position:absolute;left:300px;top:${110 + k * 150}px;width:640px;height:126px;border-radius:20px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}"><div class="a1" style="position:absolute;left:30px;top:24px;font-size:30px;font-weight:800"></div><div class="a2" style="position:absolute;left:30px;top:72px;font-size:24px;font-weight:600;color:${MUT}"></div></div>`).join('')}`;
+const tabs = [...dash.querySelectorAll('.tab')], dTtl = dash.querySelector('.ttl'), drs = [...dash.querySelectorAll('.dr')];
+const cur7 = E(P7, { width: '60px', height: '60px', zIndex: 9 }, `<svg width="60" height="60" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${WHT}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ---- P8: automation
+const p8tag = chapter(P8, '3 · AUTOMATION');
+const auto = [
+  E(P8, { left: '90px', top: '320px', width: '900px', height: '260px' }, `<div style="position:absolute;left:36px;top:30px;font-size:36px;font-weight:800">Automated fee reminders</div>
+    <div class="rm" style="position:absolute;left:36px;top:100px;padding:18px 24px;border-radius:24px 24px 24px 6px;background:#F1E9DC;font-size:26px;font-weight:600;transform-origin:0 100%">🔔 Reminder: Term 2 fee due on 10th</div>
+    <div class="snt" style="position:absolute;left:36px;top:190px;font-size:22px;font-weight:700;color:${PUR}">Sent automatically ✓</div>`, 'card'),
+  E(P8, { left: '90px', top: '610px', width: '900px', height: '260px' }, `<div style="position:absolute;left:36px;top:30px;font-size:36px;font-weight:800">Online payments</div>
+    <div class="pay" style="position:absolute;left:36px;top:100px;width:420px;height:110px;border-radius:24px;background:${PUR};color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:14px">UPI · Card · Netbanking</div>
+    <div class="paid" style="position:absolute;left:500px;top:110px;display:flex;align-items:center;gap:14px;font-size:34px;font-weight:800;color:${PUR}">${check(60)}Payment received</div>`, 'card'),
+  E(P8, { left: '90px', top: '900px', width: '900px', height: '300px' }, `<div style="position:absolute;left:36px;top:30px;font-size:36px;font-weight:800">Detailed reports</div>
+    ${[0.45, 0.62, 0.55, 0.78, 0.7, 0.92].map((h, k) => `<div class="rb" data-h="${h}" style="position:absolute;left:${50 + k * 80}px;bottom:36px;width:56px;border-radius:10px 10px 4px 4px;background:${k === 5 ? PUR : '#D9CDB9'}"></div>`).join('')}
+    <div style="position:absolute;left:560px;top:110px;width:300px;font-size:26px;font-weight:700;color:${MUT};line-height:1.5">Fees · Attendance<br>Batch performance</div>`, 'card'),
+];
+const rm = auto[0].querySelector('.rm'), snt = auto[0].querySelector('.snt'), payb = auto[1].querySelector('.pay'), paid = auto[1].querySelector('.paid'), rbs = [...auto[2].querySelectorAll('.rb')];
+const meter = E(P8, { left: '90px', top: '1240px', width: '900px', height: '120px', borderRadius: '30px', background: INK, color: '#fff' },
+  `<div style="position:absolute;left:30px;top:40px;font-size:30px;font-weight:800">Manual work</div><div style="position:absolute;left:300px;top:46px;width:560px;height:28px;border-radius:14px;background:#3A3150"><div class="mf" style="position:absolute;left:0;top:0;height:28px;border-radius:14px;background:${AMB}"></div></div>`);
+const mf = meter.querySelector('.mf');
+
+// ---- P9: no more registers
+const p9a = T(P9, 'c', 260, 72, 'Alag-alag registers');
+const p9b = T(P9, 'c', 360, 72, 'aur spreadsheets?');
+const oldStuff = E(P9, { left: '190px', top: '560px', width: '700px', height: '560px' }, `
+  ${[0, 1, 2].map(k => `<div style="position:absolute;left:${k * 8}px;top:${360 - k * 90}px;width:320px;height:100px;border-radius:10px;background:${['#8C3B2E', '#2E4A8C', '#3B6B3E'][k]};box-shadow:inset 18px 0 0 rgba(0,0,0,0.18)"></div>`).join('')}
+  <div style="position:absolute;left:380px;top:150px;width:320px;height:320px;border-radius:16px;background:#fff;box-shadow:0 0 0 2px ${LIN};overflow:hidden"><div style="height:50px;background:#2E7D4F"></div>${Array.from({ length: 18 }, (_, k) => `<div style="position:absolute;left:${(k % 3) * 107}px;top:${50 + Math.floor(k / 3) * 45}px;width:107px;height:45px;box-shadow:inset -1px -1px 0 #D5DCD0"></div>`).join('')}</div>`);
+const stamp9 = E(P9, { left: '200px', top: '740px', width: '680px', height: '200px', borderRadius: '28px', boxShadow: `inset 0 0 0 14px ${PUR}`, color: PUR, fontSize: '96px', fontWeight: 800, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }, 'NOT NEEDED');
+
+// ---- P10: growth
+const p10a = T(P10, 'c', 260, 72, 'Students <span class="amb">badhte</span> hain…');
+const p10b = T(P10, 'c', 360, 72, 'system bhi <span class="pur">better</span> ho.');
+const gro = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); gro.setAttribute('width', 900); gro.setAttribute('height', 700); Object.assign(gro.style, { position: 'absolute', left: '90px', top: '540px' });
+gro.innerHTML = `${[0, 1, 2, 3].map(k => `<path d="M0 ${140 + k * 140} H900" stroke="${LIN}" stroke-width="3"/>`).join('')}
+  <path class="g1" d="M20 640 C 220 600, 380 520, 520 400 S 760 160, 880 80" fill="none" stroke="${AMB}" stroke-width="14" stroke-linecap="round"/>
+  <path class="g2" d="M20 660 C 220 620, 380 540, 520 430 S 760 200, 880 110" fill="none" stroke="${PUR}" stroke-width="14" stroke-linecap="round"/>`;
+P10.appendChild(gro); const g1 = gro.querySelector('.g1'), g2 = gro.querySelector('.g2'), GL1 = g1.getTotalLength(), GL2 = g2.getTotalLength();
+const lg1 = E(P10, { left: '120px', top: '1280px', display: 'flex', alignItems: 'center', gap: '14px', fontSize: '30px', fontWeight: 800 }, `<span style="width:40px;height:14px;border-radius:7px;background:${AMB}"></span>Students`);
+const lg2 = E(P10, { left: '560px', top: '1280px', display: 'flex', alignItems: 'center', gap: '14px', fontSize: '30px', fontWeight: 800 }, `<span style="width:40px;height:14px;border-radius:7px;background:${PUR}"></span>Your system`);
+const scount = E(P10, { left: '700px', top: '470px', fontSize: '64px', fontWeight: 800, color: AMB }, '');
+
+// ---- P11: CTA
+const p11a = T(P11, 'c', 300, 66, 'Apne institute ke liye');
+const p11b = T(P11, 'c', 395, 84, '<span class="pur">custom software?</span>');
+const cbox = E(P11, { left: '90px', top: '640px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:52px;font-size:56px;font-weight:800;letter-spacing:0.05em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const p11c = T(P11, 'c', 860, 52, 'Comment <span class="pur">"EDUCATION"</span>', { w: 700 });
+const disc = E(P11, { left: '190px', top: '1000px', width: '700px', height: '150px', borderRadius: '40px', background: PUR, color: '#fff', fontSize: '42px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px' }, `${check(64, AMB)}Let's discuss`);
+
+// ---- P12: end
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '380px'; P12.appendChild(endLogo);
+const e1 = T(P12, 'c', 720, 120, 'HeliosLabs');
+const e2 = T(P12, 'c', 880, 50, 'Comment <span class="pur">"EDUCATION"</span>', { w: 700 });
+
+// ===================== subtitles (voiceover time) =====================
+const SUBS = [
+  [0.0, 4.9, 'Ek coaching institute ke owner humare paas aaye aur unhone ek interesting problem batayi.'],
+  [4.9, 8.2, 'Unke institute mein hundreds of students the,'],
+  [8.2, 12.9, 'lekin unka management abhi bhi registers aur Excel sheets par depend karta tha.'],
+  [12.9, 17.1, 'Kisi student ki fees pending hai, kiski attendance kam hai,'],
+  [17.1, 19.5, 'kis batch ka syllabus complete hua hai…'],
+  [19.5, 21.7, 'ye sab manually track karna padta tha.'],
+  [21.7, 25.1, 'Aur jab parents fees ya student progress ke baare mein poochte,'],
+  [25.1, 28.5, 'toh records check karne mein hi kaafi time lag jaata tha.'],
+  [28.5, 34.7, 'Unhone kaha, "Humein ek aisa system chahiye jahan institute ka saara management ek hi jagah ho."'],
+  [34.7, 38.1, 'So, we built a Custom Institute Management System.'],
+  [38.1, 43.8, 'Ek student portal jahan students apni attendance, fees aur academic updates check kar sakein.'],
+  [43.8, 50.4, 'Ek admin dashboard jahan institute students, batches, teachers aur fee records manage kar sake.'],
+  [50.4, 54.9, 'Automated fee reminders, online payments aur detailed reports,'],
+  [54.9, 57.8, 'taaki management ka manual work kam ho.'],
+  [57.8, 62.95, 'Ab institute ko alag-alag registers aur spreadsheets maintain karne ki zaroorat nahi.'],
+  [62.95, 67.7, 'Jab students badhte hain, toh unhe manage karne ka system bhi better hona chahiye.'],
+  [67.7, 71.0, 'Aap bhi apne institute ke liye aisa custom software chahte hain?'],
+  [71.0, 75.7, 'Comment "EDUCATION" and let\'s discuss your requirements.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- page turns: page k turns away at the start of page k+1
+  pages.forEach((P, k) => {
+    const next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    const p = inout(clamp((t - next + 0.35) / 0.7));
+    P.style.transform = `rotateY(${-105 * p}deg)`;
+    shade[k].style.opacity = 0.35 * Math.sin(Math.PI * Math.min(1, p * 1.2));
+    P.style.visibility = (t < SC[k] - 0.5 || p >= 0.999) ? 'hidden' : 'visible';
+  });
+
+  // ---- P0
+  pop(sticky, t, 0.1, 1e9, 'rotate(-4deg)'); pop(capE, t, 0.35); show(t0a, t, 0.64); show(t0b, t, 3.92);
+  // ---- P1
+  pop(p1tag, t, 5.1); show(p1a, t, 6.34);
+  AV.forEach((a, k) => pop(a, t, 6.34 + k * 0.025));
+  { const p = clamp(sp(t, 9.88)); regs.style.transform = `translateY(${(1 - p) * -900}px)`; regs.style.visibility = t < 9.88 ? 'hidden' : 'visible';
+    const q = clamp(sp(t, 10.82)); xls.style.clipPath = `inset(0 0 ${(1 - q) * 100}% 0 round 28px)`; xls.style.visibility = t < 10.82 ? 'hidden' : 'visible'; }
+  // ---- P2
+  pop(p2tag, t, 13.1); show(p2a, t, 19.6);
+  { const p = clamp(sp(t, 13.2)); sheet.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  rowsE.forEach((r, i) => { const ROW = ROWS[i];
+    const fp = ROW[1] === 'Pending' && t > 14.32 + i * 0.06; fees[i].style.background = fp ? AMB : 'transparent'; fees[i].style.color = INK;
+    const low = parseInt(ROW[2]) < 75 && t > 15.7 + i * 0.06; atts[i].style.background = low ? '#F6D8D4' : 'transparent'; atts[i].style.color = low ? '#B23A2E' : INK;
+    syls[i].style.width = (190 * ROW[3] * clamp(sp(t, 17.84 + i * 0.08))) + 'px';
+    tks[i].style.transform = `scale(${clamp(sp(t, 19.95 + i * 0.25))})`; });
+  { const i = clamp(Math.floor((t - 19.8) / 0.25), 0, 5); const k = clamp((t - 19.8) / 1.5);
+    pencil.style.left = (120 + 20 * Math.sin(t * 30) * (t > 19.8 && t < 21.4 ? 1 : 0)) + 'px'; pencil.style.top = (420 + 90 + i * 130 - 70) + 'px';
+    pencil.style.visibility = (t > 19.7 && t < 21.6) ? 'visible' : 'hidden'; }
+  // ---- P3
+  pop(p3tag, t, 21.7); show(p3a, t, 22.12);
+  { const p = clamp(sp(t, 21.9)); pph.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  pms.forEach((m, k) => pop(m, t, PM[k][1]));
+  pgs3.forEach((g, k) => { const tf = 25.7 + k * 0.28; g.style.transform = `rotateY(${-170 * inout(clamp((t - tf) / 0.3))}deg)`; g.style.zIndex = 10 - k; });
+  pop(flip3, t, 25.3);
+  { pop(glass, t, 26.9); const s = clamp((t - 27.0) / 1.4); glass.querySelector('.sandT').style.transform = `scaleY(${1 - s})`; glass.querySelector('.sandT').style.transformOrigin = '80px 102px';
+    glass.querySelector('.sandB').style.transform = `scaleY(${0.2 + 0.8 * s})`; glass.querySelector('.sandB').style.transformOrigin = '80px 188px'; }
+  show(p3b, t, 27.38);
+  // ---- P4
+  pop(p4tag, t, 28.7);
+  { const p = clamp(sp(t, 29.0)); quote.style.transform = `scale(${0.6 + 0.4 * p})`; quote.style.visibility = t < 29.0 ? 'hidden' : 'visible';
+    let n = 0; QT.forEach(ts => { if (t >= ts) n++; }); qText.innerHTML = QW.map((w, i) => `<span style="opacity:${i < n ? 1 : 0.12}${['system', 'ek', 'hi', 'jagah'].includes(w) ? ';color:' + PUR : ''}">${w}</span>`).join(' '); }
+  { const conv = inout(clamp((t - 33.4) / 0.7));
+    bits4.forEach((b, k) => { const sx = [120, 760, 90, 700, 400][k], sy = [900, 880, 1180, 1200, 1320][k];
+      b.style.left = lerp(sx, 460, conv) + 'px'; b.style.top = lerp(sy, 1100, conv) + 'px'; b.style.transform = `scale(${clamp(sp(t, 30.0 + k * 0.15)) * (1 - 0.9 * conv)}) rotate(${(k % 2 ? 6 : -6) * (1 - conv)}deg)`;
+      b.style.visibility = conv > 0.97 || t < 30.0 ? 'hidden' : 'visible'; });
+    pop(box4, t, 33.8); }
+  // ---- P5
+  pop(p5tag, t, 34.88); show(p5a, t, 35.1); show(p5b, t, 35.92); show(p5c, t, 36.4);
+  { const a = clamp(sp(t, 36.6)), b = clamp(sp(t, 36.9)); laptop.style.transform = `translateY(${(1 - a) * 900}px)`; mphone.style.transform = `translateY(${(1 - b) * 900}px) rotate(${6 * (1 - b)}deg)`; laptop.style.visibility = t < 36.6 ? 'hidden' : 'visible'; mphone.style.visibility = t < 36.9 ? 'hidden' : 'visible'; }
+  // ---- P6
+  pop(p6tag, t, 38.3); show(p6a, t, 38.42);
+  { const p = clamp(sp(t, 38.5)); portal.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  { const a = clamp(sp(t, 40.3)), f = inout(clamp((t - 40.3) / 0.9)); pc1.style.transform = `scale(${a})`;
+    pring.style.background = `conic-gradient(${PUR} ${f * 0.92 * 360}deg, #EDE4D4 0)`; pring.style.webkitMask = pring.style.mask = 'radial-gradient(circle, transparent 66px, #000 67px)'; ppct.textContent = Math.round(92 * f) + '%'; }
+  pop(pc2, t, 41.26); pop(pc3, t, 41.96); pups.forEach((u, k) => { const p = clamp(sp(t, 42.2 + k * 0.25)); u.style.transform = `translateX(${(1 - p) * 500}px)`; });
+  // ---- P7
+  pop(p7tag, t, 43.95); show(p7a, t, 44.08);
+  { const p = clamp(sp(t, 44.3)); dash.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  { let ia = -1; TABS.forEach(([, ts], k) => { if (t >= ts) ia = k; });
+    tabs.forEach((b, k) => { b.style.background = k === ia ? PUR : 'transparent'; });
+    const d = TABDATA[Math.max(0, ia)]; dTtl.textContent = ia < 0 ? 'Overview' : TABS[ia][0];
+    drs.forEach((r, k) => { r.querySelector('.a1').textContent = d[k][0]; const a2 = r.querySelector('.a2'); a2.textContent = d[k][1]; a2.style.color = d[k][1] === 'Pending' ? '#C98A26' : (d[k][1].includes('Paid') ? PUR : MUT);
+      const p = ia < 0 ? clamp(sp(t, 45.0 + k * 0.1)) : clamp(sp(t, TABS[ia][1] + 0.05 + k * 0.05)); r.style.transform = `translateX(${(1 - p) * 60}px)`; r.style.opacity = 0.3 + 0.7 * p; });
+    const K = [[45.6, 140, 545], ...TABS.map(([, ts], k) => [ts - 0.3, 170, 545 + k * 92])]; let x = 600, y = 1300, prev = [600, 1300];
+    K.forEach(([ts, kx, ky]) => { const p = expo(t, ts, 0.3); x = lerp(prev[0], kx, p); y = lerp(prev[1], ky, p); if (t >= ts) prev = [x, y]; });
+    let pr = 1; TABS.forEach(([, ts]) => pr *= press(t, ts)); cur7.style.left = x + 'px'; cur7.style.top = y + 'px'; cur7.style.transform = `scale(${pr})`; cur7.style.visibility = (t > 45.6 && t < 50.3) ? 'visible' : 'hidden'; }
+  // ---- P8
+  pop(p8tag, t, 50.55);
+  auto.forEach((c, k) => { const p = clamp(sp(t, [50.5, 52.6, 53.9][k])); c.style.transform = `translateX(${(1 - p) * (k % 2 ? 1100 : -1100)}px)`; });
+  pop(rm, t, 51.0); pop(snt, t, 51.66);
+  payb.style.transform = `scale(${press(t, 53.0)})`; pop(paid, t, 53.3);
+  rbs.forEach((b, k) => b.style.height = (190 * +b.dataset.h * clamp(sp(t, 54.34 + k * 0.1))) + 'px');
+  { pop(meter, t, 55.4); const f = lerp(0.9, 0.18, inout(clamp((t - 56.34) / 0.9))); mf.style.width = (560 * f) + 'px'; mf.style.background = f < 0.4 ? PUR : AMB; }
+  // ---- P9
+  show(p9a, t, 58.0); show(p9b, t, 59.7);
+  pop(oldStuff, t, 58.3);
+  { const p = clamp(sp(t, 62.52)); stamp9.style.transform = `scale(${lerp(2.2, 1, p)}) rotate(${lerp(-14, -6, p)}deg)`; stamp9.style.visibility = t < 62.52 ? 'hidden' : 'visible';
+    oldStuff.style.filter = t > 62.6 ? `grayscale(${clamp((t - 62.6) / 0.3)}) opacity(${1 - 0.5 * clamp((t - 62.6) / 0.3)})` : 'none'; }
+  // ---- P10
+  show(p10a, t, 63.2); show(p10b, t, 65.94);
+  { const a = inout(clamp((t - 63.8) / 2.6)), b = inout(clamp((t - 64.6) / 2.4)); g1.style.strokeDasharray = GL1; g1.style.strokeDashoffset = GL1 * (1 - a); g2.style.strokeDasharray = GL2; g2.style.strokeDashoffset = GL2 * (1 - b);
+    pop(lg1, t, 63.8); pop(lg2, t, 64.6); scount.textContent = ''; }
+  // ---- P11
+  show(p11a, t, 67.88); show(p11b, t, 69.3);
+  pop(cbox, t, 70.6);
+  { const s = 'EDUCATION'; cm.textContent = s.slice(0, Math.floor(clamp((t - 71.2) / 0.7) * s.length)); sd.style.transform = `scale(${press(t, 71.95)})`; }
+  show(p11c, t, 72.0);
+  { const p = clamp(sp(t, 72.58)); disc.style.transform = `translateY(${(1 - p) * 500}px)`; disc.style.visibility = t < 72.58 ? 'hidden' : 'visible'; }
+  // ---- P12
+  animLogo(endLogo, t, 74.1); show(e1, t, 74.3); show(e2, t, 74.5);
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 75.7;
+window.seek(0);
+</script>
+</body>
+</html>
