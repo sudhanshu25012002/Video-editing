@@ -1,0 +1,304 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hotel Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .a { position: absolute; }
+  .floor { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .bub { position: absolute; padding: 18px 24px; border-radius: 24px 24px 24px 6px; font-size: 28px; font-weight: 600; white-space: nowrap; transform-origin: 0 100%; }
+  .door { position: absolute; top: 0; width: 540px; height: 1920px; background: linear-gradient(90deg, #2A2238, #3A3150 40%, #2A2238); z-index: 300; }
+  #ind { position: absolute; left: 400px; top: 56px; width: 280px; height: 84px; border-radius: 42px; background: #1C1726; color: #E8A33D; z-index: 400; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 34px; font-weight: 800; letter-spacing: 0.06em; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="door" id="dL" style="left:0"></div><div class="door" id="dR" style="left:540px"></div>
+  <div id="ind"><span id="arrow">▲</span><span id="fl">LOBBY</span></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+
+// ===================== floors; elevator doors close and open between them =====================
+const SC = [0, 5.55, 12.15, 19.4, 25.25, 28.55, 34.9, 39.85, 45.2, 50.8, 54.2];
+const NAMES = ['LOBBY', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'TOP'];
+const floors = SC.map((s, k) => { const F = E(stage, { zIndex: 1 + k }, '', 'floor'); stage.insertBefore(F, document.getElementById('dL')); return F; });
+const [F0, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10] = floors;
+const dL = document.getElementById('dL'), dR = document.getElementById('dR'), fl = document.getElementById('fl'), arrow = document.getElementById('arrow');
+
+// ---- F0: hook — hotel with empty rooms nobody can see
+const h0a = T(F0, 'c', 230, 80, 'Rooms <span class="amb">khaali</span> the…');
+const hotel = E(F0, { left: '190px', top: '420px', width: '700px', height: '900px' });
+hotel.innerHTML = `<div style="position:absolute;left:0;top:80px;width:700px;height:820px;border-radius:20px 20px 0 0;background:#2A2238"></div>
+  <div style="position:absolute;left:150px;top:0;width:400px;height:100px;border-radius:18px;background:${PUR};color:#fff;font-size:44px;font-weight:800;display:flex;align-items:center;justify-content:center;letter-spacing:0.08em">HOTEL</div>
+  ${Array.from({ length: 20 }, (_, k) => `<div class="win" style="position:absolute;left:${50 + (k % 4) * 155}px;top:${140 + Math.floor(k / 4) * 120}px;width:130px;height:90px;border-radius:10px"></div>`).join('')}
+  <div style="position:absolute;left:280px;top:760px;width:140px;height:140px;border-radius:12px 12px 0 0;background:${AMB}"></div>`;
+const wins = [...hotel.querySelectorAll('.win')];
+const EMPTY = [1, 6, 8, 13, 15, 18];
+const qms = EMPTY.map(k => E(hotel, { left: (50 + (k % 4) * 155 + 40) + 'px', top: (140 + Math.floor(k / 4) * 120 - 10) + 'px', fontSize: '80px', fontWeight: 800, color: AMB, zIndex: 3 }, '?'));
+const h0b = T(F0, 'c', 1340, 56, 'Kaunse <span class="pur">available</span> hain?', { w: 800 });
+
+// ---- F1: bookings by phone / walk-in, written in a register
+const f1a = T(F1, 'c', 230, 72, 'Bookings aa rahi thi…');
+const phone1 = E(F1, { left: '110px', top: '400px', width: '400px', height: '400px' }, '', 'card');
+phone1.innerHTML = `<div class="rg" style="position:absolute;left:110px;top:70px;width:180px;height:180px;border-radius:90px;background:${AMB};display:flex;align-items:center;justify-content:center"><svg width="100" height="100" viewBox="0 0 100 100"><path d="M28 12 L40 30 L32 40 C38 54 46 62 60 68 L70 60 L88 72 L80 88 C46 86 14 54 12 20 Z" fill="${INK}"/></svg></div>
+  <div style="position:absolute;left:0;width:400px;top:290px;text-align:center;font-size:34px;font-weight:800">Phone calls</div>`;
+const ringIcon = phone1.querySelector('.rg');
+const walk = E(F1, { left: '570px', top: '400px', width: '400px', height: '400px' }, '', 'card');
+walk.innerHTML = `<div style="position:absolute;left:230px;top:40px;width:130px;height:210px;border-radius:10px 10px 0 0;background:${AMB}"></div><div class="wp" style="position:absolute;left:40px;top:60px">${person(90, INK)}</div>
+  <div style="position:absolute;left:0;width:400px;top:290px;text-align:center;font-size:34px;font-weight:800">Walk-in</div>`;
+const walker = walk.querySelector('.wp');
+const reg = E(F1, { left: '110px', top: '850px', width: '860px', height: '560px', borderRadius: '24px', background: '#FFF8EA', boxShadow: `0 24px 60px rgba(28,23,38,0.10), inset 14px 0 0 #8C3B2E` });
+reg.innerHTML = `<div style="position:absolute;left:50px;top:30px;font-size:34px;font-weight:800">Register</div>` + [0, 1, 2, 3, 4].map(k => `<div style="position:absolute;left:50px;top:${130 + k * 80}px;width:760px;height:2px;background:#E7DCC7"></div>`).join('') +
+  ['Room 203 — Sharma — 2 nights', 'Room 105 — Walk-in — 1 night', 'Room 203 — Gupta — 1 night'].map((s, k) => `<div class="en" style="position:absolute;left:60px;top:${84 + k * 80}px;font-size:32px;font-weight:600;font-style:italic;color:#2C2440">${s}</div>`).join('');
+const ens = [...reg.querySelectorAll('.en')];
+
+// ---- F2: the problems
+const f2a = T(F2, 'c', 230, 72, 'Aur phir <span class="amb">problems…</span>');
+const clash = E(F2, { left: '90px', top: '380px', width: '900px', height: '330px' }, '', 'card');
+clash.innerHTML = `<div style="position:absolute;left:36px;top:26px;font-size:34px;font-weight:800">Double booking</div>
+  <div class="g1" style="position:absolute;left:60px;top:110px;width:300px;height:160px;border-radius:20px;background:#F1E9DC;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.3">Sharma<br>Room 203</div>
+  <div class="g2" style="position:absolute;left:540px;top:110px;width:300px;height:160px;border-radius:20px;background:#F1E9DC;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.3">Gupta<br>Room 203</div>
+  <div class="bang" style="position:absolute;left:390px;top:120px;width:120px;height:120px;border-radius:60px;background:${AMB};font-size:70px;font-weight:800;display:flex;align-items:center;justify-content:center">!</div>`;
+const g1 = clash.querySelector('.g1'), g2 = clash.querySelector('.g2'), bang = clash.querySelector('.bang');
+const miss = E(F2, { left: '90px', top: '740px', width: '900px', height: '250px' }, '', 'card');
+miss.innerHTML = `<div style="position:absolute;left:36px;top:26px;font-size:34px;font-weight:800">Checkout record</div>
+  <div style="position:absolute;left:36px;top:110px;width:828px;height:100px;border-radius:18px;background:#FFF8EA;font-size:30px;font-weight:600;font-style:italic;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">Room 105 — checked out at</div>
+  <div class="ms" style="position:absolute;left:560px;top:122px;width:260px;height:76px;border-radius:14px;box-shadow:inset 0 0 0 4px ${AMB};font-size:34px;font-weight:800;color:${AMB};display:flex;align-items:center;justify-content:center">missing?</div>`;
+const msE = miss.querySelector('.ms');
+const rev = E(F2, { left: '90px', top: '1020px', width: '900px', height: '380px' }, '', 'card');
+rev.innerHTML = `<div style="position:absolute;left:36px;top:26px;font-size:34px;font-weight:800">Daily revenue?</div>
+  <div style="position:absolute;left:40px;top:96px;width:300px;height:260px;border-radius:24px;background:${INK}">
+    <div class="calc" style="position:absolute;left:20px;top:20px;width:260px;height:70px;border-radius:12px;background:#C7D3B8;font-size:40px;font-weight:800;text-align:right;padding-right:16px;box-sizing:border-box;line-height:70px;font-variant-numeric:tabular-nums"></div>
+    ${Array.from({ length: 6 }, (_, k) => `<div style="position:absolute;left:${24 + (k % 3) * 86}px;top:${110 + Math.floor(k / 3) * 70}px;width:70px;height:54px;border-radius:10px;background:#3A3150"></div>`).join('')}</div>
+  <div class="ck" style="position:absolute;left:520px;top:110px;width:240px;height:240px;border-radius:120px;background:${WHT};box-shadow:inset 0 0 0 12px ${AMB}">
+    <div class="hd" style="position:absolute;left:114px;top:30px;width:12px;height:94px;border-radius:6px;background:${INK};transform-origin:6px 90px"></div></div>`;
+const calc = rev.querySelector('.calc'), hd = rev.querySelector('.hd');
+
+// ---- F3: the owner asks
+const f3a = T(F3, 'c', 230, 72, 'Hotel owner aaye…');
+const owner = E(F3, { left: '440px', top: '1050px', width: '200px', height: '300px' }, person(200, PUR));
+const ask = E(F3, { left: '90px', top: '400px', width: '900px', height: '560px' }, `
+  <div style="position:absolute;left:40px;top:10px;font-size:200px;font-weight:800;color:${PUR};line-height:1">“</div>
+  <div class="q" style="position:absolute;left:60px;top:150px;width:780px;font-size:54px;font-weight:800;letter-spacing:-0.02em;line-height:1.25"></div>`, 'card');
+const qText = ask.querySelector('.q');
+const QW = 'Ek aisa system chahiye jahan se poora hotel manage ho sake.'.split(' ');
+const QT = [21.54, 21.74, 22.02, 22.36, 23.0, 23.2, 23.44, 23.92, 24.32, 24.64, 24.8];
+
+// ---- F4: reveal
+const f4a = T(F4, 'c', 360, 72, 'Humne develop kiya');
+const f4b = T(F4, 'c', 470, 96, '<span class="pur">Hotel Management</span>');
+const f4c = T(F4, 'c', 580, 96, '<span class="pur">System</span>');
+const keycard = E(F4, { left: '290px', top: '820px', width: '500px', height: '320px', borderRadius: '30px', background: PUR, color: '#fff', boxShadow: '0 30px 70px rgba(90,23,230,0.25)' },
+  `<div style="position:absolute;left:36px;top:36px;font-size:34px;font-weight:800;letter-spacing:0.06em">HOTEL · KEY</div><div style="position:absolute;left:36px;top:220px;width:160px;height:56px;border-radius:12px;background:${AMB}"></div>
+   <svg style="position:absolute;right:36px;top:170px" width="110" height="110" viewBox="0 0 100 100"><path d="M30 30 Q50 10 70 30 M20 45 Q50 10 80 45 M40 50 Q50 40 60 50" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="50" cy="66" r="7" fill="#fff"/></svg>`);
+
+// ---- F5: staff dashboard — room grid
+const f5a = T(F5, 'c', 230, 72, 'Staff <span class="pur">dashboard</span>');
+const dash = E(F5, { left: '70px', top: '380px', width: '940px', height: '1020px' }, '', 'card');
+const ROOMS = ['101', '102', '103', '104', '105', '106', '201', '202', '203', '204', '205', '206'];
+const ST0 = ['O', 'A', 'O', 'A', 'C', 'O', 'A', 'O', 'A', 'A', 'O', 'C'];
+dash.innerHTML = `<div style="position:absolute;left:36px;top:30px;font-size:32px;font-weight:800">Room availability</div>
+  <div style="position:absolute;right:36px;top:36px;display:flex;gap:18px;font-size:20px;font-weight:700">${[['Available', PUR], ['Occupied', INK], ['Cleaning', AMB]].map(([n, c]) => `<span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:16px;border-radius:4px;background:${c}"></span>${n}</span>`).join('')}</div>
+  ${ROOMS.map((r, k) => `<div class="rm" style="position:absolute;left:${36 + (k % 4) * 218}px;top:${100 + Math.floor(k / 4) * 150}px;width:200px;height:130px;border-radius:18px;color:#fff;font-size:34px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center">${r}<span class="st" style="font-size:18px;font-weight:700;opacity:0.85"></span></div>`).join('')}
+  <div class="bl" style="position:absolute;left:36px;top:580px;width:868px;height:400px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:28px;top:22px;font-size:28px;font-weight:800">Bookings</div>
+    ${['Sharma · 203 · Today', 'Gupta · 204 · Today', 'Mehta · 102 · Tomorrow', 'Walk-in · 104 · Now'].map((s, k) => `<div class="bk" style="position:absolute;left:28px;top:${80 + k * 76}px;width:812px;height:62px;border-radius:14px;background:#fff;box-shadow:0 0 0 2px ${LIN};font-size:24px;font-weight:700;display:flex;align-items:center;padding-left:20px;box-sizing:border-box">${s}<span style="position:absolute;right:16px">${check(38)}</span></div>`).join('')}</div>`;
+const rms = [...dash.querySelectorAll('.rm')], bks = [...dash.querySelectorAll('.bk')], blist = dash.querySelector('.bl');
+const tag5 = E(F5, { left: '0px', top: '0px', height: '64px', padding: '0 22px', borderRadius: '32px', background: INK, color: '#fff', fontSize: '26px', fontWeight: 800, display: 'flex', alignItems: 'center', zIndex: 5, whiteSpace: 'nowrap' }, '');
+
+// ---- F6: owner reports
+const f6a = T(F6, 'c', 230, 72, 'Owner ke <span class="pur">reports</span>');
+const r1 = E(F6, { left: '90px', top: '380px', width: '420px', height: '330px' }, `<div style="position:absolute;left:30px;top:28px;font-size:30px;font-weight:800">Daily revenue</div><div class="rv" style="position:absolute;left:30px;top:110px;font-size:76px;font-weight:800;color:${PUR};font-variant-numeric:tabular-nums"></div><div style="position:absolute;left:30px;top:220px;font-size:22px;font-weight:600;color:${MUT}">Today</div>`, 'card');
+const r2 = E(F6, { left: '570px', top: '380px', width: '420px', height: '330px' }, `<div style="position:absolute;left:30px;top:28px;font-size:30px;font-weight:800">Occupancy</div><div class="oc" style="position:absolute;left:120px;top:90px;width:190px;height:190px;border-radius:95px"></div><div class="ocp" style="position:absolute;left:120px;top:158px;width:190px;text-align:center;font-size:44px;font-weight:800"></div>`, 'card');
+const r3 = E(F6, { left: '90px', top: '740px', width: '900px', height: '420px' }, `<div style="position:absolute;left:30px;top:28px;font-size:30px;font-weight:800">Booking reports</div>
+  ${[0.5, 0.65, 0.55, 0.8, 0.7, 0.9, 0.85].map((h, k) => `<div class="b3" data-h="${h}" style="position:absolute;left:${50 + k * 118}px;bottom:50px;width:80px;border-radius:12px 12px 4px 4px;background:${k === 6 ? PUR : '#D9CDB9'}"></div>`).join('')}`, 'card');
+const rvE = r1.querySelector('.rv'), oc = r2.querySelector('.oc'), ocp = r2.querySelector('.ocp'), b3s = [...r3.querySelectorAll('.b3')];
+const one6 = E(F6, { left: '290px', top: '1200px', width: '500px', height: '110px', borderRadius: '55px', background: PUR, color: '#fff', fontSize: '38px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }, 'Ek hi jagah');
+
+// ---- F7: customer website
+const f7a = T(F7, 'c', 230, 72, 'Customers ki <span class="pur">website</span>');
+const site = E(F7, { left: '90px', top: '380px', width: '900px', height: '1020px' }, '', 'card');
+site.innerHTML = `<div style="position:absolute;left:0;top:0;width:900px;height:84px;border-bottom:2px solid ${LIN}"></div>
+  <div style="position:absolute;left:230px;top:20px;width:440px;height:44px;border-radius:22px;background:#F1E9DC;font-size:22px;font-weight:600;color:${MUT};display:flex;align-items:center;justify-content:center">grandstay.in</div>
+  <div style="position:absolute;left:40px;top:110px;font-size:36px;font-weight:800">Grand Stay Hotel</div>
+  ${[['Deluxe Room', 'Available'], ['Suite', 'Available'], ['Standard Room', 'Sold out']].map(([n, s], k) => `<div class="rc" style="position:absolute;left:40px;top:${190 + k * 200}px;width:820px;height:176px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:20px;top:20px;width:200px;height:136px;border-radius:14px;background:${TILE[k]}"></div>
+     <div style="position:absolute;left:250px;top:40px;font-size:32px;font-weight:800">${n}</div>
+     <div class="av" style="position:absolute;left:250px;top:96px;padding:8px 18px;border-radius:18px;font-size:22px;font-weight:800;background:${s === 'Available' ? PUR : '#D9CDB9'};color:${s === 'Available' ? '#fff' : INK}">${s}</div></div>`).join('')}
+  <div class="rq" style="position:absolute;left:40px;top:810px;width:820px;height:96px;border-radius:20px;background:${INK};color:#fff;font-size:34px;font-weight:800;display:flex;align-items:center;justify-content:center">Request booking</div>
+  <div class="ok" style="position:absolute;left:190px;top:920px;width:520px;height:80px;border-radius:40px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:14px">${check(46, AMB)}Request sent</div>`;
+const rcs = [...site.querySelectorAll('.rc')], avs = [...site.querySelectorAll('.av')], rq = site.querySelector('.rq'), okS = site.querySelector('.ok');
+const cur7 = E(F7, { width: '60px', height: '60px', zIndex: 9 }, `<svg width="60" height="60" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ---- F8: registers -> organised system
+const f8a = T(F8, 'c', 230, 72, '<span class="amb">Registers</span> ke bajaye');
+const f8b = T(F8, 'c', 330, 80, 'ek <span class="pur">organised system</span>');
+const oldReg = E(F8, { left: '240px', top: '560px', width: '600px', height: '700px', borderRadius: '24px', background: '#FFF8EA', boxShadow: `0 24px 60px rgba(28,23,38,0.12), inset 16px 0 0 #8C3B2E` },
+  [0, 1, 2, 3, 4, 5].map(k => `<div style="position:absolute;left:60px;top:${100 + k * 90}px;width:480px;height:2px;background:#E7DCC7"></div><div style="position:absolute;left:70px;top:${60 + k * 90}px;width:${300 - (k % 3) * 60}px;height:18px;border-radius:9px;background:#D7C7AE"></div>`).join(''));
+const tablet = E(F8, { left: '190px', top: '540px', width: '700px', height: '760px', borderRadius: '50px', background: INK, padding: '24px', boxSizing: 'border-box' },
+  `<div style="width:100%;height:100%;border-radius:30px;background:${WHT};position:relative;overflow:hidden">
+    <div style="position:absolute;left:0;top:0;width:100%;height:110px;background:${PUR}"></div><div style="position:absolute;left:30px;top:36px;font-size:34px;font-weight:800;color:#fff">Hotel system</div>
+    ${Array.from({ length: 12 }, (_, k) => `<div style="position:absolute;left:${30 + (k % 4) * 155}px;top:${140 + Math.floor(k / 4) * 120}px;width:140px;height:100px;border-radius:14px;background:${['#5A17E6', '#1C1726', '#E8A33D'][[0, 1, 0, 0, 2, 1, 0, 1, 0, 0, 1, 2][k]]}"></div>`).join('')}
+    <div style="position:absolute;left:30px;top:520px;width:592px;height:150px;border-radius:20px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}"></div></div>`);
+
+// ---- F9: CTA
+const f9a = T(F9, 'c', 300, 66, 'Aapke business mein bhi');
+const f9b = T(F9, 'c', 395, 84, 'aisi <span class="amb">problems</span> hain?');
+const cbox = E(F9, { left: '90px', top: '640px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:48px;font-size:64px;font-weight:800;letter-spacing:0.06em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const f9c = T(F9, 'c', 860, 56, 'Comment <span class="pur">"SYSTEM"</span>', { w: 700 });
+
+// ---- F10: end
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; F10.appendChild(endLogo);
+const e1 = T(F10, 'c', 740, 120, 'HeliosLabs');
+const e2 = T(F10, 'c', 900, 50, 'Comment <span class="pur">"SYSTEM"</span>', { w: 700 });
+
+// ===================== subtitles (voiceover time) =====================
+const SUBS = [
+  [0.0, 2.0, 'Ek hotel mein rooms khaali the,'],
+  [2.0, 5.45, 'lekin owner ko pata hi nahi tha ki kaunse rooms available hain!'],
+  [5.45, 9.7, 'Hotel ki bookings phone calls aur walk-in customers se aa rahi thi.'],
+  [9.7, 12.1, 'Staff register mein entries kar raha tha.'],
+  [12.1, 16.1, 'Kabhi double booking ho jaati, kabhi checkout ka record miss ho jaata,'],
+  [16.1, 19.3, 'aur daily revenue calculate karne mein bhi time lagta tha.'],
+  [19.3, 21.2, 'Hotel owner humare paas aaye.'],
+  [21.2, 25.2, 'Unhe ek aisa system chahiye tha jahan se poora hotel manage ho sake.'],
+  [25.2, 28.5, 'Humne unke liye ek Hotel Management System develop kiya.'],
+  [28.5, 34.9, 'Ab staff dashboard se room availability, check-in, check-out aur bookings manage kar sakta hai.'],
+  [34.9, 39.85, 'Owner daily revenue, occupancy aur booking reports ek hi jagah dekh sakte hain.'],
+  [39.85, 45.2, 'Aur customers website se available rooms check karke online booking request kar sakte hain.'],
+  [45.2, 50.8, 'Matlab, ab hotel ka kaam registers ke bajaye ek organised system se manage ho sakta hai.'],
+  [50.8, 53.2, 'Aapke business mein bhi aisi problems hain?'],
+  [53.2, 56.2, 'Comment "SYSTEM".'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- elevator: doors close (0.32s), hold, open (0.4s) around each floor change; indicator ticks
+  let close = 0, cur = 0;
+  SC.forEach((s, k) => { if (t >= s - 0.05) cur = k; if (k > 0) { const c = inout(clamp((t - (s - 0.42)) / 0.32)) * (1 - inout(clamp((t - (s + 0.05)) / 0.4))); close = Math.max(close, c); } });
+  dL.style.transform = `translateX(${-540 * (1 - close)}px)`; dR.style.transform = `translateX(${540 * (1 - close)}px)`;
+  dL.style.visibility = dR.style.visibility = close < 0.002 ? 'hidden' : 'visible';
+  fl.textContent = NAMES[cur]; arrow.style.opacity = close > 0.05 ? 1 : 0.4;
+  floors.forEach((F, k) => { const next = k + 1 < SC.length ? SC[k + 1] : 1e9; F.style.visibility = (t >= SC[k] - 0.1 && t < next + 0.2) ? 'visible' : 'hidden';
+    F.style.transform = `scale(${1 + 0.03 * clamp((t - SC[k]) / Math.max(0.1, (next < 1e8 ? next : 56.2) - SC[k]))})`; });
+
+  // ---- F0
+  show(h0a, t, 0.3);
+  { const p = clamp(sp(t, 0.15)); hotel.style.transform = `translateY(${(1 - p) * 700}px)`; }
+  wins.forEach((w, k) => { const empty = EMPTY.includes(k); const lit = empty ? clamp((t - 1.06 - EMPTY.indexOf(k) * 0.08) / 0.2) : 0; w.style.background = empty ? `rgba(232,163,61,${0.15 + 0.85 * lit})` : '#4A4060'; });
+  qms.forEach((q, k) => pop(q, t, 4.62 + k * 0.06));
+  show(h0b, t, 4.62);
+  // ---- F1
+  show(f1a, t, 5.75);
+  pop(phone1, t, 6.9); ringIcon.style.transform = `rotate(${t > 7.02 && t < 8.2 ? 14 * Math.sin((t - 7.02) * 45) : 0}deg)`;
+  pop(walk, t, 7.7); { const p = inout(clamp((t - 7.94) / 1.0)); walker.style.transform = `translateX(${p * 200}px)`; walker.style.opacity = 1 - 0.6 * clamp((p - 0.85) / 0.15); }
+  { const p = clamp(sp(t, 10.0)); reg.style.transform = `translateY(${(1 - p) * 900}px)`; reg.style.visibility = t < 10.0 ? 'hidden' : 'visible'; }
+  ens.forEach((e, k) => { const p = clamp((t - (11.0 + k * 0.35)) / 0.45); e.style.clipPath = `inset(0 ${(1 - p) * 100}% 0 0)`; });
+  // ---- F2
+  show(f2a, t, 12.3);
+  pop(clash, t, 12.4);
+  { const c = inout(clamp((t - 12.64) / 0.35)); g1.style.transform = `translateX(${c * 120}px)`; g2.style.transform = `translateX(${-c * 120}px)`; pop(bang, t, 12.98); }
+  pop(miss, t, 14.1); msE.style.opacity = t > 15.3 ? (Math.sin((t - 15.3) * 10) > 0 ? 1 : 0.25) : 0;
+  pop(rev, t, 16.4);
+  { const vals = ['', '4,500', '+ 3,200', '+ 2,800', '= ?']; const i = clamp(Math.floor((t - 16.6) / 0.45), 0, 4); calc.textContent = t < 16.6 ? '' : vals[i]; hd.style.transform = `rotate(${Math.max(0, t - 18.3) * 900}deg)`; }
+  // ---- F3
+  show(f3a, t, 19.5);
+  pop(owner, t, 20.0);
+  { const p = clamp(sp(t, 21.3)); ask.style.transform = `scale(${0.6 + 0.4 * p})`; ask.style.visibility = t < 21.3 ? 'hidden' : 'visible';
+    let n = 0; QT.forEach(ts => { if (t >= ts) n++; }); qText.innerHTML = QW.map((w, i) => `<span style="opacity:${i < n ? 1 : 0.12}${['system', 'poora', 'hotel'].includes(w) ? ';color:' + PUR : ''}">${w}</span>`).join(' '); }
+  // ---- F4
+  show(f4a, t, 25.5); show(f4b, t, 26.42); show(f4c, t, 26.84);
+  { const p = clamp(sp(t, 27.2)); keycard.style.transform = `translateY(${(1 - p) * 800}px) rotate(${(1 - p) * -12 + 3 * Math.sin(t * 1.5)}deg)`; keycard.style.visibility = t < 27.2 ? 'hidden' : 'visible'; }
+  // ---- F5 dashboard
+  show(f5a, t, 29.02);
+  { const p = clamp(sp(t, 29.3)); dash.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  rms.forEach((r, k) => { let st = ST0[k]; if (t > 31.56 && k === 1) st = 'O'; if (t > 32.34 && k === 4) st = 'A';
+    const lit = clamp(sp(t, 30.24 + k * 0.05)); r.style.background = { A: PUR, O: INK, C: AMB }[st]; r.style.transform = `scale(${lit * (k === 1 ? press(t, 31.56) : k === 4 ? press(t, 32.34) : 1)})`;
+    r.querySelector('.st').textContent = { A: 'Available', O: 'Occupied', C: 'Cleaning' }[st]; });
+  { const tgs = [[31.56, 'Check-in ✓', 1], [32.34, 'Check-out ✓', 4]]; let txt = '', idx = -1; tgs.forEach(([ts, s, k]) => { if (t >= ts && t < ts + 0.75) { txt = s; idx = k; } });
+    tag5.textContent = txt; tag5.style.visibility = txt ? 'visible' : 'hidden'; if (idx >= 0) { tag5.style.left = (70 + 36 + (idx % 4) * 218) + 'px'; tag5.style.top = (380 + 100 + Math.floor(idx / 4) * 150 - 70) + 'px'; } }
+  pop(blist, t, 33.2); bks.forEach((b, k) => { const p = clamp(sp(t, 33.34 + k * 0.12)); b.style.transform = `translateX(${(1 - p) * 800}px)`; });
+  // ---- F6 reports
+  show(f6a, t, 35.1);
+  { pop(r1, t, 35.6); const p = expo(t, 35.74, 1.0); rvE.textContent = t < 35.74 ? '' : '₹' + Math.round(48500 * p).toLocaleString('en-IN');
+    pop(r2, t, 36.5); const f = inout(clamp((t - 36.7) / 0.9)); oc.style.background = `conic-gradient(${PUR} ${f * 0.82 * 360}deg, #EDE4D4 0)`; oc.style.webkitMask = oc.style.mask = 'radial-gradient(circle, transparent 72px, #000 73px)'; ocp.textContent = t < 36.7 ? '' : Math.round(82 * f) + '%';
+    pop(r3, t, 37.5); b3s.forEach((b, k) => b.style.height = (300 * +b.dataset.h * clamp(sp(t, 37.7 + k * 0.08))) + 'px'); pop(one6, t, 38.52); }
+  // ---- F7 website
+  show(f7a, t, 41.0);
+  { const p = clamp(sp(t, 40.2)); site.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  rcs.forEach((r, k) => { const p = clamp(sp(t, 40.6 + k * 0.15)); r.style.transform = `translateX(${(1 - p) * 900}px)`; });
+  avs.forEach((a, k) => { a.style.transform = `scale(${k < 2 ? 1 + 0.12 * Math.sin(Math.PI * clamp((t - 41.68 - k * 0.15) / 0.35)) : 1})`; });
+  rcs[0].style.boxShadow = `0 0 0 ${t > 42.5 ? 4 : 2}px ${t > 42.5 ? PUR : LIN}`;
+  rq.style.transform = `scale(${press(t, 43.74)})`;
+  { const p = clamp(sp(t, 44.1)); okS.style.transform = `scale(${p})`; okS.style.visibility = t < 44.1 ? 'hidden' : 'visible'; }
+  { const K = [[42.2, 400, 560], [43.3, 520, 1240]]; let x = 950, y = 1500, prev = [950, 1500];
+    K.forEach(([ts, kx, ky]) => { const p = expo(t, ts, 0.4); x = lerp(prev[0], kx, p); y = lerp(prev[1], ky, p); if (t >= ts) prev = [x, y]; });
+    cur7.style.left = x + 'px'; cur7.style.top = y + 'px'; cur7.style.transform = `scale(${press(t, 42.5) * press(t, 43.74)})`; cur7.style.visibility = (t > 42.2 && t < 45.0) ? 'visible' : 'hidden'; }
+  // ---- F8 registers -> system
+  show(f8a, t, 45.4); show(f8b, t, 48.14);
+  { const out = inout(clamp((t - 46.98) / 0.6)); oldReg.style.transform = `translateX(${-1100 * out}px) rotate(${-10 * out}deg) scale(${clamp(sp(t, 45.5))})`; oldReg.style.visibility = t < 45.5 ? 'hidden' : 'visible';
+    const p = clamp(sp(t, 48.42)); tablet.style.transform = `translateX(${(1 - p) * 1100}px)`; tablet.style.visibility = t < 48.3 ? 'hidden' : 'visible'; }
+  // ---- F9 CTA
+  show(f9a, t, 50.95); show(f9b, t, 51.6);
+  pop(cbox, t, 52.6);
+  { const s = 'SYSTEM'; cm.textContent = s.slice(0, Math.floor(clamp((t - 53.0) / 0.5) * s.length)); sd.style.transform = `scale(${press(t, 53.6)})`; }
+  show(f9c, t, 53.7);
+  // ---- F10 end
+  animLogo(endLogo, t, 54.3); show(e1, t, 54.5); show(e2, t, 54.8);
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 56.2;
+window.seek(0);
+</script>
+</body>
+</html>

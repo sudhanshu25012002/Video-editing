@@ -1,0 +1,316 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Payment Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .a { position: absolute; }
+  .scene { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .row { position: absolute; display: flex; align-items: center; box-sizing: border-box; }
+  #coin { position: absolute; left: 0; top: 0; width: 260px; height: 260px; z-index: 300; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="coin"><svg width="260" height="260" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#E8A33D"/><circle cx="50" cy="50" r="40" fill="#5A17E6"/><circle cx="50" cy="50" r="34" fill="none" stroke="#FFFDF8" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="2 3"/><text x="50" y="66" text-anchor="middle" font-family="Inter, sans-serif" font-size="46" font-weight="800" fill="#FFFDF8">₹</text></svg></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+const rupee = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const avatar = (s, c, ch) => `<div style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${c};color:#fff;font-size:${s * 0.42}px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${ch}</div>`;
+const coinHTML = s => `<svg width="${s}" height="${s}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="${AMB}"/><circle cx="50" cy="50" r="40" fill="${PUR}"/><text x="50" y="66" text-anchor="middle" font-family="Inter, sans-serif" font-size="46" font-weight="800" fill="${WHT}">₹</text></svg>`;
+
+// ===================== scenes; a spinning ₹ coin opens each one as a circular iris =====================
+const SC = [0, 5.62, 11.2, 17.95, 25.0, 28.9, 34.95, 38.3, 44.6, 50.3, 54.0];
+const scenes = SC.map((s, k) => { const S = E(stage, { zIndex: 1 + k }, '', 'scene'); stage.insertBefore(S, document.getElementById('coin')); return S; });
+const [S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10] = scenes;
+const coin = document.getElementById('coin');
+const CUST = [['Rahul Traders', 'R', 5000], ['Mehta Stores', 'M', 50000], ['Priya Enterprises', 'P', 12500], ['Gupta & Sons', 'G', 8200]];
+const CC = [PUR, AMB, INK, '#8B5CF6'];
+
+// ---- S0: hook — money stuck with customers
+const s0a = T(S0, 'c', 230, 74, 'Aapke business ka <span class="pur">paisa</span>');
+const s0b = T(S0, 'c', 330, 74, 'customers ke paas <span class="amb">pending</span>');
+const shop = E(S0, { left: '390px', top: '760px', width: '300px', height: '300px', borderRadius: '40px', background: PUR, color: '#fff', zIndex: 3 },
+  `<svg style="position:absolute;left:60px;top:40px" width="180" height="160" viewBox="0 0 180 160"><path d="M10 60 L30 10 H150 L170 60 Z" fill="${AMB}"/><rect x="20" y="60" width="140" height="95" rx="6" fill="#fff"/><rect x="70" y="95" width="40" height="60" fill="${PUR}"/></svg>
+   <div style="position:absolute;left:0;width:300px;top:220px;text-align:center;font-size:32px;font-weight:800">Aapka business</div>`);
+const CPOS = [[90, 480], [750, 480], [90, 1110], [750, 1110]];
+const custs = CUST.map(([n, ch], k) => E(S0, { left: CPOS[k][0] + 'px', top: CPOS[k][1] + 'px', width: '240px', height: '300px' }, `
+  <div style="position:absolute;left:66px;top:28px">${avatar(108, CC[k], ch)}</div>
+  <div style="position:absolute;left:0;width:240px;top:150px;text-align:center;font-size:24px;font-weight:700">${n}</div>
+  <div class="amt" style="position:absolute;left:30px;top:200px;width:180px;height:66px;border-radius:33px;background:#FDF1DC;color:#B4740F;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums"></div>
+  <div class="qm" style="position:absolute;left:170px;top:-10px;font-size:84px;font-weight:800;color:${AMB}">?</div>`, 'card'));
+const flyCoins = CUST.map((c, k) => E(S0, { width: '70px', height: '70px', zIndex: 4 }, coinHTML(70)));
+
+// ---- S1: owner, business doing well, but a problem
+const s1a = T(S1, 'c', 230, 74, 'Ek business owner…');
+const own = E(S1, { left: '90px', top: '380px', width: '900px', height: '640px' }, `
+  <div style="position:absolute;left:40px;top:40px">${avatar(120, PUR, 'O')}</div>
+  <div style="position:absolute;left:190px;top:56px;font-size:36px;font-weight:800">Business owner</div><div style="position:absolute;left:190px;top:104px;font-size:24px;font-weight:600;color:${MUT}">Sales this year</div>
+  ${[0.3, 0.42, 0.5, 0.62, 0.7, 0.84].map((h, k) => `<div class="g" data-h="${h}" style="position:absolute;left:${70 + k * 135}px;bottom:50px;width:90px;border-radius:14px 14px 4px 4px;background:${k === 5 ? PUR : '#D9CDB9'}"></div>`).join('')}
+  <svg class="ar" style="position:absolute;left:560px;top:180px" width="260" height="140" viewBox="0 0 260 140"><path d="M10 130 L120 60 L160 90 L250 10" fill="none" stroke="${PUR}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" /><path d="M210 10 H250 V50" fill="none" stroke="${PUR}" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>`, 'card');
+const gbars = [...own.querySelectorAll('.g')], garrow = own.querySelector('.ar path');
+const s1b = T(S1, 'c', 1080, 66, 'Lekin ek <span class="amb">badi problem</span>…');
+const warn = E(S1, { left: '440px', top: '1200px', width: '200px', height: '180px' }, `<svg width="200" height="180" viewBox="0 0 200 180"><path d="M100 10 L190 170 H10 Z" fill="${AMB}" stroke="${AMB}" stroke-width="16" stroke-linejoin="round"/><rect x="92" y="62" width="16" height="60" rx="8" fill="${INK}"/><circle cx="100" cy="144" r="10" fill="${INK}"/></svg>`);
+
+// ---- S2: payments don't arrive on time; pending amounts
+const s2a = T(S2, 'c', 230, 70, 'Payments <span class="amb">time par nahi</span>');
+const pipe = E(S2, { left: '90px', top: '360px', width: '900px', height: '340px' }, `
+  <div style="position:absolute;left:40px;top:90px">${avatar(130, INK, 'C')}</div><div style="position:absolute;left:20px;top:240px;width:170px;text-align:center;font-size:24px;font-weight:700">Customers</div>
+  <div style="position:absolute;left:730px;top:90px;width:130px;height:130px;border-radius:30px;background:${PUR}"><svg style="position:absolute;left:25px;top:30px" width="80" height="70" viewBox="0 0 80 70"><rect x="2" y="10" width="76" height="56" rx="10" fill="#fff"/><rect x="50" y="28" width="28" height="20" rx="6" fill="${AMB}"/><path d="M10 10 L56 0 L62 10" fill="#fff"/></svg></div>
+  <div style="position:absolute;left:720px;top:240px;width:150px;text-align:center;font-size:24px;font-weight:700">Aap</div>
+  <div style="position:absolute;left:200px;top:152px;width:510px;height:8px;border-radius:4px;background-image:linear-gradient(90deg, ${LIN} 50%, transparent 50%);background-size:30px 8px"></div>
+  <div class="pc" style="position:absolute;top:120px;width:70px;height:70px">${coinHTML(70)}</div>
+  <div class="ck" style="position:absolute;left:400px;top:30px;width:110px;height:110px;border-radius:55px;background:${WHT};box-shadow:inset 0 0 0 9px ${AMB}"><div class="hd" style="position:absolute;left:50px;top:16px;width:10px;height:44px;border-radius:5px;background:${INK};transform-origin:5px 40px"></div></div>
+  <div class="x" style="position:absolute;left:420px;top:200px;width:70px;height:70px;border-radius:35px;background:${AMB};font-size:40px;font-weight:800;display:flex;align-items:center;justify-content:center">✕</div>`, 'card');
+const pc = pipe.querySelector('.pc'), phd = pipe.querySelector('.hd'), pck = pipe.querySelector('.ck'), px = pipe.querySelector('.x');
+const LEDG = [[0, 14.66, 5000], [1, 16.8, 50000]];
+const ledger = LEDG.map(([k, ts, amt], i) => { const c = E(S2, { left: '90px', top: (760 + i * 290) + 'px', width: '900px', height: '250px' }, `
+  <div style="position:absolute;left:40px;top:60px">${avatar(120, CC[k], CUST[k][1])}</div>
+  <div style="position:absolute;left:200px;top:62px;font-size:32px;font-weight:800">${CUST[k][0]}</div>
+  <div style="position:absolute;left:200px;top:114px;padding:8px 18px;border-radius:18px;background:#FDF1DC;color:#B4740F;font-size:22px;font-weight:800">Pending</div>
+  <div class="v" style="position:absolute;right:40px;top:70px;font-size:${i ? 76 : 64}px;font-weight:800;color:${i ? PUR : INK};font-variant-numeric:tabular-nums"></div>`, 'card'); c.v = c.querySelector('.v'); c.ts = ts; c.amt = amt; return c; });
+
+// ---- S3: due vs overdue, Excel + WhatsApp chaos
+const s3a = T(S3, 'c', 230, 74, 'Due? <span class="amb">Overdue?</span>');
+const inv = [0, 1].map(i => E(S3, { left: (90 + i * 470) + 'px', top: '360px', width: '430px', height: '440px' }, `
+  <div style="position:absolute;left:34px;top:30px;font-size:26px;font-weight:700;color:${MUT}">INVOICE #${i ? '1043' : '1057'}</div>
+  <div style="position:absolute;left:34px;top:76px;font-size:32px;font-weight:800">${CUST[i ? 1 : 2][0]}</div>
+  ${[0, 1, 2].map(r => `<div style="position:absolute;left:34px;top:${150 + r * 48}px;width:${300 - r * 50}px;height:16px;border-radius:8px;background:#EDE4D4"></div>`).join('')}
+  <div style="position:absolute;left:34px;top:310px;font-size:44px;font-weight:800;font-variant-numeric:tabular-nums">${rupee(CUST[i ? 1 : 2][2])}</div>
+  <div class="bd" style="position:absolute;left:${i ? 120 : 230}px;top:${i ? 150 : 300}px;padding:${i ? '14px 26px' : '10px 22px'};border-radius:${i ? 14 : 22}px;font-size:${i ? 46 : 28}px;font-weight:800;${i ? `color:${PUR};box-shadow:inset 0 0 0 7px ${PUR};background:rgba(255,253,248,0.85);letter-spacing:0.06em` : `background:${AMB};color:${INK}`}">${i ? 'OVERDUE' : 'DUE'}</div>`, 'card'));
+const bdg = inv.map(c => c.querySelector('.bd'));
+const xl = E(S3, { left: '80px', top: '860px', width: '560px', height: '460px', zIndex: 3 }, `
+  <div style="position:absolute;left:0;top:0;width:560px;height:64px;background:#1F7A4D;color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">payments_final_v3.xlsx</div>
+  ${Array.from({ length: 7 }, (_, r) => Array.from({ length: 4 }, (_, c) => `<div style="position:absolute;left:${20 + c * 132}px;top:${84 + r * 52}px;width:126px;height:46px;background:${r === 0 ? '#E6EFE9' : '#fff'};box-shadow:0 0 0 1px #D5DED8;font-size:18px;font-weight:600;display:flex;align-items:center;padding-left:8px;box-sizing:border-box;color:${(r === 3 || r === 5) && c === 2 ? '#C0392B' : INK}">${r === 0 ? ['Name', 'Amt', 'Due', 'Status'][c] : c === 1 ? '₹' + [5, 50, 12, 8, 23, 4][r - 1] + 'k' : c === 2 ? ['12/10', '02/10', '??', '20/10', '#REF!', '15/11'][r - 1] : c === 3 ? ['paid?', '', 'pending', 'call', '', 'paid'][r - 1] : ['Rahul', 'Mehta', 'Priya', 'Gupta', 'Shah', 'Jain'][r - 1]}</div>`).join('')).join('')}`, 'card');
+const wa = E(S3, { left: '560px', top: '960px', width: '440px', height: '420px', zIndex: 4 }, `
+  <div style="position:absolute;left:0;top:0;width:440px;height:64px;background:#25A35A;color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">WhatsApp · 23 chats</div>
+  ${['Bhai payment kab tak?', 'Kal pakka bhej dunga', 'Sir, 50k ka kya hua?', 'Next week 🙏'].map((s, k) => `<div class="wm" style="position:absolute;${k % 2 ? 'right:20px;background:#E3F4E8' : 'left:20px;background:#F1EEE8'};top:${86 + k * 80}px;padding:14px 20px;border-radius:18px;font-size:22px;font-weight:600;white-space:nowrap">${s}</div>`).join('')}`, 'card');
+const wms = [...wa.querySelectorAll('.wm')];
+
+// ---- S4: reveal
+const s4a = T(S4, 'c', 420, 70, 'Humne develop kiya');
+const s4b = T(S4, 'c', 530, 92, '<span class="pur">Payment & Receivables</span>');
+const s4c = T(S4, 'c', 640, 92, '<span class="pur">Management System</span>');
+const emb = E(S4, { left: '390px', top: '860px', width: '300px', height: '300px' }, coinHTML(300) + `<div style="position:absolute;left:210px;top:200px">${check(96, INK)}</div>`);
+
+// ---- S5: dashboard table
+const s5a = T(S5, 'c', 230, 74, 'Ek <span class="pur">dashboard</span> par');
+const COLS = [['Customer', 30], ['Pending', 360], ['History', 560], ['Due date', 740]];
+const DUE = ['12 Nov', '02 Nov', '20 Nov', '28 Nov'], DST = [AMB, '#C0392B', PUR, PUR];
+const dash = E(S5, { left: '50px', top: '380px', width: '980px', height: '820px' }, `
+  <div style="position:absolute;left:0;top:0;width:980px;height:90px;background:${INK}"></div>
+  <div style="position:absolute;left:30px;top:24px;font-size:32px;font-weight:800;color:#fff">Receivables</div>
+  <div class="hl" style="position:absolute;top:100px;height:700px;border-radius:20px;background:rgba(90,23,230,0.08);box-shadow:inset 0 0 0 3px ${PUR}"></div>
+  ${COLS.map(([n, x]) => `<div style="position:absolute;left:${x}px;top:120px;font-size:22px;font-weight:800;color:${MUT};letter-spacing:0.04em">${n.toUpperCase()}</div>`).join('')}
+  ${CUST.map(([n, ch, amt], r) => `<div class="tr" style="position:absolute;left:0;top:${170 + r * 156}px;width:980px;height:156px">
+     <div style="position:absolute;left:30px;top:22px;width:920px;height:2px;background:${LIN}"></div>
+     <div style="position:absolute;left:30px;top:50px">${avatar(64, CC[r], ch)}</div><div style="position:absolute;left:110px;top:64px;font-size:24px;font-weight:700;width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n}</div>
+     <div class="pb" style="position:absolute;left:360px;top:58px;font-size:34px;font-weight:800;font-variant-numeric:tabular-nums">${rupee(amt)}</div>
+     <svg class="hs" style="position:absolute;left:560px;top:52px" width="150" height="60" viewBox="0 0 150 60">${[0, 1, 2, 3, 4, 5].map(i => `<rect x="${i * 25}" y="${60 - [30, 44, 22, 50, 36, 14 + r * 8][i]}" width="16" height="${[30, 44, 22, 50, 36, 14 + r * 8][i]}" rx="4" fill="${i === 5 ? AMB : '#D9CDB9'}"/>`).join('')}</svg>
+     <div class="dd" style="position:absolute;left:740px;top:54px;padding:10px 18px;border-radius:16px;font-size:24px;font-weight:800;background:${DST[r]};color:${DST[r] === AMB ? INK : '#fff'}">${DUE[r]}</div></div>`).join('')}`, 'card');
+const hl = dash.querySelector('.hl'), trs = [...dash.querySelectorAll('.tr')], pbs = [...dash.querySelectorAll('.pb')], hss = [...dash.querySelectorAll('.hs')], dds = [...dash.querySelectorAll('.dd')];
+
+// ---- S6: automatic WhatsApp reminders
+const s6a = T(S6, 'c', 230, 70, 'Automatic <span class="pur">reminders</span>');
+const phone = E(S6, { left: '250px', top: '370px', width: '580px', height: '1050px', borderRadius: '70px', background: INK, padding: '22px', boxSizing: 'border-box' }, `
+  <div style="width:100%;height:100%;border-radius:52px;background:#EFE9DF;position:relative;overflow:hidden">
+    <div style="position:absolute;left:0;top:0;width:100%;height:150px;background:#25A35A"></div>
+    <div style="position:absolute;left:30px;top:56px">${avatar(64, PUR, 'R')}</div><div style="position:absolute;left:110px;top:62px;font-size:28px;font-weight:800;color:#fff">Rahul Traders</div>
+    <div class="tg" style="position:absolute;left:30px;top:180px;width:476px;height:90px;border-radius:22px;background:#fff;display:flex;align-items:center;padding:0 24px;box-sizing:border-box;font-size:24px;font-weight:700">Auto reminders<div class="sw" style="position:absolute;right:24px;top:25px;width:80px;height:40px;border-radius:20px"><div class="kn" style="position:absolute;top:4px;width:32px;height:32px;border-radius:16px;background:#fff"></div></div></div>
+    <div class="m1" style="position:absolute;left:30px;top:310px;width:420px;padding:22px 24px;border-radius:24px 24px 24px 6px;background:#fff;font-size:26px;font-weight:600;line-height:1.35;box-sizing:border-box;transform-origin:0 100%">Namaste Rahul ji, aapka <b>₹5,000</b> ka payment <b>12 Nov</b> ko due hai.<div class="pay" style="margin-top:16px;height:64px;border-radius:16px;background:${PUR};color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center">Pay now →</div></div>
+    <div class="m2" style="position:absolute;left:30px;top:640px;width:420px;padding:22px 24px;border-radius:24px 24px 24px 6px;background:#fff;font-size:26px;font-weight:600;line-height:1.35;box-sizing:border-box;transform-origin:0 100%">Reminder: payment <b>3 din</b> mein due hai. 🙏</div>
+    <div class="st" style="position:absolute;left:30px;top:830px;display:flex;align-items:center;gap:12px;font-size:24px;font-weight:800;color:${PUR}">${check(40)}Sent automatically</div></div>`);
+const sw = phone.querySelector('.sw'), kn = phone.querySelector('.kn'), m1 = phone.querySelector('.m1'), m2 = phone.querySelector('.m2'), payB = phone.querySelector('.pay'), stS = phone.querySelector('.st');
+
+// ---- S7: owner overview — overdue + total outstanding
+const s7a = T(S7, 'c', 230, 74, 'Owner: <span class="pur">ek hi jagah</span>');
+const od = E(S7, { left: '90px', top: '370px', width: '900px', height: '520px' }, `
+  <div style="position:absolute;left:36px;top:30px;font-size:32px;font-weight:800">Overdue payments</div><div style="position:absolute;right:36px;top:34px;padding:6px 16px;border-radius:16px;background:#FDE8E4;color:#C0392B;font-size:22px;font-weight:800">2 overdue</div>
+  ${[[1, 50000, '12 din overdue'], [3, 8200, '5 din overdue'], [2, 12500, 'Due in 6 din']].map(([k, a, s], r) => `<div class="or" style="position:absolute;left:36px;top:${110 + r * 130}px;width:828px;height:110px;border-radius:20px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:20px;top:22px">${avatar(66, CC[k], CUST[k][1])}</div><div style="position:absolute;left:110px;top:22px;font-size:26px;font-weight:800">${CUST[k][0]}</div>
+     <div style="position:absolute;left:110px;top:62px;font-size:20px;font-weight:700;color:${r < 2 ? '#C0392B' : MUT}">${s}</div><div style="position:absolute;right:26px;top:32px;font-size:34px;font-weight:800;font-variant-numeric:tabular-nums">${rupee(a)}</div></div>`).join('')}`, 'card');
+const ors = [...od.querySelectorAll('.or')];
+const tot = E(S7, { left: '90px', top: '930px', width: '900px', height: '420px', borderRadius: '28px', background: PUR, color: '#fff', overflow: 'hidden' }, `
+  <div style="position:absolute;left:40px;top:40px;font-size:32px;font-weight:800;opacity:0.85">Total outstanding</div>
+  <div class="tv" style="position:absolute;left:40px;top:110px;font-size:130px;font-weight:800;letter-spacing:-0.03em;font-variant-numeric:tabular-nums"></div>
+  <div style="position:absolute;left:40px;top:300px;width:820px;height:24px;border-radius:12px;background:rgba(255,255,255,0.2)"><div class="tb" style="height:24px;border-radius:12px;background:${AMB}"></div></div>
+  <div style="position:absolute;left:40px;top:346px;font-size:22px;font-weight:700;opacity:0.8">4 customers · 2 overdue</div>`);
+const tv = tot.querySelector('.tv'), tb = tot.querySelector('.tb');
+
+// ---- S8: no manual follow-ups
+const s8a = T(S8, 'c', 230, 70, '<span class="amb">Manually</span> follow up?');
+const todo = E(S8, { left: '140px', top: '380px', width: '800px', height: '640px' }, `<div style="position:absolute;left:36px;top:30px;font-size:32px;font-weight:800">Aaj ke follow-ups</div>
+  ${['Call Rahul Traders', 'Message Mehta Stores', 'Reminder: Priya Enterprises', 'Call Gupta & Sons'].map((s, r) => `<div class="td" style="position:absolute;left:36px;top:${110 + r * 124}px;width:728px;height:104px;border-radius:20px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN};font-size:28px;font-weight:700;display:flex;align-items:center;padding-left:96px;box-sizing:border-box">
+     <div style="position:absolute;left:28px;top:30px;width:44px;height:44px;border-radius:10px;box-shadow:inset 0 0 0 4px #CDBFA8"></div>${s}<div class="sk" style="position:absolute;left:90px;top:50px;height:5px;border-radius:3px;background:${INK}"></div></div>`).join('')}`, 'card');
+const tds = [...todo.querySelectorAll('.td')], sks = [...todo.querySelectorAll('.sk')];
+const s8b = T(S8, 'c', 1090, 84, '<span class="pur">Zaroorat nahi</span>');
+const auto8 = E(S8, { left: '240px', top: '1230px', width: '600px', height: '120px', borderRadius: '60px', background: INK, color: '#fff', fontSize: '34px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px' }, `${check(56, PUR)}Auto follow-up: ON`);
+
+// ---- S9: CTA
+const s9a = T(S9, 'c', 300, 66, 'Aapke business mein bhi');
+const s9b = T(S9, 'c', 390, 64, 'payments <span class="amb">pending</span> rehti hain?');
+const cbox = E(S9, { left: '90px', top: '640px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:48px;font-size:64px;font-weight:800;letter-spacing:0.06em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const s9c = T(S9, 'c', 860, 56, 'Comment <span class="pur">"PAYMENT"</span>', { w: 700 });
+
+// ---- S10: end
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; S10.appendChild(endLogo);
+const e1 = T(S10, 'c', 740, 120, 'HeliosLabs');
+const e2 = T(S10, 'c', 900, 50, 'Comment <span class="pur">"PAYMENT"</span>', { w: 700 });
+
+// ===================== subtitles (voiceover time) =====================
+const SUBS = [
+  [0.0, 2.95, 'Aapke business ka paisa customers ke paas pending hai,'],
+  [2.95, 5.6, 'aur aapko yaad bhi nahi ki kisne kitna dena hai?'],
+  [5.6, 9.5, 'Ek business owner humare paas aaye. Unka business achha chal raha tha,'],
+  [9.5, 11.2, 'lekin ek badi problem thi.'],
+  [11.2, 14.1, 'Customers se payments time par nahi aa rahi thi.'],
+  [14.1, 17.9, 'Kisi ka ₹5,000 pending tha, kisi ka ₹50,000.'],
+  [17.9, 21.2, 'Kiska payment due hai, kiski payment overdue hai,'],
+  [21.2, 24.95, 'ye sab Excel sheets aur WhatsApp messages mein manage ho raha tha.'],
+  [24.95, 28.9, 'Humne unke liye ek Payment & Receivables Management System develop kiya.'],
+  [28.9, 34.95, 'Ab dashboard par har customer ka pending balance, payment history aur due date track hoti hai.'],
+  [34.95, 38.3, 'System automatically WhatsApp payment reminders bhej sakta hai,'],
+  [38.3, 44.55, 'aur owner ek hi jagah se overdue payments aur total outstanding amount dekh sakte hain.'],
+  [44.55, 50.25, 'Matlab, payment tracking ke liye ab har customer ko manually follow up karne ki zaroorat nahi.'],
+  [50.25, 52.9, 'Aapke business mein bhi payments pending rehti hain?'],
+  [52.9, 56.0, 'Comment "PAYMENT".'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- coin iris: coin spins in (T-0.55..T-0.1), then the next scene opens as a circle from its centre
+  let cs = 0, cr = 0, cop = 0;
+  scenes.forEach((S, k) => {
+    const s = SC[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    if (k === 0) S.style.clipPath = 'none';
+    else { const p = clamp((t - (s - 0.12)) / 0.55), r = 120 + 2100 * inout(p) * inout(p); S.style.clipPath = p >= 1 ? 'none' : `circle(${r}px at 540px 960px)`; }
+    S.style.visibility = (t >= s - 0.12 && t < next + 0.45) ? 'visible' : 'hidden';
+    S.style.transform = `scale(${1 + 0.025 * clamp((t - s) / 6)})`;
+    if (k > 0) { const a = clamp((t - (s - 0.6)) / 0.5), b = clamp((t - (s - 0.12)) / 0.16);
+      if (a > 0 && b < 1) { cs = inout(a) * (1 + 0.8 * b); cr = (1 - a) * 900 + 720 * inout(a); cop = 1 - b; } }
+  });
+  coin.style.visibility = cop > 0.01 ? 'visible' : 'hidden';
+  coin.style.opacity = cop; coin.style.transform = `translate(410px, 830px) scale(${cs}) rotateY(${cr}deg)`;
+
+  // ---- S0
+  show(s0a, t, 0.3); show(s0b, t, 1.9);
+  pop(shop, t, 0.2);
+  custs.forEach((c, k) => { pop(c, t, 0.6 + k * 0.1);
+    const amt = c.querySelector('.amt'), qm = c.querySelector('.qm'), blur = clamp((t - 3.44) / 0.4);
+    amt.style.visibility = t >= 2.24 + k * 0.06 ? 'visible' : 'hidden'; amt.style.transform = `scale(${clamp(sp(t, 2.24 + k * 0.06))})`;
+    amt.textContent = t < 4.0 ? rupee(CUST[k][2]) : '₹ ???'; amt.style.filter = `blur(${t < 4.0 ? blur * 8 : 0}px)`;
+    pop(qm, t, 4.32 + k * 0.1, 1e9, `rotate(${12 * Math.sin(t * 3 + k)}deg)`); });
+  flyCoins.forEach((f, k) => { const ts = 1.3 + k * 0.16, p = inout(clamp((t - ts) / 0.6)); const x0 = 505, y0 = 875, x1 = CPOS[k][0] + 85, y1 = CPOS[k][1] + 115;
+    f.style.left = lerp(x0, x1, p) + 'px'; f.style.top = (lerp(y0, y1, p) - 160 * Math.sin(Math.PI * p)) + 'px'; f.style.transform = `scale(${p >= 1 ? 0 : 1}) rotateY(${p * 540}deg)`; f.style.visibility = t >= ts && p < 1 ? 'visible' : 'hidden'; });
+  // ---- S1
+  show(s1a, t, 5.92);
+  { const p = clamp(sp(t, 6.3)); own.style.transform = `translateY(${(1 - p) * 1100}px)`; own.style.visibility = t < 6.3 ? 'hidden' : 'visible';
+    const shake = t > 10.38 && t < 10.9 ? 6 * Math.sin((t - 10.38) * 60) * (1 - (t - 10.38) / 0.52) : 0;
+    gbars.forEach((g, k) => { g.style.height = (440 * +g.dataset.h * clamp(sp(t, 7.98 + k * 0.08))) + 'px'; g.style.transform = `translateX(${shake}px)`; });
+    garrow.style.strokeDashoffset = 1 - inout(clamp((t - 8.26) / 0.8)); garrow.parentElement.style.visibility = t < 8.26 ? 'hidden' : 'visible'; garrow.nextElementSibling.style.opacity = clamp((t - 8.95) / 0.15); }
+  show(s1b, t, 9.8); pop(warn, t, 10.38, 1e9, `rotate(${t > 10.38 ? 6 * Math.sin((t - 10.38) * 14) * Math.exp(-(t - 10.38) * 2) : 0}deg)`);
+  // ---- S2
+  show(s2a, t, 11.46);
+  { pop(pipe, t, 11.3); const p = clamp((t - 11.98) / 0.9); pc.style.left = (200 + 160 * inout(p) + (t > 12.9 ? 3 * Math.sin(t * 40) * Math.exp(-(t - 12.9) * 3) : 0)) + 'px';
+    phd.style.transform = `rotate(${Math.max(0, t - 12.48) * 300}deg)`; pck.style.transform = `scale(${clamp(sp(t, 12.48))})`; pop(px, t, 13.06); }
+  ledger.forEach((c, i) => { pop(c, t, c.ts - 0.35); c.v.textContent = t < c.ts ? '' : rupee(c.amt * expo(t, c.ts, 0.7)); });
+  // ---- S3
+  show(s3a, t, 18.16);
+  inv.forEach((c, i) => pop(c, t, 18.2 + i * 1.5));
+  pop(bdg[0], t, 18.72); { const p = clamp((t - 20.12) / 0.18); bdg[1].style.visibility = t < 20.12 ? 'hidden' : 'visible'; bdg[1].style.transform = `rotate(-12deg) scale(${lerp(2.2, 1, inout(p))})`; bdg[1].style.opacity = clamp(p * 2); }
+  { const p = clamp(sp(t, 21.68)); xl.style.transform = `translate(${(1 - p) * -900}px, 0) rotate(-4deg)`; xl.style.visibility = t < 21.68 ? 'hidden' : 'visible';
+    const q = clamp(sp(t, 22.86)); wa.style.transform = `translate(${(1 - q) * 900}px, 0) rotate(5deg)`; wa.style.visibility = t < 22.86 ? 'hidden' : 'visible';
+    wms.forEach((m, k) => { const r = clamp(sp(t, 23.1 + k * 0.3)); m.style.transform = `scale(${r})`; m.style.transformOrigin = k % 2 ? '100% 100%' : '0 100%'; });
+    const j = t > 23.92 ? 1 : 0; xl.style.marginTop = (j * 4 * Math.sin(t * 9)) + 'px'; wa.style.marginTop = (j * 4 * Math.sin(t * 8 + 1)) + 'px'; }
+  // ---- S4
+  show(s4a, t, 25.3); show(s4b, t, 26.14); show(s4c, t, 27.46);
+  { const p = clamp(sp(t, 27.6)); emb.style.transform = `scale(${p}) rotateY(${(1 - expo(t, 27.6, 1.0)) * 720}deg)`; emb.style.visibility = t < 27.6 ? 'hidden' : 'visible'; }
+  // ---- S5
+  show(s5a, t, 29.66);
+  { const p = clamp(sp(t, 29.74)); dash.style.transform = `translateY(${(1 - p) * 1300}px)`; }
+  trs.forEach((r, k) => { const p = clamp(sp(t, 30.1 + k * 0.1)); r.style.transform = `translateX(${(1 - p) * 1000}px)`; });
+  { const cols = [[31.34, 340, 190], [32.54, 545, 175], [33.76, 725, 230]]; let hx = -1, hw = 0, op = 0;
+    cols.forEach(([ts, x, w], i) => { const nxt = i < 2 ? cols[i + 1][0] : 34.95; if (t >= ts - 0.1) { const p = expo(t, ts - 0.1, 0.4); const prev = i ? cols[i - 1] : null; hx = prev && t < ts + 0.3 ? lerp(prev[1], x, p) : x; hw = prev && t < ts + 0.3 ? lerp(prev[2], w, p) : w; op = i ? 1 : p; } });
+    hl.style.left = hx + 'px'; hl.style.width = hw + 'px'; hl.style.opacity = op; hl.style.visibility = hx < 0 ? 'hidden' : 'visible'; }
+  pbs.forEach((b, k) => b.style.transform = `scale(${1 + 0.1 * Math.sin(Math.PI * clamp((t - 31.4 - k * 0.08) / 0.3))})`);
+  hss.forEach((h, k) => h.style.clipPath = `inset(0 ${(1 - inout(clamp((t - 32.54 - k * 0.08) / 0.5))) * 100}% 0 0)`);
+  dds.forEach((d, k) => pop(d, t, 33.76 + k * 0.08));
+  // ---- S6
+  show(s6a, t, 35.48);
+  { const p = clamp(sp(t, 35.1)); phone.style.transform = `translateY(${(1 - p) * 1300}px)`;
+    const on = inout(clamp((t - 36.3) / 0.25)); sw.style.background = on > 0.5 ? PUR : '#CDBFA8'; kn.style.left = (4 + 44 * on) + 'px';
+    pop(m1, t, 36.7); payB.style.transform = `scale(${1 + 0.06 * Math.sin(Math.PI * clamp((t - 37.04) / 0.3))})`; pop(m2, t, 37.5); pop(stS, t, 37.9); }
+  // ---- S7
+  show(s7a, t, 39.5);
+  pop(od, t, 38.5); ors.forEach((r, k) => { const p = clamp(sp(t, 40.88 + k * 0.15)); r.style.transform = `translateX(${(1 - p) * 950}px)`; });
+  { const p = clamp(sp(t, 42.1)); tot.style.transform = `translateY(${(1 - p) * 1000}px)`; tot.style.visibility = t < 42.1 ? 'hidden' : 'visible';
+    const c = expo(t, 42.6, 1.1); tv.textContent = t < 42.6 ? '' : rupee(75700 * c); tb.style.width = (820 * 0.62 * c) + 'px'; }
+  // ---- S8
+  show(s8a, t, 44.86, 49.2);
+  pop(todo, t, 45.2, 1e9, `translateX(${-1200 * inout(clamp((t - 49.3) / 0.45))}px)`);
+  tds.forEach((d, k) => { const p = clamp(sp(t, 45.5 + k * 0.12)); d.style.transform = `translateY(${(1 - p) * 60}px)`; d.style.opacity = p; });
+  sks.forEach((s, k) => { const p = inout(clamp((t - (47.92 + k * 0.22)) / 0.25)); s.style.width = (p * 560) + 'px'; s.parentElement.style.color = p > 0.5 ? MUT : INK; });
+  show(s8b, t, 49.38); pop(auto8, t, 49.6);
+  // ---- S9 CTA
+  show(s9a, t, 50.4); show(s9b, t, 51.6);
+  pop(cbox, t, 52.5);
+  { const s = 'PAYMENT'; cm.textContent = s.slice(0, Math.floor(clamp((t - 53.0) / 0.55) * s.length)); sd.style.transform = `scale(${press(t, 53.7)})`; }
+  show(s9c, t, 53.3);
+  // ---- S10
+  animLogo(endLogo, t, 54.15); show(e1, t, 54.4); show(e2, t, 54.7);
+
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 56.0;
+window.seek(0);
+</script>
+</body>
+</html>

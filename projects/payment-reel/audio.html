@@ -1,0 +1,144 @@
+<!doctype html><meta charset="utf-8"><script>
+// Payment reel: Indian-pop groove (synth tabla, hammered santoor, tanpura drone, soft modern kick) + money / chat sound design.
+window.renderScore = async function (DUR, P, SFX) {
+  const sr = 44100, ctx = new OfflineAudioContext(2, Math.ceil(DUR * sr), sr);
+  const { BUILT, CTA, END } = P;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.25; comp.connect(ctx.destination);
+  const master = ctx.createGain(); master.gain.value = 0.9; master.connect(comp);
+  let seed = 23; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const ir = ctx.createBuffer(2, sr * 2.2, sr);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (rnd() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+  const verb = ctx.createConvolver(); verb.buffer = ir; const vg = ctx.createGain(); vg.gain.value = 0.24; verb.connect(vg).connect(master);
+  const mus = ctx.createGain(); mus.connect(master); const mv = ctx.createGain(); mv.gain.value = 0.6; mus.connect(mv).connect(verb);
+  const fx = ctx.createGain(); fx.connect(master); const fxv = ctx.createGain(); fxv.gain.value = 0.2; fx.connect(fxv).connect(verb);
+  const noise = ctx.createBuffer(1, sr * 2, sr); { const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1; }
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  const pan = (dest, p) => { const s = ctx.createStereoPanner(); s.pan.value = p; s.connect(dest); return s; };
+  const env = (g, t, a, pk, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(pk, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
+  function nz(t, len, f, type, v, dest = master, q = 1, p = 0) { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true;
+    s.playbackRate.value = 0.8 + rnd() * 0.4; fl.type = type; fl.frequency.value = f; fl.Q.value = q; env(g, t, 0.002, v, len); s.connect(fl).connect(g).connect(pan(dest, p)); s.start(t, rnd()); s.stop(t + len + 0.05); }
+
+  // ---------- santoor: bright Karplus-Strong strings, each note a pair of slightly detuned strings ----------
+  const ksCache = {};
+  function ks(m, det) {
+    const key = m + ':' + det; if (ksCache[key]) return ksCache[key];
+    const f = hz(m) * det, N = Math.max(2, Math.round(sr / f)), len = Math.floor(sr * 2.0), b = ctx.createBuffer(1, len, sr), y = b.getChannelData(0);
+    for (let i = 0; i < N; i++) y[i] = rnd() * 2 - 1;                                      // bright hammer excitation
+    for (let i = N; i < len; i++) y[i] = 0.997 * 0.5 * (y[i - N] + y[i - N - 1 < 0 ? 0 : i - N - 1]);
+    let pk = 0; for (let i = 0; i < len; i++) pk = Math.max(pk, Math.abs(y[i])); for (let i = 0; i < len; i++) y[i] /= pk;
+    return (ksCache[key] = { b, rate: N / (sr / f) });
+  }
+  const sbus = ctx.createBiquadFilter(); sbus.type = 'highpass'; sbus.frequency.value = 180; sbus.connect(mus);
+  function santoor(t, m, v, p = 0.2, len = 1.6) { [1, 1.003].forEach((det, k) => { const { b, rate } = ks(m, det), s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; s.playbackRate.value = rate;
+    g.gain.setValueAtTime(v * 0.6, t); g.gain.setValueAtTime(v * 0.6, t + len - 0.1); g.gain.linearRampToValueAtTime(0, t + len); s.connect(g).connect(pan(sbus, p + (k ? 0.15 : -0.15))); s.start(t); s.stop(t + len + 0.02); }); }
+  // ---------- tabla: bayan (ge, pitch-bent low drum), dayan (na / tin, tuned ringing), ke (dry slap) ----------
+  function ge(t, v = 0.3) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(78, t); o.frequency.linearRampToValueAtTime(105, t + 0.12); o.frequency.exponentialRampToValueAtTime(92, t + 0.5);
+    env(g, t, 0.004, v, 0.5); o.connect(g).connect(pan(master, -0.15)); o.start(t); o.stop(t + 0.6); }
+  function na(t, v = 0.12, f = 520) { [1, 2.0, 3.01].forEach((r, k) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f * r; env(g, t, 0.002, v * [1, 0.45, 0.25][k], [0.32, 0.18, 0.1][k]); o.connect(g).connect(pan(master, 0.15)); o.start(t); o.stop(t + 0.4); });
+    nz(t, 0.012, 3500, 'bandpass', v * 0.8, master, 2, 0.15); }
+  const tin = (t, v = 0.09) => na(t, v, 520 * 1.5);
+  const ke = (t, v = 0.08) => nz(t, 0.03, 900, 'bandpass', v, master, 1.5, -0.15);
+  const dha = (t, v = 1) => { ge(t, 0.3 * v); na(t, 0.12 * v); };
+  function kick(t, v) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.14); env(g, t, 0.003, v, 0.35); o.connect(g).connect(master); o.start(t); o.stop(t + 0.4); }
+  const shaker = (t, v, p) => nz(t, 0.05, 7000, 'highpass', v, master, 1, p);
+  // tanpura-style drone: sustained saw tones with slow filter shimmer
+  function drone(a, b, notes, v) { notes.forEach((m, k) => { const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(m);
+    lp.type = 'bandpass'; lp.frequency.value = hz(m) * 4; lp.Q.value = 1.2; lfo.frequency.value = 0.23 + k * 0.07; lg.gain.value = hz(m) * 2; lfo.connect(lg).connect(lp.frequency);
+    g.gain.setValueAtTime(0.0001, a); g.gain.linearRampToValueAtTime(v, a + 1.2); g.gain.setValueAtTime(v, b - 0.6); g.gain.linearRampToValueAtTime(0.0001, b);
+    o.connect(lp).connect(g).connect(pan(mus, (k - 1) * 0.4)); [o, lfo].forEach(x => { x.start(a); x.stop(b + 0.05); }); }); }
+  function bass(t, m, len, v = 0.16) { const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); o.type = 'triangle'; o.frequency.value = hz(m); lp.type = 'lowpass'; lp.frequency.value = 500;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(v * 0.5, t + 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t + len); o.connect(lp).connect(g).connect(mus); o.start(t); o.stop(t + len + 0.02); }
+  function pad(t, notes, len, v) { notes.forEach((m, k) => [-7, 7].forEach(dt => { const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(m); o.detune.value = dt;
+    lp.type = 'lowpass'; lp.frequency.value = 1300; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.6); g.gain.setValueAtTime(v, t + len - 0.4); g.gain.linearRampToValueAtTime(0.0001, t + len + 0.2);
+    o.connect(lp).connect(g).connect(pan(mus, (k - 1) * 0.35)); o.start(t); o.stop(t + len + 0.25); })); }
+
+  // ---------- arrangement: 96 BPM keherwa-style theka; D minor-ish (Bhairavi colour) for the problem, D major (Bilawal) for the solution ----------
+  const B = 60 / 96, BAR = 4 * B, E8 = B / 2;
+  const THEKA = ['dha', 'ge', 'na', 'tin', 'na', 'ke', 'dha', 'na'];       // one bar of 8ths
+  const MINOR = [[62, 63, 65, 67, 69, 70, 72, 74], [50, 57]];             // D Eb F G A Bb C D, drone D-A
+  const MAJOR = [[62, 64, 66, 67, 69, 71, 73, 74], [50, 57]];
+  // santoor phrases (scale degrees, 16th index within 2 bars)
+  const PHR = [[0, 4], [2, 3], [4, 2], [6, 1], [8, 0], [12, 2], [14, 4], [16, 5], [18, 4], [20, 3], [24, 2], [26, 1], [28, 0]];
+  function section(a, b, scale, o) {
+    drone(a, b + 0.3, scale[1], o.dv);
+    for (let k = 0; a + k * BAR < b - 0.05; k++) {
+      const t0 = a + k * BAR;
+      if (o.tabla) THEKA.forEach((bol, i) => { const tt = t0 + i * E8 + (i % 2 ? 0.02 : 0); if (tt >= b - 0.02) return;
+        ({ dha, ge, na, tin, ke })[bol](tt, o.tv * (i === 0 ? 1.1 : 0.85)); if (o.fill && k % 4 === 3 && i >= 6) na(tt + E8 / 2, 0.08); });
+      if (o.kick) { [0, 2.5].forEach(bt => { const tt = t0 + bt * B; if (tt < b - 0.02) kick(tt, 0.5); }); for (let i = 0; i < 8; i++) { const tt = t0 + i * E8; if (tt < b) shaker(tt, i % 2 ? 0.02 : 0.012, 0.3); } }
+      const root = [50, 50, 55, 57][k % 4] + (o.major && k % 4 === 2 ? 0 : 0); if (o.bass) { bass(t0, root - 12, B * 1.5); if (t0 + 2.5 * B < b) bass(t0 + 2.5 * B, root - 12 + 7, B); }
+      if (o.pad && k % 2 === 0) pad(t0, o.major ? [[62, 66, 69], [62, 66, 69], [67, 71, 74], [69, 73, 76]][k % 4] : [[62, 65, 69], [62, 65, 69], [67, 70, 74], [69, 72, 76]][k % 4], Math.min(2 * BAR, b - t0), 0.007);
+      if (k % 2 === 0 && o.mel) PHR.forEach(([s16, d]) => { const tt = t0 + s16 * B / 4; if (tt < b - 0.2) santoor(tt, scale[0][(d + (k % 4 === 2 ? 2 : 0)) % 8] + 12, o.mel); });
+    }
+  }
+  const PROB = 11.2;
+  section(0, PROB, MINOR, { dv: 0.006, tabla: true, tv: 0.8, mel: 0.05, bass: true });                       // hook + story: tabla + santoor, minor
+  section(PROB, BUILT, MINOR, { dv: 0.008, tabla: true, tv: 0.9, mel: 0.04, bass: true, kick: true, fill: true });   // problems: fuller, tense
+  // santoor glissando up into the solution
+  for (let i = 0; i < 14; i++) santoor(BUILT - 0.7 + i * 0.05, MAJOR[0][i % 8] + 12 * (1 + Math.floor(i / 8)), 0.035, 0.3, 1.2);
+  section(BUILT, CTA, MAJOR, { dv: 0.007, tabla: true, tv: 0.9, mel: 0.05, bass: true, kick: true, pad: true, major: true, fill: true });   // solution: bright major
+  section(CTA, END, MAJOR, { dv: 0.007, tabla: false, mel: 0.045, bass: true, pad: true, major: true });   // CTA: drums out
+  [62, 66, 69, 74, 78].forEach((m, i) => santoor(END + i * 0.07, m + 12, 0.05, 0.2, DUR - END)); bass(END, 38, DUR - END - 0.1, 0.16); dha(END, 0.9);
+  drone(END, DUR, [50, 57], 0.006);
+
+  // ---------- sound effects ----------
+  const SFXF = {
+    // elevator doors sliding (soft mechanical rumble) and the floor-arrival ding
+    door: (t, p) => { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true; fl.type = 'lowpass'; fl.frequency.setValueAtTime(380, t); fl.frequency.linearRampToValueAtTime(700, t + 0.3);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.1); g.gain.setValueAtTime(0.09, t + 0.26); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38); s.connect(fl).connect(g).connect(pan(fx, p)); s.start(t, rnd()); s.stop(t + 0.42);
+      nz(t + 0.33, 0.05, 900, 'bandpass', 0.06, fx, 1.5, p); },
+    ding: (t, p, m = 88) => [1, 2.76, 5.4].forEach((r, k) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = hz(m) * r; env(g, t, 0.003, [0.06, 0.018, 0.008][k], [1.6, 0.7, 0.3][k]); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 1.7); }),
+    ring: (t, p) => { const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), am = ctx.createOscillator(), amg = ctx.createGain(), g = ctx.createGain(), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.8;
+      o1.frequency.value = 1100; o2.frequency.value = 1300; am.type = 'square'; am.frequency.value = 22; amg.gain.value = 0.5; am.connect(amg);
+      const vca = ctx.createGain(); vca.gain.value = 0.5; amg.connect(vca.gain); o1.connect(vca); o2.connect(vca); vca.connect(bp).connect(g).connect(pan(fx, p));
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.035, t + 0.02); g.gain.setValueAtTime(0.035, t + 0.9); g.gain.linearRampToValueAtTime(0.0001, t + 1.0);
+      [o1, o2, am].forEach(o => { o.start(t); o.stop(t + 1.05); }); },
+    step: (t, p) => { nz(t, 0.05, 260, 'lowpass', 0.25, fx, 1, p); nz(t + 0.01, 0.03, 2400, 'bandpass', 0.04, fx, 1, p); },
+    book: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.18); env(g, t, 0.003, 0.35, 0.25); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.3); nz(t, 0.09, 1500, 'bandpass', 0.12, fx, 0.8, p); },
+    pen: (t, p) => { for (let k = 0; k < 6; k++) nz(t + k * 0.06 + rnd() * 0.02, 0.04, 3600 + rnd() * 1500, 'bandpass', 0.045, fx, 3, p); },
+    clash: (t, p) => { [55, 56.3].forEach(m => { const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(m); lp.type = 'lowpass'; lp.frequency.value = 1400; env(g, t, 0.004, 0.05, 0.5); o.connect(lp).connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.6); });
+      SFXF.book(t, p); },
+    error: (t, p) => [0, 0.16].forEach(d => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = 330; env(g, t + d, 0.004, 0.06, 0.1); o.connect(g).connect(pan(fx, p)); o.start(t + d); o.stop(t + d + 0.15); }),
+    beep: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = 2100; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.02, t + 0.003); g.gain.setValueAtTime(0.02, t + 0.06); g.gain.linearRampToValueAtTime(0.0001, t + 0.07);
+      o.connect(lp).connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.08); nz(t, 0.015, 3000, 'bandpass', 0.05, fx, 3, p); },
+    tick: (t, p) => nz(t, 0.012, 5200, 'bandpass', 0.07, fx, 6, p),
+    pop: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(980, t + 0.045); env(g, t, 0.003, 0.08, 0.07); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.1); },
+    whoosh: (t, p) => { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true; fl.type = 'bandpass'; fl.Q.value = 1.4;
+      fl.frequency.setValueAtTime(400, t); fl.frequency.exponentialRampToValueAtTime(2800, t + 0.35); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.18); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      const pn = ctx.createStereoPanner(); pn.pan.setValueAtTime(-p, t); pn.pan.linearRampToValueAtTime(p, t + 0.4); s.connect(fl).connect(g).connect(pn).connect(fx); s.start(t, rnd()); s.stop(t + 0.45); },
+    bell: (t, p, notes = [84, 88]) => notes.forEach((m, k) => SFXF.ding(t + k * 0.1, p, m)),
+    success: (t, p) => SFXF.bell(t, p, [79, 84, 88]),
+    // hotel key card: tap beep-beep + lock release clunk
+    keycard: (t, p) => { [0, 0.1].forEach(d => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 2600; g.gain.setValueAtTime(0.0001, t + d); g.gain.linearRampToValueAtTime(0.03, t + d + 0.004); g.gain.setValueAtTime(0.03, t + d + 0.06); g.gain.linearRampToValueAtTime(0.0001, t + d + 0.07); o.connect(g).connect(pan(fx, p)); o.start(t + d); o.stop(t + d + 0.08); });
+      nz(t + 0.25, 0.04, 900, 'bandpass', 0.14, fx, 2, p); nz(t + 0.29, 0.03, 2200, 'bandpass', 0.07, fx, 3, p); },
+    click: (t, p) => { nz(t, 0.008, 4200, 'bandpass', 0.16, fx, 4, p); nz(t + 0.06, 0.006, 3600, 'bandpass', 0.1, fx, 4, p); },
+    coin: (t, p) => { SFXF.bell(t, p, [88, 95]); nz(t, 0.25, 7000, 'highpass', 0.03, fx, 1, p); },
+    key: (t, p) => { nz(t, 0.018, 2600, 'bandpass', 0.1, fx, 2, p); },
+    paper: (t, p) => { for (let k = 0; k < 5; k++) nz(t + k * 0.05, 0.06, 2500 + rnd() * 2500, 'bandpass', 0.05, fx, 1, p); },
+    rise: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(hz(64), t); o.frequency.exponentialRampToValueAtTime(hz(76), t + 1.0);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.04, t + 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 1.2); },
+  };
+  // ---- payment-specific effects
+  // coin spin (transition): metallic ring whose pitch wobbles as it spins, settling with a soft clink
+  SFXF.coinspin = (t, p) => { [1, 2.4].forEach((r, k) => { const o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain(); o.frequency.value = 2400 * r; lfo.frequency.setValueAtTime(9, t); lfo.frequency.linearRampToValueAtTime(26, t + 0.45);
+    lg.gain.value = 60; lfo.connect(lg).connect(o.frequency); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(k ? 0.006 : 0.014, t + 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.connect(g).connect(pan(fx, p)); [o, lfo].forEach(x => { x.start(t); x.stop(t + 0.6); }); }); nz(t + 0.45, 0.06, 5200, 'bandpass', 0.05, fx, 4, p); };
+  // cash register: drawer bell + coins
+  SFXF.cash = (t, p) => { SFXF.ding(t, p, 93); SFXF.ding(t + 0.06, p, 100); for (let k = 0; k < 6; k++) nz(t + 0.12 + k * 0.035 + rnd() * 0.02, 0.05, 5000 + rnd() * 3000, 'bandpass', 0.05, fx, 8, p); nz(t, 0.08, 400, 'lowpass', 0.12, fx, 1, p); };
+  // chat message: soft two-note pluck
+  SFXF.msg = (t, p) => [76, 83].forEach((m, k) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = hz(m); env(g, t + k * 0.07, 0.003, 0.07, 0.16); o.connect(g).connect(pan(fx, p)); o.start(t + k * 0.07); o.stop(t + k * 0.07 + 0.2); });
+  SFXF.stamp = (t, p) => { SFXF.book(t, p); nz(t + 0.01, 0.05, 700, 'lowpass', 0.2, fx, 1, p); };
+  SFXF.toggle = (t, p) => { nz(t, 0.01, 3000, 'bandpass', 0.12, fx, 3, p); SFXF.pop(t + 0.05, p); };
+  SFXF.strike = (t, p) => nz(t, 0.18, 2800, 'bandpass', 0.05, fx, 1.5, p);
+  SFXF.counter = (t, p, n = 10, d = 0.7) => { for (let k = 0; k < n; k++) SFXF.tick(t + d * (1 - Math.pow(1 - k / n, 2)), p); };
+  SFX.forEach(([type, t, p = 0, ...rest]) => SFXF[type](t, p, ...rest));
+  const buf = await ctx.startRendering();
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), n = L.length, ab = new ArrayBuffer(44 + n * 4), dv = new DataView(ab);
+  const ws = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+  ws(0, 'RIFF'); dv.setUint32(4, 36 + n * 4, true); ws(8, 'WAVE'); ws(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 2, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 4, true); dv.setUint16(32, 4, true); dv.setUint16(34, 16, true); ws(36, 'data'); dv.setUint32(40, n * 4, true);
+  for (let i = 0; i < n; i++) { dv.setInt16(44 + i * 4, Math.max(-1, Math.min(1, L[i])) * 32767, true); dv.setInt16(46 + i * 4, Math.max(-1, Math.min(1, R[i])) * 32767, true); }
+  let bin = ''; const u8 = new Uint8Array(ab); for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+</script>

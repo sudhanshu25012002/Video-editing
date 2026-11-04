@@ -1,0 +1,133 @@
+<!doctype html><meta charset="utf-8"><script>
+// Hotel-lobby bossa nova (nylon guitar, upright bass, brushes) + elevator / hotel sound design. Times are voiceover seconds.
+window.renderScore = async function (DUR, P, SFX) {
+  const sr = 44100, ctx = new OfflineAudioContext(2, Math.ceil(DUR * sr), sr);
+  const { ASK, BUILT, CTA, END } = P;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.25; comp.connect(ctx.destination);
+  const master = ctx.createGain(); master.gain.value = 0.9; master.connect(comp);
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const ir = ctx.createBuffer(2, sr * 2.4, sr);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (rnd() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+  const verb = ctx.createConvolver(); verb.buffer = ir; const vg = ctx.createGain(); vg.gain.value = 0.26; verb.connect(vg).connect(master);
+  const mus = ctx.createGain(); mus.connect(master); const mv = ctx.createGain(); mv.gain.value = 0.7; mus.connect(mv).connect(verb);
+  const fx = ctx.createGain(); fx.connect(master); const fxv = ctx.createGain(); fxv.gain.value = 0.2; fx.connect(fxv).connect(verb);
+  const noise = ctx.createBuffer(1, sr * 2, sr); { const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = rnd() * 2 - 1; }
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  const pan = (dest, p) => { const s = ctx.createStereoPanner(); s.pan.value = p; s.connect(dest); return s; };
+  const env = (g, t, a, pk, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(pk, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
+  function nz(t, len, f, type, v, dest = master, q = 1, p = 0) { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true;
+    s.playbackRate.value = 0.8 + rnd() * 0.4; fl.type = type; fl.frequency.value = f; fl.Q.value = q; env(g, t, 0.002, v, len); s.connect(fl).connect(g).connect(pan(dest, p)); s.start(t, rnd()); s.stop(t + len + 0.05); }
+
+  // ---------- nylon guitar: Karplus-Strong string, rendered once per pitch ----------
+  const gbus = ctx.createBiquadFilter(); gbus.type = 'lowpass'; gbus.frequency.value = 3200; gbus.Q.value = 0.4; const gg = ctx.createGain(); gg.gain.value = 1; gbus.connect(gg).connect(mus);
+  const ksCache = {};
+  function ks(m) {
+    if (ksCache[m]) return ksCache[m];
+    const f = hz(m), N = Math.max(2, Math.round(sr / f)), len = Math.floor(sr * 2.6), b = ctx.createBuffer(1, len, sr), y = b.getChannelData(0);
+    let lp = 0; for (let i = 0; i < N; i++) { lp += 0.5 * ((rnd() * 2 - 1) - lp); y[i] = lp; }            // soft (thumb) excitation
+    const decay = 0.996 - Math.min(0.006, f / 200000);
+    for (let i = N; i < len; i++) y[i] = decay * 0.5 * (y[i - N] + y[i - N - 1 < 0 ? 0 : i - N - 1]);
+    let pk = 0; for (let i = 0; i < len; i++) pk = Math.max(pk, Math.abs(y[i])); for (let i = 0; i < len; i++) y[i] /= pk;
+    return (ksCache[m] = { b, rate: N / (sr / f) });
+  }
+  function pluck(t, m, v, p = 0, len = 2.4) { const { b, rate } = ks(m), s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; s.playbackRate.value = rate;
+    g.gain.setValueAtTime(v, t); g.gain.setValueAtTime(v, t + len - 0.12); g.gain.linearRampToValueAtTime(0, t + len); s.connect(g).connect(pan(gbus, p)); s.start(t); s.stop(t + len + 0.02); }
+  function strum(t, notes, v, len) { notes.forEach((m, k) => pluck(t + k * 0.012, m, v * (0.85 + 0.3 * rnd()), (k - 1.5) * 0.12, len)); }
+  // upright bass: sine + soft 2nd harmonic, plucked envelope
+  function bass(t, m, len, v = 0.2) { const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g2 = ctx.createGain(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+    o.frequency.value = hz(m); o2.frequency.value = hz(m) * 2; g2.gain.value = 0.25; o2.connect(g2).connect(lp); o.connect(lp);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(v * 0.4, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    lp.connect(g).connect(mus); [o, o2].forEach(x => { x.start(t); x.stop(t + len + 0.02); }); }
+  // brushes: swirl (filtered noise swelling on each beat), soft taps, cross-stick, soft kick
+  function swirl(t, len, v) { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true; fl.type = 'bandpass'; fl.frequency.value = 5200; fl.Q.value = 0.6;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + len * 0.6); g.gain.linearRampToValueAtTime(0.0001, t + len); s.connect(fl).connect(g).connect(pan(master, 0.15)); s.start(t, rnd()); s.stop(t + len + 0.02); }
+  function rim(t, v) { nz(t, 0.03, 1900, 'bandpass', v, master, 3, -0.2); const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 820; env(g, t, 0.001, v * 0.5, 0.03); o.connect(g).connect(pan(master, -0.2)); o.start(t); o.stop(t + 0.05); }
+  function kick(t, v) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12); env(g, t, 0.004, v, 0.3); o.connect(g).connect(master); o.start(t); o.stop(t + 0.35); }
+  // warm string pad for the solution half
+  function pad(t, notes, len, v) { notes.forEach((m, k) => [-6, 6].forEach(dt => { const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(m); o.detune.value = dt;
+    lp.type = 'lowpass'; lp.frequency.value = 1100; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.8); g.gain.setValueAtTime(v, t + len - 0.5); g.gain.linearRampToValueAtTime(0.0001, t + len + 0.3);
+    o.connect(lp).connect(g).connect(pan(mus, (k - 1.5) * 0.3)); o.start(t); o.stop(t + len + 0.35); })); }
+  // vibraphone-ish melody voice
+  function vib(t, m, len, v, p = 0.25) { const c = ctx.createOscillator(), mo = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain(), tr = ctx.createOscillator(), tg = ctx.createGain();
+    c.frequency.value = hz(m); mo.frequency.value = hz(m) * 4; mg.gain.setValueAtTime(hz(m) * 0.8, t); mg.gain.exponentialRampToValueAtTime(1, t + 0.2); mo.connect(mg).connect(c.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + len); tr.frequency.value = 5.5; tg.gain.value = v * 0.3; tr.connect(tg).connect(g.gain);
+    c.connect(g).connect(pan(mus, p)); [c, mo, tr].forEach(o => { o.start(t); o.stop(t + len + 0.05); }); }
+
+  // ---------- arrangement: bossa at 128 BPM (2-feel), 2-bar comping pattern ----------
+  const B = 60 / 128, BAR = 4 * B, E8 = B / 2;
+  const minor = [ { b: 38, c: [53, 57, 60, 64] }, { b: 43, c: [53, 58, 62, 65] }, { b: 40, c: [50, 55, 58, 62] }, { b: 45, c: [49, 55, 58, 64] } ];   // Dm9  Gm9  Em7b5  A7b9
+  const major = [ { b: 41, c: [57, 60, 64, 67] }, { b: 38, c: [53, 57, 60, 64] }, { b: 43, c: [53, 57, 58, 62] }, { b: 36, c: [52, 57, 58, 62] } ];   // Fmaj9 Dm9 Gm9 C13
+  const COMP = [0, 3, 6, 10, 13];        // bossa comping hits, in 8ths over 2 bars
+  const MEL = [[0, 72], [3, 74], [6, 76], [10, 77], [12, 76], [14, 72]];   // simple melody (8th index, midi) for the major half
+  function section(a, b, prog, o) {
+    for (let k = 0; a + k * 2 * BAR < b - 0.05; k++) {
+      const t0 = a + k * 2 * BAR, ch = prog[k % 4];
+      COMP.forEach(e => { const tt = t0 + e * E8; if (tt < b - 0.05) strum(tt, ch.c, o.gv, Math.min(e === 13 ? 1.6 : 1.1, b - tt + 0.3)); });
+      [[0, ch.b], [3, ch.b + 7], [4, ch.b + 7], [8, ch.b], [11, ch.b + 7], [12, ch.b + 7]].forEach(([e, m]) => { const tt = t0 + e * E8; if (tt < b - 0.05) bass(tt, m, e % 4 === 3 ? E8 * 0.9 : B * 1.4, o.bv); });
+      if (o.mel && k % 2 === 1) MEL.forEach(([e, m]) => { const tt = t0 + e * E8; if (tt < b - 0.3) vib(tt, m + (k % 4 === 3 ? -2 : 0), 1.0, 0.03); });
+      if (o.pad) pad(t0, ch.c.map(m => m - 12 + 12), Math.min(2 * BAR, b - t0), 0.008);
+      if (!o.drums) continue;
+      for (let e = 0; e < 16; e++) { const tt = t0 + e * E8; if (tt >= b - 0.02) break;
+        if (e % 2 === 0) swirl(tt, B, 0.012);
+        if (e % 4 === 2) nz(tt, 0.08, 4500, 'bandpass', 0.03, master, 0.8, 0.1);   // brush tap on 2 and 4
+        if ([0, 3, 6, 10, 12].includes(e)) rim(tt, 0.05);
+        if (e % 4 === 0) kick(tt, 0.35); }
+    }
+  }
+  section(0, ASK, minor, { gv: 0.075, bv: 0.18, drums: true });                       // problems: dusky minor bossa
+  section(ASK, BUILT, minor, { gv: 0.07, bv: 0.15, drums: false });                  // owner's ask: guitar + bass only
+  { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(hz(62), BUILT - 1.0); o.frequency.exponentialRampToValueAtTime(hz(86), BUILT);   // lift into the solution
+    g.gain.setValueAtTime(0.0001, BUILT - 1.0); g.gain.exponentialRampToValueAtTime(0.04, BUILT - 0.05); g.gain.linearRampToValueAtTime(0, BUILT); o.connect(g).connect(mus); o.start(BUILT - 1.0); o.stop(BUILT); }
+  section(BUILT, CTA, major, { gv: 0.08, bv: 0.18, drums: true, mel: true, pad: true });   // the solution: warm major, melody, strings
+  section(CTA, END, major, { gv: 0.075, bv: 0.16, drums: false, pad: true });        // CTA: drums out
+  strum(END, [41, 48, 57, 60, 64, 67], 0.09, DUR - END); bass(END, 29, DUR - END - 0.1, 0.18); vib(END + 0.3, 79, 2.2, 0.04);   // final Fmaj9
+
+  // ---------- sound effects ----------
+  const SFXF = {
+    // elevator doors sliding (soft mechanical rumble) and the floor-arrival ding
+    door: (t, p) => { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true; fl.type = 'lowpass'; fl.frequency.setValueAtTime(380, t); fl.frequency.linearRampToValueAtTime(700, t + 0.3);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.1); g.gain.setValueAtTime(0.09, t + 0.26); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38); s.connect(fl).connect(g).connect(pan(fx, p)); s.start(t, rnd()); s.stop(t + 0.42);
+      nz(t + 0.33, 0.05, 900, 'bandpass', 0.06, fx, 1.5, p); },
+    ding: (t, p, m = 88) => [1, 2.76, 5.4].forEach((r, k) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = hz(m) * r; env(g, t, 0.003, [0.06, 0.018, 0.008][k], [1.6, 0.7, 0.3][k]); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 1.7); }),
+    ring: (t, p) => { const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), am = ctx.createOscillator(), amg = ctx.createGain(), g = ctx.createGain(), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.8;
+      o1.frequency.value = 1100; o2.frequency.value = 1300; am.type = 'square'; am.frequency.value = 22; amg.gain.value = 0.5; am.connect(amg);
+      const vca = ctx.createGain(); vca.gain.value = 0.5; amg.connect(vca.gain); o1.connect(vca); o2.connect(vca); vca.connect(bp).connect(g).connect(pan(fx, p));
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.035, t + 0.02); g.gain.setValueAtTime(0.035, t + 0.9); g.gain.linearRampToValueAtTime(0.0001, t + 1.0);
+      [o1, o2, am].forEach(o => { o.start(t); o.stop(t + 1.05); }); },
+    step: (t, p) => { nz(t, 0.05, 260, 'lowpass', 0.25, fx, 1, p); nz(t + 0.01, 0.03, 2400, 'bandpass', 0.04, fx, 1, p); },
+    book: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.18); env(g, t, 0.003, 0.35, 0.25); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.3); nz(t, 0.09, 1500, 'bandpass', 0.12, fx, 0.8, p); },
+    pen: (t, p) => { for (let k = 0; k < 6; k++) nz(t + k * 0.06 + rnd() * 0.02, 0.04, 3600 + rnd() * 1500, 'bandpass', 0.045, fx, 3, p); },
+    clash: (t, p) => { [55, 56.3].forEach(m => { const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(m); lp.type = 'lowpass'; lp.frequency.value = 1400; env(g, t, 0.004, 0.05, 0.5); o.connect(lp).connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.6); });
+      SFXF.book(t, p); },
+    error: (t, p) => [0, 0.16].forEach(d => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = 330; env(g, t + d, 0.004, 0.06, 0.1); o.connect(g).connect(pan(fx, p)); o.start(t + d); o.stop(t + d + 0.15); }),
+    beep: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = 2100; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.02, t + 0.003); g.gain.setValueAtTime(0.02, t + 0.06); g.gain.linearRampToValueAtTime(0.0001, t + 0.07);
+      o.connect(lp).connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.08); nz(t, 0.015, 3000, 'bandpass', 0.05, fx, 3, p); },
+    tick: (t, p) => nz(t, 0.012, 5200, 'bandpass', 0.07, fx, 6, p),
+    pop: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(980, t + 0.045); env(g, t, 0.003, 0.08, 0.07); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 0.1); },
+    whoosh: (t, p) => { const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true; fl.type = 'bandpass'; fl.Q.value = 1.4;
+      fl.frequency.setValueAtTime(400, t); fl.frequency.exponentialRampToValueAtTime(2800, t + 0.35); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.18); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      const pn = ctx.createStereoPanner(); pn.pan.setValueAtTime(-p, t); pn.pan.linearRampToValueAtTime(p, t + 0.4); s.connect(fl).connect(g).connect(pn).connect(fx); s.start(t, rnd()); s.stop(t + 0.45); },
+    bell: (t, p, notes = [84, 88]) => notes.forEach((m, k) => SFXF.ding(t + k * 0.1, p, m)),
+    success: (t, p) => SFXF.bell(t, p, [79, 84, 88]),
+    // hotel key card: tap beep-beep + lock release clunk
+    keycard: (t, p) => { [0, 0.1].forEach(d => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 2600; g.gain.setValueAtTime(0.0001, t + d); g.gain.linearRampToValueAtTime(0.03, t + d + 0.004); g.gain.setValueAtTime(0.03, t + d + 0.06); g.gain.linearRampToValueAtTime(0.0001, t + d + 0.07); o.connect(g).connect(pan(fx, p)); o.start(t + d); o.stop(t + d + 0.08); });
+      nz(t + 0.25, 0.04, 900, 'bandpass', 0.14, fx, 2, p); nz(t + 0.29, 0.03, 2200, 'bandpass', 0.07, fx, 3, p); },
+    click: (t, p) => { nz(t, 0.008, 4200, 'bandpass', 0.16, fx, 4, p); nz(t + 0.06, 0.006, 3600, 'bandpass', 0.1, fx, 4, p); },
+    coin: (t, p) => { SFXF.bell(t, p, [88, 95]); nz(t, 0.25, 7000, 'highpass', 0.03, fx, 1, p); },
+    key: (t, p) => { nz(t, 0.018, 2600, 'bandpass', 0.1, fx, 2, p); },
+    paper: (t, p) => { for (let k = 0; k < 5; k++) nz(t + k * 0.05, 0.06, 2500 + rnd() * 2500, 'bandpass', 0.05, fx, 1, p); },
+    rise: (t, p) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(hz(64), t); o.frequency.exponentialRampToValueAtTime(hz(76), t + 1.0);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.04, t + 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1); o.connect(g).connect(pan(fx, p)); o.start(t); o.stop(t + 1.2); },
+  };
+  SFX.forEach(([type, t, p = 0]) => SFXF[type](t, p));
+
+  const buf = await ctx.startRendering();
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), n = L.length, ab = new ArrayBuffer(44 + n * 4), dv = new DataView(ab);
+  const ws = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+  ws(0, 'RIFF'); dv.setUint32(4, 36 + n * 4, true); ws(8, 'WAVE'); ws(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 2, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 4, true); dv.setUint16(32, 4, true); dv.setUint16(34, 16, true); ws(36, 'data'); dv.setUint32(40, n * 4, true);
+  for (let i = 0; i < n; i++) { dv.setInt16(44 + i * 4, Math.max(-1, Math.min(1, L[i])) * 32767, true); dv.setInt16(46 + i * 4, Math.max(-1, Math.min(1, R[i])) * 32767, true); }
+  let bin = ''; const u8 = new Uint8Array(ab); for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+</script>
