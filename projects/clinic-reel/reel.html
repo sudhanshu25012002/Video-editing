@@ -1,0 +1,340 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Clinic Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .a { position: absolute; }
+  .layer { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .tag { position: absolute; height: 54px; padding: 0 22px; border-radius: 27px; background: #1C1726; color: #FFFDF8; font-size: 24px; font-weight: 800; letter-spacing: 0.12em; display: flex; align-items: center; }
+  .bub { position: absolute; padding: 18px 24px; border-radius: 24px 24px 24px 6px; font-size: 28px; font-weight: 600; white-space: nowrap; transform-origin: 0 100%; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 50; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 50; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const tooth = (s, c = PUR) => `<svg width="${s}" height="${s}" viewBox="0 0 100 100"><path d="M30 8 C14 8 8 22 10 38 C12 52 18 58 20 70 C22 84 24 94 32 94 C40 94 40 72 50 72 C60 72 60 94 68 94 C76 94 78 84 80 70 C82 58 88 52 90 38 C92 22 86 8 70 8 C60 8 56 14 50 14 C44 14 40 8 30 8 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+
+// ===================== scenes with diagonal slice wipes =====================
+const SC = [0, 3.15, 9.45, 15.92, 20.45, 22.95, 28.92, 36.62, 42.62, 47.56, 52.98, 57.55];
+const layers = SC.map((s, k) => { const L = E(stage, { zIndex: 1 + k }, '', 'layer'); stage.insertBefore(L, document.getElementById('logoTL')); return L; });
+const slashes = SC.map((s, k) => { const b = E(stage, { left: '0px', top: '0px', width: '1080px', height: '1920px', background: PUR, zIndex: 1 + k }); stage.insertBefore(b, document.getElementById('logoTL')); return b; });
+const [L0, L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11] = layers;
+const chapter = (L, txt, y = 200) => E(L, { left: '0', top: y + 'px', width: '1080px', display: 'flex', justifyContent: 'center' }, `<div class="tag" style="position:relative">${txt}</div>`);
+
+// ---- L0: case study opener
+const c0tag = chapter(L0, 'CASE STUDY', 360);
+const c0tooth = E(L0, { left: '390px', top: '470px', width: '300px', height: '300px' }, tooth(300));
+const c0a = T(L0, 'c', 820, 108, 'Dental Clinic');
+const c0b = T(L0, 'c', 960, 64, 'with a <span class="amb">problem ⚠</span>');
+
+// ---- L1: enquiries, WhatsApp, phone calls
+const p1tag = chapter(L1, 'THE PROBLEM');
+const p1a = T(L1, 'c', 290, 72, 'Enquiries <span class="amb">aa rahi thi…</span>');
+const ph1 = E(L1, { left: '300px', top: '430px', width: '480px', height: '900px', borderRadius: '56px', background: WHT, boxShadow: '0 0 0 10px #1C1726', overflow: 'hidden' },
+  `<div style="position:absolute;left:0;top:0;width:480px;height:110px;background:#F1E9DC"></div><div style="position:absolute;left:28px;top:46px;font-size:28px;font-weight:800">WhatsApp · Clinic</div>`);
+const ENQ = [['Root canal ka charge?', 4.52], ['Kal appointment milega?', 5.0], ['Braces ke liye time?', 6.82], ['Doctor kab available?', 7.3], ['Slot confirm karo', 7.82]];
+const enq = ENQ.map(([m], k) => E(ph1, { left: (k % 2 ? 90 : 24) + 'px', top: (140 + k * 130) + 'px', background: k % 2 ? INK : '#F1E9DC', color: k % 2 ? '#fff' : INK }, m, 'bub'));
+const ring = E(L1, { left: '740px', top: '360px', width: '200px', height: '200px', borderRadius: '100px', background: AMB, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 },
+  `<svg width="110" height="110" viewBox="0 0 100 100"><path d="M28 12 L40 30 L32 40 C38 54 46 62 60 68 L70 60 L88 72 L80 88 C46 86 14 54 12 20 Z" fill="${INK}"/></svg>`);
+const ringLbl = E(L1, { left: '700px', top: '575px', width: '280px', textAlign: 'center', fontSize: '28px', fontWeight: 800, color: INK, zIndex: 5 }, 'Incoming call…');
+
+// ---- L2: manual staff work
+const p2tag = chapter(L2, 'THE PROBLEM');
+const p2a = T(L2, 'c', 290, 72, 'Sab kuch <span class="amb">manually</span>');
+const k1 = E(L2, { left: '90px', top: '440px', width: '900px', height: '280px' }, `
+  <div style="position:absolute;left:36px;top:30px;font-size:34px;font-weight:800">Bookings check</div>
+  ${['10:00 — R. Mehta', '10:30 — S. Khan ✗', '10:30 — A. Rao ?', '11:00 — —'].map((s, k) => `<div style="position:absolute;left:${36 + (k % 2) * 420}px;top:${96 + Math.floor(k / 2) * 76}px;width:400px;height:60px;border-radius:12px;background:#FFF8EA;font-size:24px;font-weight:600;font-style:italic;color:#4A4158;display:flex;align-items:center;padding-left:18px;box-sizing:border-box;${k === 1 ? 'text-decoration:line-through;' : ''}">${s}</div>`).join('')}`, 'card');
+const k2 = E(L2, { left: '90px', top: '760px', width: '430px', height: '360px' }, `
+  <div style="position:absolute;left:30px;top:26px;font-size:32px;font-weight:800">Patient records</div>
+  ${[0, 1, 2, 3].map(k => `<div class="fl" style="position:absolute;left:${40 + k * 16}px;top:${100 + k * 50}px;width:330px;height:120px;border-radius:12px;background:${['#E9DDCA', '#E2D2BA', '#EFE4D3', '#E5D6C0'][k]};box-shadow:0 -2px 0 ${LIN}"></div>`).join('')}`, 'card');
+const k3 = E(L2, { left: '560px', top: '760px', width: '430px', height: '360px' }, `
+  <div style="position:absolute;left:30px;top:26px;font-size:32px;font-weight:800">Daily reports</div>
+  ${[0, 1, 2, 3, 4].map(k => `<div style="position:absolute;left:30px;top:${96 + k * 34}px;width:${280 - (k % 3) * 50}px;height:14px;border-radius:7px;background:#E2D8C6"></div>`).join('')}
+  <div class="clk" style="position:absolute;left:290px;top:210px;width:120px;height:120px;border-radius:60px;background:${WHT};box-shadow:inset 0 0 0 8px ${AMB}">
+    <div class="hand" style="position:absolute;left:56px;top:18px;width:8px;height:46px;border-radius:4px;background:${INK};transform-origin:4px 42px"></div></div>`, 'card');
+const files2 = [...k2.querySelectorAll('.fl')], hand3 = k3.querySelector('.hand');
+const p2b = T(L2, 'c', 1180, 64, '<span class="amb">Time-consuming.</span>');
+
+// ---- L3: the ask
+const p3tag = chapter(L3, 'THE ASK');
+const quote = E(L3, { left: '90px', top: '320px', width: '900px', height: '440px' }, `
+  <div style="position:absolute;left:40px;top:10px;font-size:200px;font-weight:800;color:${PUR};line-height:1">“</div>
+  <div class="q" style="position:absolute;left:60px;top:140px;width:780px;font-size:50px;font-weight:800;letter-spacing:-0.02em;line-height:1.25"></div>`, 'card');
+const qText = quote.querySelector('.q');
+const QWORDS = 'Kya aisa koi system ho sakta hai jisse ye sab ek hi jagah manage ho jaaye?'.split(' ');
+const QT = [17.3, 17.52, 17.74, 17.88, 18.2, 18.38, 18.6, 18.8, 19.04, 19.18, 19.32, 19.42, 19.58, 19.82, 20.1, 20.18];
+const bits = ['WhatsApp', 'Calls', 'Bookings', 'Records', 'Reports'].map((n, k) => E(L3, { height: '60px', padding: '0 24px', borderRadius: '30px', background: k % 2 ? INK : '#FFFDF8', color: k % 2 ? '#fff' : INK, boxShadow: '0 0 0 2px #E2D8C6', fontSize: '26px', fontWeight: 700, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }, n));
+const hub = E(L3, { left: '415px', top: '1000px', width: '250px', height: '250px', borderRadius: '125px', background: PUR, color: '#fff', fontSize: '30px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', lineHeight: '1.2' }, 'Ek hi<br>jagah');
+
+// ---- L4: the solution
+const p4tag = chapter(L4, 'THE SOLUTION', 300);
+const p4a = T(L4, 'c', 400, 92, 'Complete');
+const p4b = T(L4, 'c', 510, 104, '<span class="pur">digital solution</span>');
+const slots = ['Website', 'Mobile app', 'WhatsApp bot'].map((n, k) => E(L4, { left: (90 + k * 310) + 'px', top: '800px', width: '280px', height: '300px', borderRadius: '30px', boxShadow: `inset 0 0 0 4px ${PUR}`, background: 'rgba(90,23,230,0.05)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '30px', boxSizing: 'border-box', fontSize: '30px', fontWeight: 800, color: PUR }, `${k + 1}. ${n}`));
+
+// ---- L5: 1. website
+const s5tag = chapter(L5, '1 · WEBSITE');
+const s5a = T(L5, 'c', 290, 68, 'Professional <span class="pur">website</span>');
+const site = E(L5, { left: '90px', top: '420px', width: '900px', height: '980px' }, '', 'card');
+site.innerHTML = `<div style="position:absolute;left:0;top:0;width:900px;height:84px;border-bottom:2px solid ${LIN}"></div>
+  <div style="position:absolute;left:230px;top:20px;width:440px;height:44px;border-radius:22px;background:#F1E9DC;font-size:22px;font-weight:600;color:${MUT};display:flex;align-items:center;justify-content:center">smiledental.in</div>
+  <div style="position:absolute;left:40px;top:110px;display:flex;align-items:center;gap:14px;font-size:34px;font-weight:800">${tooth(46)}Smile Dental</div>
+  <div style="position:absolute;left:40px;top:190px;font-size:28px;font-weight:700;color:${MUT}">Treatments</div>
+  ${['Cleaning', 'Braces', 'Root canal', 'Whitening'].map((n, k) => `<div class="tr" style="position:absolute;left:${40 + (k % 2) * 420}px;top:${240 + Math.floor(k / 2) * 150}px;width:400px;height:130px;border-radius:20px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:24px;top:30px">${tooth(68, k === 1 ? PUR : '#C9B9A2')}</div><div style="position:absolute;left:110px;top:44px;font-size:30px;font-weight:800">${n}</div></div>`).join('')}
+  <div style="position:absolute;left:40px;top:570px;font-size:28px;font-weight:700;color:${MUT}">Book online</div>
+  ${['10:00', '11:30', '4:00 PM', '6:30 PM'].map((s, k) => `<div class="sl" style="position:absolute;left:${40 + k * 207}px;top:620px;width:190px;height:80px;border-radius:16px;background:#F1E9DC;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center">${s}</div>`).join('')}
+  <div class="bk" style="position:absolute;left:40px;top:740px;width:820px;height:96px;border-radius:20px;background:${PUR};color:#fff;font-size:34px;font-weight:800;display:flex;align-items:center;justify-content:center">Book appointment</div>
+  <div class="ok" style="position:absolute;left:190px;top:860px;width:520px;height:90px;border-radius:45px;background:${INK};color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:14px">${check(48)}Appointment booked</div>`;
+const trs = [...site.querySelectorAll('.tr')], sls = [...site.querySelectorAll('.sl')], bk = site.querySelector('.bk'), okS = site.querySelector('.ok');
+const cur5 = E(L5, { width: '64px', height: '64px', zIndex: 9 }, `<svg width="64" height="64" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+
+// ---- L6: 2. doctor's mobile app
+const s6tag = chapter(L6, '2 · MOBILE APP');
+const s6a = T(L6, 'c', 290, 68, 'Doctor ka <span class="pur">custom app</span>');
+const app = E(L6, { left: '250px', top: '420px', width: '580px', height: '1000px', borderRadius: '60px', background: WHT, boxShadow: '0 0 0 12px #1C1726', overflow: 'hidden' });
+app.innerHTML = `<div style="position:absolute;left:0;top:0;width:580px;height:130px;background:${PUR}"></div><div style="position:absolute;left:32px;top:56px;font-size:32px;font-weight:800;color:#fff">Dr. Dashboard</div>
+  <div class="v1" style="position:absolute;left:0;top:130px;width:580px;height:870px">
+    <div style="position:absolute;left:28px;top:24px;font-size:26px;font-weight:700;color:${MUT}">Today's bookings</div>
+    ${['10:00 · R. Mehta · Cleaning', '11:30 · S. Khan · Braces', '4:00 · A. Rao · Root canal', '6:30 · P. Das · Check-up'].map((s, k) => `<div class="bkr" style="position:absolute;left:24px;top:${74 + k * 112}px;width:532px;height:96px;border-radius:18px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN};font-size:24px;font-weight:700;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">${s}<span class="cf" style="position:absolute;right:20px">${check(44)}</span></div>`).join('')}
+  </div>
+  <div class="v2" style="position:absolute;left:0;top:130px;width:580px;height:870px;background:${WHT}">
+    <div style="position:absolute;left:24px;top:24px;width:532px;height:70px;border-radius:35px;background:#F1E9DC"></div>
+    ${['Daily', 'Weekly', 'Monthly'].map((s, k) => `<div class="tb" style="position:absolute;left:${30 + k * 176}px;top:30px;width:168px;height:58px;border-radius:29px;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center">${s}</div>`).join('')}
+    ${[0, 1, 2, 3, 4, 5].map(k => `<div class="br2" style="position:absolute;left:${50 + k * 82}px;bottom:300px;width:60px;border-radius:10px 10px 4px 4px;background:${k === 5 ? PUR : '#D9CDB9'}"></div>`).join('')}
+    <div class="gen" style="position:absolute;left:24px;top:620px;width:532px;height:90px;border-radius:20px;background:${INK};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Generate report</div>
+    <div class="pdf" style="position:absolute;left:190px;top:730px;width:200px;height:120px;border-radius:16px;background:${AMB};font-size:34px;font-weight:800;display:flex;align-items:center;justify-content:center">PDF ✓</div>
+  </div>`;
+const v1 = app.querySelector('.v1'), v2 = app.querySelector('.v2'), bkrs = [...app.querySelectorAll('.bkr')], cfs = [...app.querySelectorAll('.cf')], tbs = [...app.querySelectorAll('.tb')], brs = [...app.querySelectorAll('.br2')], gen = app.querySelector('.gen'), pdf = app.querySelector('.pdf');
+const BRH = [[0.4, 0.6, 0.5, 0.7, 0.55, 0.8], [0.55, 0.7, 0.6, 0.8, 0.75, 0.9], [0.6, 0.65, 0.8, 0.75, 0.9, 1.0]];
+
+// ---- L7: 3. WhatsApp chatbot
+const s7tag = chapter(L7, '3 · WHATSAPP BOT');
+const s7a = T(L7, 'c', 290, 68, 'WhatsApp <span class="pur">chatbot</span>');
+const badge247 = E(L7, { left: '780px', top: '420px', width: '200px', height: '200px', borderRadius: '100px', background: AMB, fontSize: '56px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }, '24/7');
+const chat = E(L7, { left: '120px', top: '470px', width: '640px', height: '940px', borderRadius: '50px', background: WHT, boxShadow: '0 0 0 10px #1C1726', overflow: 'hidden' },
+  `<div style="position:absolute;left:0;top:0;width:640px;height:120px;background:#F1E9DC"></div><div style="position:absolute;left:28px;top:34px;width:56px;height:56px;border-radius:28px;background:${PUR};display:flex;align-items:center;justify-content:center">${tooth(34, '#fff')}</div>
+   <div style="position:absolute;left:100px;top:34px;font-size:28px;font-weight:800">Smile Dental Bot</div><div style="position:absolute;left:100px;top:72px;font-size:20px;font-weight:600;color:${PUR}">online · replies instantly</div>`);
+const CH = [['Clinic timings kya hai?', 1, 39.3], ['Mon–Sat, 10 AM – 8 PM 🦷', 0, 40.1], ['Appointment book karni hai', 1, 40.9], ['Ye slots free hain: 11:30 · 4:00 PM', 0, 41.4], ['✓ 4:00 PM booked!', 0, 41.9]];
+const chb = CH.map(([m, me], k) => E(chat, { left: me ? 'auto' : '24px', right: me ? '24px' : 'auto', top: (150 + k * 140) + 'px', background: me ? INK : (k === 4 ? PUR : '#F1E9DC'), color: me || k === 4 ? '#fff' : INK, borderRadius: me ? '24px 24px 6px 24px' : '24px 24px 24px 6px', transformOrigin: me ? '100% 100%' : '0 100%' }, m, 'bub'));
+const dots7 = E(chat, { left: '24px', top: '0px', width: '110px', height: '60px', borderRadius: '30px', background: '#F1E9DC' }, [0, 1, 2].map(k => `<div class="d" style="position:absolute;left:${22 + k * 24}px;top:24px;width:14px;height:14px;border-radius:7px;background:${MUT}"></div>`).join(''));
+
+// ---- L8: one system
+const s8a = T(L8, 'c', 230, 76, 'All working together');
+const s8b = T(L8, 'c', 335, 88, 'as <span class="pur">one system.</span>');
+const NODE = [['Website', 540, 560, 43.04], ['Mobile app', 250, 1060, 43.86], ['WhatsApp\nautomation', 830, 1060, 44.76]];
+const nodes = NODE.map(([n, x, y]) => E(L8, { left: (x - 140) + 'px', top: (y - 110) + 'px', width: '280px', height: '220px', borderRadius: '34px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', whiteSpace: 'pre-line', fontSize: '34px', fontWeight: 800, lineHeight: '1.2' }, n));
+const hub8 = E(L8, { left: '440px', top: '780px', width: '200px', height: '200px', borderRadius: '100px', background: PUR, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: '28px', fontWeight: 800, lineHeight: '1.15', zIndex: 3 }, 'One<br>system');
+const net = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); net.setAttribute('width', 1080); net.setAttribute('height', 1920); Object.assign(net.style, { position: 'absolute', left: 0, top: 0 });
+net.innerHTML = NODE.map(([, x, y]) => `<line class="ln" x1="${x}" y1="${y}" x2="540" y2="880" stroke="${PUR}" stroke-width="10" stroke-linecap="round"/>`).join('') + NODE.map(() => [0, 1].map(() => `<circle class="pk" r="11" fill="${AMB}"/>`).join('')).join('');
+L8.insertBefore(net, L8.firstChild); const lns = [...net.querySelectorAll('.ln')], pks = [...net.querySelectorAll('.pk')];
+
+// ---- L9: we don't just build websites
+const s9a = T(L9, 'c', 360, 84, 'Hum sirf');
+const s9b = T(L9, 'c', 470, 120, 'websites');
+const strike9 = E(L9, { left: '230px', top: '540px', width: '620px', height: '22px', borderRadius: '11px', background: AMB, transformOrigin: '0 50%', zIndex: 12 });
+const s9c = T(L9, 'c', 620, 72, 'nahi banate.', { color: MUT });
+const flow9 = E(L9, { left: '90px', top: '820px', width: '900px', height: '420px' }, `
+  <div class="f1" style="position:absolute;left:0;top:60px;width:380px;height:300px;border-radius:34px;background:#FFFDF8;box-shadow:0 0 0 3px ${AMB};display:flex;align-items:center;justify-content:center;text-align:center;font-size:44px;font-weight:800;line-height:1.2;color:${INK}">Real<br>problems</div>
+  <div class="f2" style="position:absolute;left:400px;top:180px;width:100px;height:60px;font-size:60px;font-weight:800;color:${PUR};text-align:center;line-height:60px">→</div>
+  <div class="f3" style="position:absolute;left:520px;top:60px;width:380px;height:300px;border-radius:34px;background:${PUR};display:flex;align-items:center;justify-content:center;text-align:center;font-size:44px;font-weight:800;line-height:1.2;color:#fff">Technology<br>that solves</div>`);
+const f1 = flow9.querySelector('.f1'), f2 = flow9.querySelector('.f2'), f3 = flow9.querySelector('.f3');
+
+// ---- L10: CTA
+const s10a = T(L10, 'c', 300, 70, 'Aapke business mein bhi');
+const s10b = T(L10, 'c', 395, 84, 'aisi <span class="amb">problem</span> hai?');
+const cbox = E(L10, { left: '90px', top: '640px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:48px;font-size:64px;font-weight:800;letter-spacing:0.06em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const s10c = T(L10, 'c', 860, 52, 'Comment <span class="pur">"SYSTEM"</span>', { w: 700 });
+const consult = E(L10, { left: '190px', top: '1010px', width: '700px', height: '150px', borderRadius: '40px', background: PUR, color: '#fff', fontSize: '44px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '18px' }, `${check(64, AMB)}Free consultation`);
+
+// ---- L11: end card
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '380px'; L11.appendChild(endLogo);
+const e1 = T(L11, 'c', 720, 120, 'HeliosLabs');
+const e2 = T(L11, 'c', 880, 50, 'Comment <span class="pur">"SYSTEM"</span>', { w: 700 });
+
+// ===================== subtitles (voiceover time) =====================
+const SUBS = [
+  [0.0, 3.2, 'Recently, ek dental clinic owner humare paas aaye with a problem.'],
+  [3.2, 5.6, 'Unke clinic mein patients ki enquiries toh aa rahi thi,'],
+  [5.6, 9.45, 'lekin appointments WhatsApp messages aur phone calls se manage ho rahi thi.'],
+  [9.45, 11.85, 'Staff ko manually bookings check karni padti thi,'],
+  [11.85, 13.68, 'patient records maintain karne padte the'],
+  [13.68, 15.9, 'aur daily reports banana bhi time-consuming tha.'],
+  [15.9, 17.2, 'Unhone humse kaha,'],
+  [17.2, 20.42, '"Kya aisa koi system ho sakta hai jisse ye sab ek hi jagah manage ho jaaye?"'],
+  [20.42, 22.95, 'So, we proposed a complete digital solution.'],
+  [22.95, 25.4, 'Sabse pehle, ek professional website'],
+  [25.4, 28.9, 'jahan patients treatments explore kar sakein aur online appointments book kar sakein.'],
+  [28.9, 32.4, 'Phir ek custom mobile app jahan doctor saari bookings check kar sakein,'],
+  [32.4, 36.6, 'appointments manage kar sakein aur daily, weekly aur monthly reports generate kar sakein.'],
+  [36.6, 39.4, 'Aur WhatsApp chatbot, jo 24/7'],
+  [39.4, 42.6, 'patients ki basic queries ka reply kare aur appointment booking mein help kare.'],
+  [42.6, 45.7, 'Ek website, ek mobile app aur WhatsApp automation.'],
+  [45.7, 47.55, 'All working together as one system.'],
+  [47.55, 49.25, 'Because hum sirf websites nahi banate,'],
+  [49.25, 52.95, 'hum businesses ki real problems solve karne ke liye technology build karte hain.'],
+  [52.95, 54.65, 'Aapke business mein bhi koi aisi problem hai?'],
+  [54.65, 59.3, 'Comment "SYSTEM" and let\'s schedule a free consultation.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- diagonal slice wipes: a purple slash sweeps down-right, revealing the next scene behind it
+  SC.forEach((s, k) => {
+    const L = layers[k], B = slashes[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    const p = k === 0 ? 1 : inout(clamp((t - s + 0.2) / 0.5));
+    const edge = lerp(-900, 2900, p);                 // position of the diagonal edge
+    L.style.clipPath = k === 0 ? 'none' : `polygon(0 0, ${edge}px 0, ${edge - 1100}px 1920px, 0 1920px)`;
+    L.style.transform = `scale(${1 + 0.03 * clamp((t - s) / Math.max(0.1, (next < 1e8 ? next : 59.3) - s))})`;
+    L.style.visibility = (t < s - 0.2 || t > next + 0.6) ? 'hidden' : 'visible';
+    B.style.visibility = (k > 0 && p > 0 && p < 1) ? 'visible' : 'hidden';
+    B.style.clipPath = `polygon(${edge}px 0, ${edge + 110}px 0, ${edge + 110 - 1100}px 1920px, ${edge - 1100}px 1920px)`;
+  });
+
+  // ---- L0
+  pop(c0tag, t, 0.1); pop(c0tooth, t, 0.82);
+  c0tooth.style.transform += ` rotate(${-6 * Math.exp(-2 * Math.max(0, t - 0.82)) * Math.sin(Math.max(0, t - 0.82) * 9)}deg)`;
+  show(c0a, t, 0.95); show(c0b, t, 2.72);
+
+  // ---- L1
+  pop(p1tag, t, 3.3); show(p1a, t, 3.45);
+  { const p = clamp(sp(t, 3.4)); ph1.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  enq.forEach((e, k) => pop(e, t, ENQ[k][1]));
+  { const on = t > 7.94; const shake = on ? 6 * Math.sin((t - 7.94) * 60) * Math.exp(-1.2 * (t - 7.94)) : 0;
+    pop(ring, t, 7.94, 1e9, `rotate(${shake}deg)`); pop(ringLbl, t, 8.0); }
+
+  // ---- L2
+  pop(p2tag, t, 9.5); show(p2a, t, 9.6);
+  { const a = clamp(sp(t, 10.1)), b = clamp(sp(t, 12.36)), c = clamp(sp(t, 14.24));
+    k1.style.transform = `translateX(${(1 - a) * -1100}px)`; k2.style.transform = `translateY(${(1 - b) * 900}px)`; k3.style.transform = `translateY(${(1 - c) * 900}px)`; k2.style.visibility = t < 12.36 ? 'hidden' : 'visible'; k3.style.visibility = t < 14.24 ? 'hidden' : 'visible'; k1.style.visibility = t < 10.1 ? 'hidden' : 'visible';
+    files2.forEach((f, i) => f.style.transform = `rotate(${(i % 2 ? 4 : -5) * clamp(sp(t, 12.7 + i * 0.1))}deg) translateX(${(i % 2 ? 10 : -12) * clamp(sp(t, 12.7 + i * 0.1))}px)`);
+    hand3.style.transform = `rotate(${t < 15.0 ? 0 : (t - 15.0) * 1400}deg)`; }
+  show(p2b, t, 15.02);
+
+  // ---- L3
+  pop(p3tag, t, 16.0);
+  { const p = clamp(sp(t, 16.62)); quote.style.transform = `scale(${0.6 + 0.4 * p})`; quote.style.visibility = t < 16.62 ? 'hidden' : 'visible';
+    let n = 0; QT.forEach(ts => { if (t >= ts) n++; }); qText.innerHTML = QWORDS.map((w, i) => `<span style="opacity:${i < n ? 1 : 0.12}${['system', 'ek', 'hi', 'jagah'].includes(w) ? ';color:' + PUR : ''}">${w}</span>`).join(' '); }
+  { const conv = inout(clamp((t - 19.32) / 0.7));
+    bits.forEach((b, k) => { const sx = [120, 760, 90, 700, 400][k], sy = [880, 860, 1180, 1200, 1300][k];
+      b.style.left = lerp(sx, 470, conv) + 'px'; b.style.top = lerp(sy, 1095, conv) + 'px'; b.style.transform = `scale(${clamp(sp(t, 17.0 + k * 0.12)) * (1 - 0.9 * conv)}) rotate(${(k % 2 ? 6 : -6) * (1 - conv)}deg)`;
+      b.style.visibility = conv > 0.97 || t < 17.0 ? 'hidden' : 'visible'; });
+    pop(hub, t, 19.6); }
+
+  // ---- L4
+  pop(p4tag, t, 20.6); show(p4a, t, 21.0); show(p4b, t, 21.42);
+  slots.forEach((s, k) => pop(s, t, 21.9 + k * 0.18));
+
+  // ---- L5 website
+  pop(s5tag, t, 23.1); show(s5a, t, 24.66);
+  { const p = clamp(sp(t, 23.4)); site.style.transform = `translateY(${(1 - p) * 1100}px)`; }
+  trs.forEach((e, k) => { const h = clamp(sp(t, 25.98 + k * 0.18)) * (1 - clamp(sp(t, 26.3 + k * 0.18))); e.style.transform = `scale(${1 + 0.06 * h})`; e.style.boxShadow = `0 0 0 ${2 + 3 * h}px ${h > 0.2 ? PUR : LIN}`; });
+  sls.forEach((e, k) => { const pick = k === 2 && t > 27.7; e.style.background = pick ? PUR : '#F1E9DC'; e.style.color = pick ? '#fff' : INK; e.style.transform = `scale(${k === 2 ? press(t, 27.6) : 1})`; });
+  bk.style.transform = `scale(${press(t, 28.2)})`;
+  { const p = clamp(sp(t, 28.3)); okS.style.transform = `translateY(${(1 - p) * 120}px) scale(${p})`; okS.style.visibility = t < 28.3 ? 'hidden' : 'visible'; }
+  { const K = [[25.6, 300, 830], [26.6, 760, 830], [27.3, 600, 1120], [27.9, 520, 1230]]; let x = 1000, y = 1500, prev = [1000, 1500];
+    K.forEach(([ts, kx, ky]) => { const p = expo(t, ts, 0.45); x = lerp(prev[0], kx, p); y = lerp(prev[1], ky, p); if (t >= ts) prev = [x, y]; });
+    cur5.style.left = x + 'px'; cur5.style.top = y + 'px'; cur5.style.transform = `scale(${press(t, 27.6) * press(t, 28.2)})`; cur5.style.visibility = (t > 25.6 && t < 28.85) ? 'visible' : 'hidden'; }
+
+  // ---- L6 doctor's app
+  pop(s6tag, t, 29.05); show(s6a, t, 29.5);
+  { const p = clamp(sp(t, 29.3)); app.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  bkrs.forEach((r, k) => { const p = clamp(sp(t, 31.08 + k * 0.12)); r.style.transform = `translateX(${(1 - p) * 600}px)`; });
+  cfs.forEach((c, k) => { c.style.transform = `scale(${clamp(sp(t, 32.3 + k * 0.2))})`; });
+  { const sw = inout(clamp((t - 33.45) / 0.4)); v2.style.transform = `translateX(${(1 - sw) * 580}px)`; }
+  { const tabT = [33.6, 34.3, 35.06]; let ia = 0; tabT.forEach((ts, k) => { if (t >= ts) ia = k; });
+    tbs.forEach((b, k) => { b.style.background = k === ia ? PUR : 'transparent'; b.style.color = k === ia ? '#fff' : INK; });
+    const prevH = BRH[Math.max(0, ia - 1)], curH = BRH[ia], p = clamp(sp(t, tabT[ia]));
+    brs.forEach((b, k) => b.style.height = (440 * lerp(ia === 0 ? 0 : prevH[k], curH[k], p)) + 'px'); }
+  gen.style.transform = `scale(${press(t, 35.8)})`;
+  pop(pdf, t, 36.0);
+
+  // ---- L7 chatbot
+  pop(s7tag, t, 36.75); show(s7a, t, 37.08);
+  { const p = clamp(sp(t, 36.9)); chat.style.transform = `translateY(${(1 - p) * 1200}px)`; }
+  pop(badge247, t, 38.32, 1e9, `rotate(${-8 + 8 * clamp(sp(t, 38.32))}deg)`);
+  chb.forEach((b, k) => pop(b, t, CH[k][2]));
+  { const typing = (t > 39.6 && t < 40.1) || (t > 41.0 && t < 41.4); dots7.style.top = (t < 40.5 ? 150 + 140 : 150 + 3 * 140) + 'px'; dots7.style.visibility = typing ? 'visible' : 'hidden';
+    [...dots7.querySelectorAll('.d')].forEach((d, k) => d.style.transform = `translateY(${-8 * Math.max(0, Math.sin(t * 14 - k))}px)`); }
+
+  // ---- L8 one system
+  show(s8a, t, 45.8); show(s8b, t, 46.66);
+  nodes.forEach((n, k) => pop(n, t, NODE[k][3]));
+  lns.forEach((l, k) => { const L = Math.hypot(NODE[k][1] - 540, NODE[k][2] - 880); const d = inout(clamp((t - (NODE[k][3] + 0.3)) / 0.5)); l.setAttribute('stroke-dasharray', L); l.setAttribute('stroke-dashoffset', L * (1 - d)); });
+  pop(hub8, t, 46.82);
+  pks.forEach((c, i) => { const k = Math.floor(i / 2), [, x, y] = NODE[k]; const u = ((t - 47.0) * 0.8 + (i % 2) * 0.5) % 1; const on = t > 47.0;
+    c.setAttribute('cx', lerp(x, 540, u)); c.setAttribute('cy', lerp(y, 880, u)); c.style.visibility = on ? 'visible' : 'hidden'; });
+
+  // ---- L9
+  show(s9a, t, 47.7); show(s9b, t, 48.06);
+  strike9.style.transform = `scaleX(${inout(clamp((t - 48.78) / 0.3))})`; strike9.style.visibility = t < 48.78 ? 'hidden' : 'visible';
+  show(s9c, t, 48.94);
+  pop(f1, t, 50.26); f2.style.transform = `translateX(${(1 - clamp(sp(t, 51.0))) * -60}px)`; f2.style.visibility = t < 51.0 ? 'hidden' : 'visible'; pop(f3, t, 51.86);
+
+  // ---- L10 CTA
+  show(s10a, t, 53.1); show(s10b, t, 53.6);
+  pop(cbox, t, 54.6);
+  { const s = 'SYSTEM'; cm.textContent = s.slice(0, Math.floor(clamp((t - 54.95) / 0.5) * s.length)); sd.style.transform = `scale(${press(t, 55.55)})`; }
+  show(s10c, t, 55.6);
+  { const p = clamp(sp(t, 56.8)); consult.style.transform = `translateY(${(1 - p) * 500}px)`; consult.style.visibility = t < 56.8 ? 'hidden' : 'visible'; }
+
+  // ---- L11 end
+  animLogo(endLogo, t, 57.65); show(e1, t, 57.9); show(e2, t, 58.2);
+
+  // ---- subtitles
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 59.3;
+window.seek(0);
+</script>
+</body>
+</html>
