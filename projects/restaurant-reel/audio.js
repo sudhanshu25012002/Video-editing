@@ -12,7 +12,7 @@ const SFX = [
   ['tick', 33.0, 0.2], ['tick', 34.18, 0.2], ['tick', 35.38, 0.2], ['tick', 36.32, 0.2], ['bell', 37.38, 0],   // details highlighted
   ['tap', 42.22, 0], ['move', 42.4, 0.4], ['printer', 43.35, 0.3], ['sizzle', 44.0, -0.4, 5.5],   // forward → kitchen ticket prints, kitchen sizzle
   ['tick', 47.44, 0.2], ['tick', 48.94, 0.1], ['tick', 49.24, 0.1], ['tick', 49.54, 0.1], ['servicebell', 50.5, 0.3],   // table 7, items ready, bell
-  ['move', 50.85, -0.3], ...[51.7, 52.0, 52.3, 52.6, 52.9].map((t, k) => ['step', t, 0.4 - k * 0.1]), ['plate', 53.38, 0], ['plate', 53.5, -0.1],   // serve
+  ['move', 50.85, -0.3], ...[51.7, 52.0, 52.3, 52.6, 52.9].map((t, k) => ['step', t, 0.4 - k * 0.1]), ['plate', 53.7, -0.1], ['plate', 53.94, 0], ['plate', 54.18, 0.1], ...[44.9, 46.2, 47.5, 48.9].map(t => ['whoosh', t, -0.3]),   // serve
   ['move', 54.5, -0.4], ['stamp', 55.55, 0], ['stamp', 56.85, 0], ['stamp', 58.75, 0],   // no, no, no
   ['move', 60.8, 0], ['bell', 61.6, 0],                                                    // the whole system
   ['whoosh', 64.0, 0], ['rise', 70.0, 0], ['success', 71.04, 0],                         // HeliosLabs sheet, operations become simple

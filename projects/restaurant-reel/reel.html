@@ -94,23 +94,76 @@ function qrHTML(s) { let h = ''; const n = 21, c = s / n; let sd = 7;
     if (on) h += `<rect x="${x * c}" y="${y * c}" width="${c + 0.4}" height="${c + 0.4}"/>`; }
   return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" fill="${INK}">${h}</svg>`; }
 const lamp = x => `<div style="position:absolute;left:${x}px;top:0;width:4px;height:150px;background:${INK}"></div><div style="position:absolute;left:${x - 50}px;top:150px;width:104px;height:56px;border-radius:52px 52px 6px 6px;background:${AMB}"></div><div style="position:absolute;left:${x - 70}px;top:206px;width:144px;height:120px;background:radial-gradient(ellipse at top, rgba(232,163,61,0.35), transparent 70%)"></div>`;
-const tableHTML = (num) => `<div style="position:absolute;left:220px;top:1060px;width:640px;height:34px;border-radius:12px;background:#8C5A3C"></div>
-  <div style="position:absolute;left:240px;top:1094px;width:600px;height:70px;background:#FFFDF8;border-radius:0 0 30px 30px;box-shadow:0 0 0 2px ${LIN}"></div>
-  <div style="position:absolute;left:300px;top:1164px;width:24px;height:220px;background:#6E4630"></div><div style="position:absolute;left:756px;top:1164px;width:24px;height:220px;background:#6E4630"></div>
-  <div style="position:absolute;left:470px;top:980px;width:90px;height:80px;border-radius:10px;background:${INK};color:${AMB};font-size:40px;font-weight:800;display:flex;align-items:center;justify-content:center">${num}</div>`;
-const chair = (x, flip) => `<div style="position:absolute;left:${x}px;top:960px;width:26px;height:420px;border-radius:13px;background:#6E4630;${flip ? '' : ''}"></div><div style="position:absolute;left:${flip ? x - 130 : x}px;top:1180px;width:156px;height:28px;border-radius:10px;background:#8C5A3C"></div><div style="position:absolute;left:${flip ? x - 110 : x + 110}px;top:1208px;width:20px;height:176px;background:#6E4630"></div>`;
+const tableHTML = (num) => `<div style="position:absolute;left:350px;top:1060px;width:420px;height:30px;border-radius:12px;background:#8C5A3C"></div>
+  <div style="position:absolute;left:366px;top:1090px;width:388px;height:62px;background:#FFFDF8;border-radius:0 0 26px 26px;box-shadow:0 0 0 2px ${LIN}"></div>
+  <div style="position:absolute;left:404px;top:1152px;width:22px;height:238px;background:#6E4630"></div><div style="position:absolute;left:694px;top:1152px;width:22px;height:238px;background:#6E4630"></div>
+  <div style="position:absolute;left:684px;top:988px;width:74px;height:72px;border-radius:10px;background:${INK};color:${AMB};font-size:38px;font-weight:800;display:flex;align-items:center;justify-content:center">${num}</div>`;
+const chair = x => `<div style="position:absolute;left:${x}px;top:930px;width:26px;height:460px;border-radius:13px;background:#6E4630"></div><div style="position:absolute;left:${x}px;top:1176px;width:190px;height:28px;border-radius:10px;background:#8C5A3C"></div><div style="position:absolute;left:${x + 164}px;top:1204px;width:20px;height:186px;background:#6E4630"></div>`;
+
+// ---------- character rig: jointed SVG person (hips, knees, shoulders, elbows, head, face) ----------
+const ROLE = {
+  customer: { skin: '#C98B5E', hair: '#2B1E1A', shirt: PUR, sleeve: PUR, pants: INK, shoe: '#3A2A22' },
+  waiter: { skin: '#A8714A', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: INK, shoe: '#111' },
+  chef: { skin: '#8D5A3B', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: '#3A3150', shoe: '#111' },
+};
+function makePerson(parent, role, SC, z = 4) {
+  const c = ROLE[role], NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', 300 * SC); svg.setAttribute('height', 560 * SC); svg.setAttribute('viewBox', '-40 -100 300 560');
+  Object.assign(svg.style, { position: 'absolute', overflow: 'visible', zIndex: z });
+  const leg = s => { const hx = s === 'L' ? 90 : 130; return `<g class="hip${s}"><rect x="${hx - 12}" y="262" width="24" height="100" rx="12" fill="${c.pants}"/><g class="knee${s}"><rect x="${hx - 11}" y="348" width="22" height="90" rx="11" fill="${c.pants}"/><ellipse cx="${hx}" cy="440" rx="21" ry="10" fill="${c.shoe}"/></g></g>`; };
+  const arm = s => { const sx = s === 'L' ? 62 : 158; return `<g class="sh${s}"><rect x="${sx - 10}" y="130" width="20" height="88" rx="10" fill="${c.sleeve}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/><g class="el${s}"><rect x="${sx - 9}" y="206" width="18" height="74" rx="9" fill="${c.skin}"/><circle cx="${sx}" cy="284" r="12" fill="${c.skin}"/></g></g>`; };
+  const extra = role === 'waiter' ? `<path d="M72 134 L102 134 L110 196 L118 134 L148 134 L146 272 H74 Z" fill="${INK}"/><path d="M98 122 L110 129 L98 136 Z M122 122 L110 129 L122 136 Z" fill="${INK}"/><rect x="74" y="236" width="72" height="40" rx="6" fill="#EFE7DA"/>`
+    : role === 'chef' ? `${[160, 190, 220].map(y => `<circle cx="98" cy="${y}" r="4" fill="${INK}"/><circle cx="122" cy="${y}" r="4" fill="${INK}"/>`).join('')}<path d="M96 124 L110 146 L124 124 Z" fill="${AMB}"/>`
+    : `<path d="M96 126 L110 142 L124 126" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="4"/>`;
+  const hair = role === 'chef' ? `<rect x="78" y="-12" width="64" height="46" rx="8" fill="#fff" stroke="${LIN}" stroke-width="3"/>${[82, 110, 138].map(x => `<circle cx="${x}" cy="-14" r="24" fill="#fff" stroke="${LIN}" stroke-width="3"/>`).join('')}<rect x="76" y="20" width="68" height="16" rx="6" fill="#fff" stroke="${LIN}" stroke-width="3"/>`
+    : role === 'waiter' ? `<path d="M68 64 Q66 24 110 24 Q154 24 152 64 Q146 42 124 40 Q96 38 84 50 Q74 56 68 64 Z" fill="${c.hair}"/>`
+    : `<path d="M68 68 Q64 22 110 22 Q156 22 152 68 Q150 44 132 40 Q116 52 90 44 Q74 50 68 68 Z" fill="${c.hair}"/>`;
+  svg.innerHTML = leg('R') + `<path d="M70 252 H150 L152 300 H68 Z" fill="${c.pants}"/>` + leg('L').replace('<g class="hipL">', '<g class="hipL">') + arm('R') +
+    `<path d="M58 130 Q110 116 162 130 L150 280 H70 Z" fill="${c.shirt}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/>${extra}
+     <g class="head"><rect x="100" y="98" width="20" height="34" fill="${c.skin}"/><circle cx="68" cy="74" r="9" fill="${c.skin}"/><circle cx="152" cy="74" r="9" fill="${c.skin}"/>
+       <circle cx="110" cy="70" r="42" fill="${c.skin}"/>${hair}
+       <g class="eo"><ellipse class="e1" cx="95" cy="72" rx="5" ry="5.5" fill="${INK}"/><ellipse class="e2" cx="125" cy="72" rx="5" ry="5.5" fill="${INK}"/></g>
+       <path class="eh" d="M88 74 Q95 66 102 74 M118 74 Q125 66 132 74" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+       <circle cx="86" cy="88" r="7" fill="#E8645A" opacity="0.22"/><circle cx="134" cy="88" r="7" fill="#E8645A" opacity="0.22"/>
+       <path class="ms" d="M97 90 Q110 102 123 90" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><ellipse class="mo" cx="110" cy="95" rx="9" ry="8" fill="#7A2E2E"/></g>` + arm('L');
+  parent.appendChild(svg);
+  const q = s => svg.querySelector(s), parts = { hipL: q('.hipL'), hipR: q('.hipR'), kneeL: q('.kneeL'), kneeR: q('.kneeR'), shL: q('.shL'), shR: q('.shR'), elL: q('.elL'), elR: q('.elR'), head: q('.head') };
+  const piv = { hipL: [90, 270], hipR: [130, 270], kneeL: [90, 356], kneeR: [130, 356], shL: [62, 140], shR: [158, 140], elL: [62, 214], elR: [158, 214], head: [110, 112] };
+  const eo = q('.eo'), eh = q('.eh'), ms = q('.ms'), mo = q('.mo'), e1 = q('.e1'), e2 = q('.e2');
+  const P = { x: 0, y: 0, sc: SC };
+  return {
+    svg, P,
+    set(p, t) { P.x = p.x; P.y = p.y; svg.style.left = (p.x - 40 * SC) + 'px'; svg.style.top = (p.y - 100 * SC) + 'px';
+      Object.keys(parts).forEach(k => parts[k].setAttribute('transform', `rotate(${(p[k] || 0).toFixed(2)} ${piv[k][0]} ${piv[k][1]})`));
+      const happy = p.eyes === 'happy', blink = !happy && ((t + (p.seed || 0)) % 3.1) < 0.12;
+      eo.style.display = happy ? 'none' : 'inline'; eh.style.display = happy ? 'inline' : 'none'; [e1, e2].forEach(e => e.setAttribute('ry', blink ? 0.8 : 5.5));
+      const open = p.mouth === 'open'; ms.style.display = open ? 'none' : 'inline'; mo.style.display = open ? 'inline' : 'none'; if (open) mo.setAttribute('ry', 5 + 3 * Math.abs(Math.sin(t * 14))); },
+    hand(s, p) { const S = s === 'L' ? [62, 140] : [158, 140], a1 = (p['sh' + s] || 0) * Math.PI / 180, a2 = a1 + (p['el' + s] || 0) * Math.PI / 180;
+      const lx = S[0] - 74 * Math.sin(a1) - 70 * Math.sin(a2), ly = S[1] + 74 * Math.cos(a1) + 70 * Math.cos(a2); return [p.x + lx * SC, p.y + ly * SC]; },
+  };
+}
+const STAND = sc => 1390 - 450 * sc, SEAT = sc => 1176 - 270 * sc;
+const walkPose = (ph, amp = 1) => ({ hipL: 16 * amp * Math.sin(ph), hipR: -16 * amp * Math.sin(ph), kneeL: -8 * amp * Math.max(0, Math.sin(ph)), kneeR: 8 * amp * Math.max(0, -Math.sin(ph)),
+  shL: 10 + 10 * amp * Math.sin(ph), shR: -10 + 10 * amp * Math.sin(ph), elL: -10, elR: 10, head: 2 * Math.sin(ph) * amp, bob: -7 * amp * Math.abs(Math.sin(ph)) });
+const seatedPose = { hipL: -90, hipR: -84, kneeL: 90, kneeR: 84, shL: -40, elL: -50, shR: -60, elR: -30 };
+const mixPose = (a, b, p) => { const o = { ...a }; Object.keys(b).forEach(k => { if (typeof b[k] === 'number') o[k] = lerp(a[k] || 0, b[k], p); else o[k] = p > 0.5 ? b[k] : a[k]; }); return o; };
+// plate / glass / steam props
+const plateHTML = em => `<div style="position:absolute;left:0;top:44px;width:140px;height:30px;border-radius:50%;background:#FFFDF8;box-shadow:0 4px 0 #D8CCB8, 0 0 0 2px ${LIN}"></div><div style="position:absolute;left:34px;top:0;font-size:62px;line-height:1">${em}</div>
+  <svg class="stm" style="position:absolute;left:30px;top:-80px;overflow:visible" width="80" height="80" viewBox="0 0 80 80">${[10, 38, 66].map((x, i) => `<path d="M${x} 80 Q${x - 10} 60 ${x} 42 Q${x + 10} 24 ${x} 6" fill="none" stroke="#B9A88C" stroke-width="5" stroke-linecap="round" class="s${i}"/>`).join('')}</svg>`;
+const glassHTML = `<div style="position:absolute;left:0;top:0;width:54px;height:96px;border-radius:6px 6px 14px 14px;background:linear-gradient(180deg, rgba(255,255,255,0.7) 0 12%, #F2B33D 12%);box-shadow:inset 0 0 0 3px rgba(28,23,38,0.15)"></div><div style="position:absolute;left:30px;top:-34px;width:8px;height:60px;border-radius:4px;background:${PUR};transform:rotate(14deg)"></div>`;
 const restaurantBG = `<div style="position:absolute;left:0;top:0;width:1080px;height:1000px;background:#EFE3CF"></div>
   <div style="position:absolute;left:0;top:1000px;width:1080px;height:920px;background:#E3D3BA"></div>
   <div style="position:absolute;left:0;top:990px;width:1080px;height:14px;background:#D2BE9E"></div>${lamp(260)}${lamp(540)}${lamp(820)}
   <div style="position:absolute;left:370px;top:420px;width:340px;height:120px;border-radius:24px;background:${INK};color:${AMB};font-size:56px;font-weight:800;display:flex;align-items:center;justify-content:center;letter-spacing:0.06em">BISTRO</div>`;
 
 // ===================== ROOM T: arriving at the restaurant =====================
-const T_ = room.T; T_.insertAdjacentHTML('beforeend', restaurantBG + `<div class="tbl">${tableHTML(7)}</div>` + chair(180, false) + chair(874, true));
-const tGlow = E(T_, { left: '200px', top: '940px', width: '680px', height: '260px', borderRadius: '40px', boxShadow: `0 0 0 8px ${PUR}`, zIndex: 3 });
-const cust = E(T_, { left: '0px', top: '820px', zIndex: 4 }, person(150, PUR));
-const waiter = E(T_, { left: '860px', top: '800px', zIndex: 4 }, person(160, INK) + `<div style="position:absolute;left:30px;top:120px;width:100px;height:26px;border-radius:6px;background:#fff"></div>`);
-const welcome = E(T_, { left: '620px', top: '660px', padding: '18px 26px', borderRadius: '26px 26px 6px 26px', background: WHT, fontSize: '34px', fontWeight: 800, boxShadow: '0 10px 30px rgba(28,23,38,0.15)', zIndex: 5, transformOrigin: '100% 100%', whiteSpace: 'nowrap' }, 'Welcome! 🙏');
-const qrStand = E(T_, { left: '600px', top: '880px', width: '130px', height: '180px', borderRadius: '14px', background: WHT, boxShadow: `0 0 0 3px ${INK}`, zIndex: 3, transformOrigin: '50% 100%' }, `<div style="position:absolute;left:15px;top:14px">${qrHTML(100)}</div><div style="position:absolute;left:0;width:130px;top:126px;text-align:center;font-size:18px;font-weight:800">SCAN</div>`);
+const T_ = room.T; T_.insertAdjacentHTML('beforeend', restaurantBG + `<div class="tbl">${tableHTML(7)}</div>` + chair(150));
+const tGlow = E(T_, { left: '330px', top: '960px', width: '460px', height: '220px', borderRadius: '36px', boxShadow: `0 0 0 8px ${PUR}`, zIndex: 3 });
+const qrStand = E(T_, { left: '570px', top: '935px', width: '92px', height: '125px', borderRadius: '12px', background: WHT, boxShadow: `0 0 0 3px ${INK}`, zIndex: 3, transformOrigin: '50% 100%' }, `<div style="position:absolute;left:11px;top:10px">${qrHTML(70)}</div><div style="position:absolute;left:0;width:92px;top:88px;text-align:center;font-size:16px;font-weight:800">SCAN</div>`);
+const cust = makePerson(T_, 'customer', 1.45, 4);
+const waiter = makePerson(T_, 'waiter', 1.45, 4);
+const welcome = E(T_, { left: '560px', top: '640px', padding: '18px 26px', borderRadius: '26px 26px 6px 26px', background: WHT, fontSize: '34px', fontWeight: 800, boxShadow: '0 10px 30px rgba(28,23,38,0.15)', zIndex: 6, transformOrigin: '100% 100%', whiteSpace: 'nowrap' }, 'Welcome! 🙏');
+const cPhone = E(T_, { width: '46px', height: '84px', borderRadius: '10px', background: INK, boxShadow: `inset 0 0 0 4px ${INK}, inset 0 0 0 30px ${PUR}`, zIndex: 6 });
 const t1 = T(T_, 'c', 230, 78, 'Imagine kijiye…');
 const t2 = T(T_, 'c', 230, 78, 'Ek <span class="pur">table</span> milti hai');
 const t3 = T(T_, 'c', 230, 78, 'Table par <span class="pur">QR code</span>');
@@ -201,7 +254,7 @@ const touchR = toucher(R_, [[42.22, 50 + 330 + 305, 300 + 120 + 885]], 41.5, 42.
 const K_ = room.K;
 const kA = T(K_, 'c', 196, 64, 'Kitchen ki <span class="pur">screen</span> par');
 const kB = T(K_, 'c', 196, 64, 'Order <span class="pur">ready!</span>');
-const kds = E(K_, { left: '50px', top: '300px', width: '980px', height: '900px', borderRadius: '36px', background: INK, boxShadow: '0 30px 70px rgba(28,23,38,0.3)' }, `
+const kds = E(K_, { left: '50px', top: '300px', width: '980px', height: '850px', borderRadius: '36px', background: INK, boxShadow: '0 30px 70px rgba(28,23,38,0.3)' }, `
   <div style="position:absolute;left:34px;top:26px;font-size:30px;font-weight:800;color:#fff">Kitchen display</div><div style="position:absolute;right:34px;top:30px;font-size:22px;font-weight:800;color:${AMB}">3 active</div>
   ${[['#1039', 'TABLE 3', ['Dal Makhani', 'Naan ×3']], ['#1041', 'TABLE 12', ['Veg Biryani', 'Raita']]].map(([o, tb, it], k) => `<div style="position:absolute;left:${30 + k * 312}px;top:96px;width:292px;height:600px;border-radius:22px;background:#2C2440;overflow:hidden">
      <div style="height:60px;background:${AMB};font-size:22px;font-weight:800;display:flex;align-items:center;padding-left:18px">${o} · Preparing</div>
@@ -213,19 +266,24 @@ const kds = E(K_, { left: '50px', top: '300px', width: '980px', height: '900px',
      <div style="margin:14px;padding:14px;border-radius:14px;background:#FDF1DC;font-size:22px;font-weight:700">📝 Less spicy, no onion</div>
      <div class="st" style="position:absolute;left:14px;bottom:18px;width:268px;height:80px;border-radius:20px;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center"></div></div>`);
 const nk = kds.querySelector('.nk'), nkh = kds.querySelector('.nkh'), tb7 = kds.querySelector('.tb7'), kbs = [...kds.querySelectorAll('.kb')], kst = kds.querySelector('.st');
-const chef = E(K_, { left: '460px', top: '1230px', width: '160px', height: '240px' }, `<div style="position:absolute;left:30px;top:-40px;width:100px;height:70px;border-radius:40px 40px 10px 10px;background:#fff;box-shadow:0 0 0 3px ${LIN}"></div>${person(160, PUR)}`);
-const bell = E(K_, { left: '700px', top: '1290px', width: '120px', height: '110px' }, `<svg width="120" height="110" viewBox="0 0 120 110"><path d="M20 80 Q20 30 60 30 Q100 30 100 80 Z" fill="${AMB}"/><rect x="10" y="80" width="100" height="14" rx="7" fill="${INK}"/><circle cx="60" cy="24" r="8" fill="${INK}"/></svg>`);
+const counter = E(K_, { left: '230px', top: '1372px', width: '620px', height: '200px', borderRadius: '16px', background: '#BDB3A3', zIndex: 6 }, `<div style="position:absolute;left:0;top:0;width:620px;height:16px;border-radius:16px 16px 0 0;background:#D7CEC0"></div>`);
+const chef = makePerson(K_, 'chef', 0.8, 5);
+const pan = E(K_, { width: '150px', height: '40px', zIndex: 7 }, `<div style="position:absolute;left:0;top:10px;width:96px;height:28px;border-radius:0 0 48px 48px;background:${INK}"></div><div style="position:absolute;left:92px;top:14px;width:58px;height:10px;border-radius:5px;background:#3A3150"></div>`);
+const bits = [0, 1, 2, 3].map(k => E(K_, { width: '16px', height: '16px', borderRadius: '8px', background: [AMB, '#D9603B', '#7BA05B', AMB][k], zIndex: 7 }));
+const bell = E(K_, { left: '690px', top: '1262px', width: '120px', height: '110px', zIndex: 7 }, `<svg width="120" height="110" viewBox="0 0 120 110"><path d="M20 80 Q20 30 60 30 Q100 30 100 80 Z" fill="${AMB}"/><rect x="10" y="80" width="100" height="14" rx="7" fill="${INK}"/><circle cx="60" cy="24" r="8" fill="${INK}"/></svg>`);
 
 // ===================== ROOM S: serving =====================
-const S_ = room.S; S_.insertAdjacentHTML('beforeend', restaurantBG + `<div>${tableHTML(7)}</div>` + chair(180, false));
+const S_ = room.S; S_.insertAdjacentHTML('beforeend', restaurantBG + `<div>${tableHTML(7)}</div>` + chair(150));
 const sA = T(S_, 'c', 230, 66, 'Correct table par <span class="pur">serve</span>');
-const sCust = E(S_, { left: '140px', top: '820px', zIndex: 4 }, person(150, PUR));
-const sWaiter = E(S_, { left: '0px', top: '800px', zIndex: 5 }, person(160, INK) + `<div style="position:absolute;left:-60px;top:110px;width:200px;height:18px;border-radius:9px;background:#B9A88C"></div><div class="tr" style="position:absolute;left:-40px;top:62px;font-size:54px;white-space:nowrap">🧀🍗</div>`);
-const trayItems = sWaiter.querySelector('.tr');
-const plates = E(S_, { left: '330px', top: '988px', fontSize: '66px', zIndex: 4, whiteSpace: 'nowrap', letterSpacing: '20px' }, '🧀 🍗 🥭');
-const t7ring = E(S_, { left: '450px', top: '960px', width: '130px', height: '120px', borderRadius: '24px', boxShadow: `0 0 0 8px ${PUR}`, zIndex: 3 });
-const t7tag = E(S_, { left: '400px', top: '820px', padding: '12px 22px', borderRadius: '20px', background: PUR, color: '#fff', fontSize: '28px', fontWeight: 800, zIndex: 6, whiteSpace: 'nowrap' }, `Table 7 ✓`);
-const yum = E(S_, { left: '60px', top: '700px', padding: '16px 24px', borderRadius: '26px 26px 26px 6px', background: WHT, fontSize: '34px', fontWeight: 800, boxShadow: '0 10px 30px rgba(28,23,38,0.15)', zIndex: 6, transformOrigin: '0 100%', whiteSpace: 'nowrap' }, 'Wah! 😋');
+const sCust = makePerson(S_, 'customer', 1.45, 4);
+const sWaiter = makePerson(S_, 'waiter', 1.45, 5);
+const tray = E(S_, { width: '300px', height: '18px', borderRadius: '9px', background: '#B9A88C', boxShadow: '0 6px 0 #9C8B70', zIndex: 6 });
+const SERVE = [{ html: plateHTML('🧀'), w: 140, tray: -120, spot: 445, ts: 53.38 }, { html: plateHTML('🍗'), w: 140, tray: 10, spot: 570, ts: 53.62 }, { html: glassHTML, w: 54, tray: 120, spot: 650, ts: 53.86, glass: 1 }];
+SERVE.forEach(s => { s.el = E(S_, { width: s.w + 'px', height: '96px', zIndex: 7 }, s.html); s.stm = s.el.querySelector('.stm'); });
+const t7ring = E(S_, { left: '672px', top: '976px', width: '98px', height: '96px', borderRadius: '20px', boxShadow: `0 0 0 8px ${PUR}`, zIndex: 3 });
+const t7tag = E(S_, { left: '640px', top: '880px', padding: '12px 22px', borderRadius: '20px', background: PUR, color: '#fff', fontSize: '28px', fontWeight: 800, zIndex: 8, whiteSpace: 'nowrap' }, `Table 7 ✓`);
+const yum = E(S_, { left: '40px', top: '690px', padding: '16px 24px', borderRadius: '26px 26px 26px 6px', background: WHT, fontSize: '34px', fontWeight: 800, boxShadow: '0 10px 30px rgba(28,23,38,0.15)', zIndex: 8, transformOrigin: '0 100%', whiteSpace: 'nowrap' }, 'Wah! 😋');
+const enjoy = E(S_, { left: '700px', top: '640px', padding: '16px 24px', borderRadius: '26px 26px 6px 26px', background: WHT, fontSize: '32px', fontWeight: 800, boxShadow: '0 10px 30px rgba(28,23,38,0.15)', zIndex: 8, transformOrigin: '100% 100%', whiteSpace: 'nowrap' }, 'Enjoy! 🙂');
 
 // ===================== ROOM N: no confusion =====================
 const N_ = room.N;
@@ -266,7 +324,7 @@ const e1 = T(Z_, 'c', 740, 120, 'HeliosLabs');
 const e2 = T(Z_, 'c', 900, 50, 'Comment <span class="pur">"RESTAURANT"</span>', { w: 700 });
 
 // ===================== camera =====================
-const MAP = [1740, 2160, 0.3], QRF = [665, 960, 2.4];
+const MAP = [1740, 2160, 0.3], QRF = [616, 990, 2.4];
 const at = k => [...C(k), 1];
 const CAM = [[0, ...at('T')], [6.8, ...at('T')], [7.5, ...QRF], [8.3, ...at('P')], [22.95, ...at('P')], [24.0, ...MAP], [25.6, ...MAP], [27.4, ...at('R')],
   [42.4, ...at('R')], [43.4, ...at('K')], [50.85, ...at('K')], [51.7, ...at('S')], [54.5, ...at('S')], [55.25, ...at('N')], [60.8, ...at('N')], [61.9, ...MAP], [80, ...MAP]];
@@ -326,8 +384,20 @@ window.seek = function (t) {
 
   // ---- T
   show(t1, t, 0.2, 3.0); show(t2, t, 3.15, 4.75); show(t3, t, 4.85);
-  { const p = inout(clamp((t - 1.0) / 1.5)); cust.style.left = lerp(-200, 120, p) + 'px'; cust.style.top = (820 - (p < 1 ? 10 * Math.abs(Math.sin(p * 14)) : 0)) + 'px';
-    pop(waiter, t, 1.4); pop(welcome, t, 1.62, 3.4); }
+  { // customer walks in (1.0–2.5), sits (2.5–2.95), looks at the QR, lifts the phone
+    const sc = 1.45, w = clamp((t - 1.0) / 1.5), ph = (t - 1.0) * Math.PI * 3.4; let p;
+    if (t < 2.5) { const wp = walkPose(ph, t > 1.0 ? 1 : 0); p = { ...wp, x: lerp(-360, 110, inout(w)), y: STAND(sc) + (t > 1.0 ? wp.bob : 0), mouth: 'smile' }; }
+    else { const s2 = inout(clamp((t - 2.5) / 0.45)); p = mixPose({ ...walkPose(0, 0), x: 110, y: STAND(sc) }, { ...seatedPose, x: 110, y: SEAT(sc) }, s2); }
+    if (t > 5.9) { const l = inout(clamp((t - 5.9) / 0.3)); p.head = lerp(0, 8, l); }
+    const ph2 = inout(clamp((t - 6.15) / 0.4)); if (ph2 > 0) { p.shR = lerp(p.shR, -120, ph2); p.elR = lerp(p.elR, -50, ph2); }
+    p.eyes = t > 5.9 && t < 6.15 ? 'open' : 'open'; p.seed = 0.7; cust.set(p, t);
+    const [hx, hy] = cust.hand('R', p); cPhone.style.left = (hx - 23) + 'px'; cPhone.style.top = (hy - 70) + 'px'; cPhone.style.visibility = ph2 > 0.05 ? 'visible' : 'hidden'; }
+  { // waiter: wave + "Welcome!" (1.62), points to the table (3.48)
+    const sc = 1.45, p = { x: 710, y: STAND(sc), shL: 8, shR: -8, seed: 1.9 };
+    const wv = clamp((t - 1.5) / 0.25) * (1 - clamp((t - 2.7) / 0.3)); if (wv > 0) { p.shR = lerp(-8, -158, wv); p.elR = wv * 22 * Math.sin(t * 15); p.head = -4 * wv; }
+    p.mouth = t > 1.62 && t < 2.4 ? 'open' : 'smile';
+    const pt = inout(clamp((t - 3.4) / 0.3)) * (1 - inout(clamp((t - 4.8) / 0.4))); if (pt > 0) { p.shL = lerp(8, 78, pt); p.elL = -12 * pt; p.head = -6 * pt; }
+    if (t > 5.9) p.eyes = 'happy'; waiter.set(p, t); pop(welcome, t, 1.62, 3.3); }
   { const g = t > 3.48 ? Math.sin(Math.PI * clamp((t - 3.48) / 1.1)) : 0; tGlow.style.opacity = g; tGlow.style.visibility = g > 0.01 ? 'visible' : 'hidden'; tGlow.style.transform = `scale(${0.96 + 0.04 * g})`; }
   pop(qrStand, t, 5.88);
   // ---- P
@@ -363,12 +433,37 @@ window.seek = function (t) {
     const h = t > 47.44 && t < 48.6; tb7.style.background = h ? AMB : 'transparent'; tb7.style.transform = `scale(${1 + 0.06 * Math.sin(Math.PI * clamp((t - 47.44) / 0.3))})`;
     kbs.forEach((b, k) => { const on = t > 48.94 + k * 0.3; b.style.background = on ? PUR : 'transparent'; b.style.boxShadow = on ? 'none' : `inset 0 0 0 3px ${INK}`; b.textContent = on ? '✓' : ''; });
     kst.style.background = t < 50.5 ? '#FDF1DC' : PUR; kst.style.color = t < 50.5 ? '#B4740F' : '#fff'; kst.textContent = t < 48.94 ? 'New order' : t < 50.5 ? 'Preparing…' : 'READY ✓'; kst.style.transform = `scale(${1 + 0.08 * Math.sin(Math.PI * clamp((t - 50.5) / 0.3))})`; }
-  pop(chef, t, 43.76); bell.style.transform = `rotate(${t > 50.5 && t < 51.3 ? 12 * Math.sin((t - 50.5) * 30) * (1 - (t - 50.5) / 0.8) : 0}deg)`;
+  { // chef tosses the pan, stirs; thumbs-up when the order is ready
+    const sc = 0.8, inK = clamp(sp(t, 43.76)), TOSS = [44.9, 46.2, 47.5, 48.9];
+    let toss = 0, tt0 = -9; TOSS.forEach(ts => { if (t >= ts && t < ts + 0.5) { toss = Math.sin(Math.PI * (t - ts) / 0.5); tt0 = ts; } });
+    const p = { x: 380, y: 1380 - 262 * sc + (1 - inK) * 300, shL: 62 + 26 * toss, elL: -40 - 20 * toss, shR: -40 + 12 * Math.sin(t * 7), elR: -50, head: 3 * Math.sin(t * 2), seed: 0.3 };
+    if (t > 50.5) { const u = inout(clamp((t - 50.5) / 0.3)); p.shR = lerp(p.shR, -165, u); p.elR = lerp(p.elR, -10, u); p.eyes = 'happy'; p.mouth = 'open'; }
+    chef.set(p, t); chef.svg.style.visibility = t < 43.76 ? 'hidden' : 'visible';
+    const [hx, hy] = chef.hand('L', p); pan.style.left = (hx - 120) + 'px'; pan.style.top = (hy - 22) + 'px'; pan.style.transform = `rotate(${-10 * toss}deg)`; pan.style.visibility = t < 43.76 ? 'hidden' : 'visible';
+    bits.forEach((b, k) => { const u = (t - tt0) / 0.5, on = u >= 0 && u <= 1; b.style.visibility = on ? 'visible' : 'hidden'; b.style.left = (hx - 90 + k * 18) + 'px'; b.style.top = (hy - 30 - Math.sin(Math.PI * clamp(u)) * (70 + k * 15)) + 'px'; }); }
+  bell.style.transform = `rotate(${t > 50.5 && t < 51.3 ? 12 * Math.sin((t - 50.5) * 30) * (1 - (t - 50.5) / 0.8) : 0}deg)`;
   // ---- S
   show(sA, t, 52.2);
-  { const p = inout(clamp((t - 51.6) / 1.6)); sWaiter.style.left = lerp(1100, 700, p) + 'px'; sWaiter.style.top = (800 - (p > 0 && p < 1 ? 10 * Math.abs(Math.sin(p * 12)) : 0)) + 'px';
-    trayItems.style.visibility = t < 53.38 ? 'visible' : 'hidden'; pop(plates, t, 53.38);
-    const r = clamp(sp(t, 52.42)) * (1 - clamp(sp(t, 53.4))); t7ring.style.opacity = r; t7ring.style.visibility = r > 0.01 ? 'visible' : 'hidden'; pop(t7tag, t, 52.6, 54.2); pop(yum, t, 53.9); }
+  { // waiter walks in carrying the tray high (51.6–52.95), reaches over the table, places plates one by one, nods "Enjoy!"
+    const sc = 1.45, w = clamp((t - 51.6) / 1.35), ph = (t - 51.6) * Math.PI * 3.4, walking = t > 51.6 && t < 52.95;
+    const wp = walkPose(ph, walking ? 1 : 0);
+    const p = { ...wp, x: lerp(1150, 700, inout(w)), y: STAND(sc) + (walking ? wp.bob : 0), shR: walking ? wp.shR : -8, seed: 2.2 };
+    const reach = inout(clamp((t - 52.95) / 0.35)), down = inout(clamp((t - 54.0) / 0.35));
+    p.shL = lerp(lerp(95, 80, reach), 8, down); p.elL = lerp(lerp(75, 10, reach), 0, down); p.head = lerp(0, -6, reach) + (t > 54.05 ? 8 * Math.sin(Math.PI * clamp((t - 54.05) / 0.5)) : 0);
+    p.mouth = t > 54.05 && t < 54.5 ? 'open' : 'smile'; sWaiter.set(p, t); pop(enjoy, t, 54.05);
+    const [hx, hy] = sWaiter.hand('L', p), tx = hx - 150, ty = hy - 22;
+    tray.style.left = tx + 'px'; tray.style.top = ty + 'px'; tray.style.opacity = 1 - down; tray.style.visibility = down > 0.98 ? 'hidden' : 'visible';
+    SERVE.forEach(s => { const u = inout(clamp((t - s.ts) / 0.32)), land = t - s.ts - 0.32;
+      const fx = tx + 150 + s.tray - s.w / 2, fy = ty - 92, gx = s.spot - s.w / 2, gy = 1060 - 92 + (s.glass ? -4 : 0);
+      const x = lerp(fx, gx, u), y = lerp(fy, gy, u) - Math.sin(Math.PI * u) * 60 + (land > 0 ? -6 * Math.sin(land * 30) * Math.exp(-land * 12) : 0);
+      s.el.style.left = x + 'px'; s.el.style.top = y + 'px'; s.el.style.visibility = (t >= 51.5 && (u > 0 || down < 0.98)) ? 'visible' : 'hidden';
+      if (s.stm) { s.stm.style.opacity = land > 0 ? 0.8 * clamp(land / 0.3) : 0; [...s.stm.children].forEach((pth, i) => pth.setAttribute('transform', `translate(0 ${-((t * 26 + i * 13) % 26)})`)); } });
+    const r = clamp(sp(t, 52.42)) * (1 - clamp(sp(t, 53.3))); t7ring.style.opacity = r; t7ring.style.visibility = r > 0.01 ? 'visible' : 'hidden'; pop(t7tag, t, 52.5, 53.3);
+    // customer: seated, watches the waiter, cheers when the food lands
+    const c = { ...seatedPose, x: 110, y: SEAT(sc), head: 6 * clamp((t - 52.2) / 0.4), seed: 0.4 };
+    const ch = inout(clamp((t - 53.95) / 0.25));
+    if (ch > 0) { c.shL = lerp(c.shL, 150, ch); c.elL = lerp(c.elL, 20 * Math.sin(t * 16), ch); c.shR = lerp(c.shR, -150, ch); c.elR = lerp(c.elR, -20 * Math.sin(t * 16), ch); c.eyes = 'happy'; c.mouth = 'open'; }
+    sCust.set(c, t); pop(yum, t, 53.95); }
   // ---- N
   show(nA, t, 55.0);
   nos.forEach(c => { pop(c, t, c.ts - 0.2); const p = inout(clamp((t - c.ts - 0.3) / 0.3)); c.sk.style.width = (p * Math.min(600, c.tx.scrollWidth + 20)) + 'px'; c.tx.style.color = p > 0.5 ? MUT : INK;
