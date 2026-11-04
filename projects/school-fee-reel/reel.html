@@ -231,7 +231,7 @@ K(10, 36.5, { c: WHT }); K(11, 36.5, { c: WHT });
 // ===================== SCENE F: end title (37.5–42) =====================
 K(10, 37.5, { w: 0, h: 0 }); K(11, 37.5, { w: 0, h: 0 });
 K(6, 37.5, { x: 540, y: 640, w: 600, h: 8, r: 0, e: 1 });
-const MK = 0.4, MCX = 540, MCY = 640;   // logo mark placement (source coords 1932 square, mark centre ~965,948)
+const MK = 0.2, MCX = 540, MCY = 640;   // logo mark placement (source coords 1932 square, mark centre ~965,948)
 const markBar = k => ({ x: MCX + ([849, 985, 1119.5][k] - 965.5) * MK, y: MCY + (913 - 948) * MK, w: 110 * MK, h: 160 * MK, sk: -9.93 });
 // line splits into the three logo bars (shapes 0,1,2)
 [0, 1, 2].forEach((i, k) => K(i, 37.9, { x: 540, y: 640, w: 0, h: 8, c: PUR, rad: 0, a: 0, rot: 0, rx: 0, z: 0, sk: 0 }));
@@ -240,7 +240,9 @@ K(6, 38.0, { w: 0, h: 0, e: 0 });
 const markSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
 markSvg.setAttribute('viewBox', '0 0 1932 1932'); markSvg.setAttribute('width', 1932 * MK); markSvg.setAttribute('height', 1932 * MK);
-markSvg.innerHTML = `<path d="${BRACE}" fill="${PUR}"/><path d="${BRACE}" fill="${PUR}" transform="rotate(180 967 948)"/>`;
+const MBARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+// full logo: purple rounded square (part of the logo) with the white mark
+markSvg.innerHTML = `<rect width="1932" height="1932" rx="300" fill="${PUR}"/><path d="${BRACE}" fill="#FFFDF8"/><path d="${BRACE}" fill="#FFFDF8" transform="rotate(180 967 948)"/>` + MBARS.map(d => `<path d="${d}" fill="#FFFDF8"/>`).join('');
 Object.assign(markSvg.style, { position: 'absolute', left: (MCX - 965.5 * MK) + 'px', top: (MCY - 948 * MK) + 'px', zIndex: 5 });
 world.appendChild(markSvg);
 const fA = mtext('c', 920, 128, 'HeliosLabs', { w: 800 });
