@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Gym Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  #world { position: absolute; inset: 0; }
+  .a { position: absolute; }
+  .scene { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; box-shadow: 0 -30px 60px rgba(28,23,38,0.35); }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+const rupee = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const avatar = (s, c, ch) => `<div style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${c};color:#fff;font-size:${s * 0.42}px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${ch}</div>`;
+const dumbbell = (w, c = INK) => `<svg width="${w}" height="${w * 0.45}" viewBox="0 0 200 90"><rect x="10" y="15" width="22" height="60" rx="6" fill="${c}"/><rect x="34" y="5" width="26" height="80" rx="7" fill="${c}"/><rect x="60" y="38" width="80" height="14" rx="5" fill="${c}"/><rect x="140" y="5" width="26" height="80" rx="7" fill="${c}"/><rect x="168" y="15" width="22" height="60" rx="6" fill="${c}"/></svg>`;
+const world = document.getElementById('world');
+
+// ===================== scenes; each one drops in from above and slams down =====================
+const SC = [0, 1.95, 6.99, 13.7, 19.0, 27.35, 34.15, 38.35, 45.95, 50.0, 57.05, 63.6, 69.0];
+const scenes = SC.map((s, k) => E(world, { zIndex: 1 + k }, '', 'scene'));
+const [S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12] = scenes;
+const DROP = 0.32;
+
+// ---- S0: 200 members
+const s0n = E(S0, { left: '0px', width: '1080px', top: '300px', textAlign: 'center', fontSize: '300px', fontWeight: 800, letterSpacing: '-0.05em', color: PUR, fontVariantNumeric: 'tabular-nums' }, '');
+const s0a = T(S0, 'c', 640, 80, 'members');
+const dots0 = E(S0, { left: '140px', top: '820px', width: '800px', height: '400px' });
+dots0.innerHTML = Array.from({ length: 200 }, (_, i) => `<div style="position:absolute;left:${(i % 20) * 40}px;top:${Math.floor(i / 20) * 40}px;width:28px;height:28px;border-radius:14px;background:${PUR}"></div>`).join('');
+const d0 = [...dots0.children];
+const plate0 = E(S0, { left: '420px', top: '1270px', width: '240px', height: '110px' }, dumbbell(240, INK));
+
+// ---- S1: who paid this month?
+const s1a = T(S1, 'c', 230, 60, 'Is mahine kitne members ne');
+const s1b = T(S1, 'c', 320, 80, 'fees <span class="amb">pay ki?</span>');
+const dots1 = E(S1, { left: '140px', top: '520px', width: '800px', height: '400px' });
+dots1.innerHTML = Array.from({ length: 200 }, (_, i) => `<div style="position:absolute;left:${(i % 20) * 40}px;top:${Math.floor(i / 20) * 40}px;width:28px;height:28px;border-radius:14px"></div>`).join('');
+const d1 = [...dots1.children];
+const q1 = E(S1, { left: '290px', top: '1000px', width: '500px', height: '200px', borderRadius: '100px', background: INK, color: AMB, fontSize: '96px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums' }, '?? / 200');
+
+// ---- S2: three kinds of members
+const s2a = T(S2, 'c', 230, 74, 'Har member alag…');
+const MEM = [['Rohit', 'R', 'Monthly', 'Fees pending', AMB, 7.42], ['Simran', 'S', 'Quarterly', 'Package expired', INK, 9.42], ['Arjun', 'A', 'Advance', 'Paid ₹6,000 advance', PUR, 12.16]];
+const mcs = MEM.map(([n, ch, plan, st, c, ts], i) => { const e = E(S2, { left: '90px', top: (380 + i * 330) + 'px', width: '900px', height: '290px' }, `
+  <div style="position:absolute;left:0;top:0;width:18px;height:290px;background:${c}"></div>
+  <div style="position:absolute;left:60px;top:60px">${avatar(130, c, ch)}</div>
+  <div style="position:absolute;left:230px;top:66px;font-size:44px;font-weight:800">${n}</div>
+  <div style="position:absolute;left:230px;top:130px;font-size:28px;font-weight:700;color:${MUT}">${plan} plan</div>
+  <div class="bd" style="position:absolute;left:230px;top:184px;padding:10px 22px;border-radius:20px;font-size:28px;font-weight:800;${i === 1 ? `color:${INK};box-shadow:inset 0 0 0 5px ${INK};transform:rotate(-6deg)` : i === 0 ? `background:${AMB};color:${INK}` : `background:${PUR};color:#fff`}">${st}</div>`, 'card'); e.ts = ts; e.bd = e.querySelector('.bd'); return e; });
+
+// ---- S3: register + Excel
+const s3a = T(S3, 'c', 230, 74, 'Saara record…');
+const reg3 = E(S3, { left: '90px', top: '420px', width: '440px', height: '600px', borderRadius: '24px', background: '#FFF8EA', boxShadow: `0 24px 60px rgba(28,23,38,0.12), inset 16px 0 0 #8C3B2E` },
+  `<div style="position:absolute;left:44px;top:30px;font-size:34px;font-weight:800">Register</div>` + [0, 1, 2, 3, 4, 5, 6].map(k => `<div style="position:absolute;left:44px;top:${120 + k * 64}px;width:350px;height:2px;background:#E7DCC7"></div><div style="position:absolute;left:50px;top:${88 + k * 64}px;font-size:24px;font-weight:600;font-style:italic;color:#4A4060">${['Rohit — ₹1500 ✓', 'Simran — 3m ??', 'Arjun — adv.', 'Neha — pending', 'Kabir — ✓?', 'Vikas — ₹1500', 'Pooja — '][k]}</div>`).join(''));
+const xl3 = E(S3, { left: '560px', top: '480px', width: '440px', height: '560px' }, `
+  <div style="position:absolute;left:0;top:0;width:440px;height:64px;background:#1F7A4D;color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;padding-left:20px;box-sizing:border-box">gym_fees_2026.xlsx</div>
+  ${Array.from({ length: 9 }, (_, r) => Array.from({ length: 3 }, (_, c) => `<div style="position:absolute;left:${16 + c * 136}px;top:${80 + r * 52}px;width:130px;height:46px;background:${r === 0 ? '#E6EFE9' : '#fff'};box-shadow:0 0 0 1px #D5DED8;font-size:18px;font-weight:600;display:flex;align-items:center;padding-left:8px;box-sizing:border-box;color:${c === 2 && (r === 4 || r === 7) ? '#C0392B' : INK}">${r === 0 ? ['Member', 'Plan', 'Paid'][c] : c === 0 ? ['Rohit', 'Simran', 'Arjun', 'Neha', 'Kabir', 'Vikas', 'Pooja', 'Ravi'][r - 1] : c === 1 ? ['M', 'Q', 'M', 'M', 'Y', 'M', 'Q', 'M'][r - 1] : ['✓', '', '✓', '#N/A', '✓', '', '?', ''][r - 1]}</div>`).join('')).join('')}`, 'card');
+const s3b = T(S3, 'c', 1120, 60, 'mein <span class="amb">maintain</span> ho raha tha', { w: 800 });
+
+// ---- S4: things slip
+const s4a = T(S4, 'c', 230, 74, 'Kabhi… kabhi… kabhi…');
+const P4 = [['Payment update', 'bhool gaye', 19.4], ['Renewal date', 'miss ho gayi', 21.7], ['Fees ke liye', 'baar-baar remind', 23.86]];
+const p4 = P4.map(([a, b, ts], i) => { const e = E(S4, { left: '90px', top: (370 + i * 330) + 'px', width: '900px', height: '290px' }, `
+  <div class="ic" style="position:absolute;left:50px;top:55px;width:180px;height:180px;border-radius:40px;background:${i === 1 ? AMB : '#F1E9DC'}"></div>
+  <div style="position:absolute;left:280px;top:80px;font-size:44px;font-weight:800">${a}</div>
+  <div style="position:absolute;left:280px;top:146px;font-size:40px;font-weight:800;color:${i === 1 ? '#B4740F' : PUR}">${b}</div>`, 'card'); e.ts = ts; e.ic = e.querySelector('.ic'); return e; });
+p4[0].ic.innerHTML = `<svg style="position:absolute;left:40px;top:40px" width="100" height="100" viewBox="0 0 100 100"><rect x="18" y="10" width="64" height="80" rx="8" fill="#fff" stroke="${INK}" stroke-width="6"/><rect x="30" y="30" width="40" height="6" rx="3" fill="${INK}"/><rect x="30" y="48" width="30" height="6" rx="3" fill="${INK}"/></svg><div class="qq" style="position:absolute;left:112px;top:-6px;font-size:70px;font-weight:800;color:${AMB}">?</div>`;
+p4[1].ic.innerHTML = `<svg style="position:absolute;left:30px;top:30px" width="120" height="120" viewBox="0 0 120 120"><rect x="10" y="20" width="100" height="90" rx="12" fill="#fff"/><rect x="10" y="20" width="100" height="26" rx="12" fill="${INK}"/><text x="60" y="94" text-anchor="middle" font-family="Inter" font-size="40" font-weight="800" fill="${INK}">15</text></svg><div class="xx" style="position:absolute;left:30px;top:30px;width:120px;height:120px"><svg width="120" height="120" viewBox="0 0 120 120"><path d="M20 20 L100 100 M100 20 L20 100" stroke="#C0392B" stroke-width="12" stroke-linecap="round"/></svg></div>`;
+p4[2].ic.innerHTML = [0, 1, 2, 3].map(k => `<div class="rb" style="position:absolute;left:${18 + (k % 2) * 16}px;top:${18 + k * 38}px;width:${120 - (k % 2) * 16}px;height:30px;border-radius:15px 15px 15px 4px;background:${k === 3 ? PUR : '#fff'};box-shadow:0 0 0 2px ${LIN}"></div>`).join('');
+const rbs = [...p4[2].ic.querySelectorAll('.rb')], xx4 = p4[1].ic.querySelector('.xx'), qq4 = p4[0].ic.querySelector('.qq');
+
+// ---- S5: biggest issue: month-end calculation
+const s5a = T(S5, 'c', 330, 92, 'Aur sabse <span class="amb">badi baat?</span>');
+const cal5 = E(S5, { left: '90px', top: '560px', width: '900px', height: '820px' }, `
+  <div style="position:absolute;left:40px;top:40px;width:220px;height:240px;border-radius:24px;background:${WHT};box-shadow:0 0 0 3px ${INK}"><div style="height:66px;border-radius:21px 21px 0 0;background:${INK};color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center">MONTH END</div><div style="text-align:center;font-size:110px;font-weight:800;line-height:170px">31</div></div>
+  <div style="position:absolute;left:310px;top:60px;font-size:34px;font-weight:800">Owner ka hisaab</div>
+  ${['Rohit  1,500', 'Neha  1,500', 'Arjun  6,000', 'Kabir  12,000', '+ … 196 aur'].map((s, k) => `<div class="cl" style="position:absolute;left:310px;top:${130 + k * 62}px;font-size:32px;font-weight:600;font-style:italic;color:#4A4060;font-variant-numeric:tabular-nums">${s}</div>`).join('')}
+  <div style="position:absolute;left:40px;top:470px;width:820px;height:4px;background:${INK}"></div>
+  <div style="position:absolute;left:40px;top:510px;font-size:40px;font-weight:800">Actual collection =</div>
+  <div class="qc" style="position:absolute;left:470px;top:490px;width:390px;height:110px;border-radius:24px;background:${AMB};font-size:80px;font-weight:800;display:flex;align-items:center;justify-content:center">₹ ???</div>
+  <div class="pn" style="position:absolute;left:600px;top:640px">${'<svg width="200" height="140" viewBox="0 0 200 140"><rect x="10" y="10" width="140" height="120" rx="18" fill="#1C1726"/><rect x="26" y="24" width="108" height="34" rx="6" fill="#C7D3B8"/>' + [0, 1, 2].map(c => [0, 1].map(r => `<rect x="${26 + c * 38}" y="${70 + r * 28}" width="30" height="20" rx="4" fill="#3A3150"/>`).join('')).join('') + '</svg>'}</div>`, 'card');
+const cls = [...cal5.querySelectorAll('.cl')], qc = cal5.querySelector('.qc'), calc5 = cal5.querySelector('.pn');
+
+// ---- S6: reveal
+const s6a = T(S6, 'c', 400, 70, 'Humne banaya ek custom');
+const s6b = T(S6, 'c', 510, 104, '<span class="pur">Gym Fee</span>');
+const s6c = T(S6, 'c', 630, 104, '<span class="pur">Management System</span>');
+const emb6 = E(S6, { left: '340px', top: '880px', width: '400px', height: '300px' }, `<div style="position:absolute;left:0;top:0;width:400px;height:300px;border-radius:60px;background:${PUR}"></div><div style="position:absolute;left:80px;top:100px">${dumbbell(240, WHT)}</div><div style="position:absolute;left:320px;top:-30px">${check(110, AMB)}</div>`);
+
+// ---- S7: member dashboard
+const s7a = T(S7, 'c', 230, 74, 'Ek hi <span class="pur">dashboard</span>');
+const dash7 = E(S7, { left: '70px', top: '370px', width: '940px', height: '1020px' }, `
+  <div style="position:absolute;left:0;top:0;width:940px;height:200px;background:${INK}"></div>
+  <div style="position:absolute;left:40px;top:40px">${avatar(120, AMB, 'R')}</div>
+  <div style="position:absolute;left:190px;top:50px;font-size:44px;font-weight:800;color:#fff">Rohit Mehra</div><div style="position:absolute;left:190px;top:110px;font-size:24px;font-weight:700;color:rgba(255,255,255,0.7)">Member #0147 · Since Jan 2026</div>
+  ${[['Payment record', '6 payments · last 01 Oct'], ['Membership plan', 'Monthly · ₹1,500'], ['Renewal date', '05 Nov 2026'], ['Pending fees', '₹1,500']].map(([a, b], k) => `<div class="dr" style="position:absolute;left:40px;top:${240 + k * 190}px;width:860px;height:160px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:30px;top:30px;font-size:24px;font-weight:800;color:${MUT};letter-spacing:0.04em">${a.toUpperCase()}</div>
+     <div style="position:absolute;left:30px;top:74px;font-size:44px;font-weight:800;color:${k === 3 ? '#B4740F' : INK}">${b}</div>
+     ${k === 0 ? `<div style="position:absolute;right:30px;top:50px;display:flex;gap:10px">${[1, 1, 1, 1, 1, 0].map(p => `<div style="width:46px;height:60px;border-radius:10px;background:${p ? PUR : LIN}"></div>`).join('')}</div>` : ''}
+     ${k === 1 ? `<div style="position:absolute;right:30px;top:50px;padding:12px 22px;border-radius:20px;background:${PUR};color:#fff;font-size:26px;font-weight:800">Active</div>` : ''}
+     ${k === 2 ? `<div style="position:absolute;right:30px;top:50px;padding:12px 22px;border-radius:20px;background:${AMB};font-size:26px;font-weight:800">In 3 days</div>` : ''}
+     ${k === 3 ? `<div style="position:absolute;right:30px;top:50px;padding:12px 22px;border-radius:20px;background:${INK};color:#fff;font-size:26px;font-weight:800">Due</div>` : ''}</div>`).join('')}`, 'card');
+const drs = [...dash7.querySelectorAll('.dr')];
+
+// ---- S8: automatic reminders
+const s8a = T(S8, 'c', 230, 70, 'Fees due? <span class="pur">Auto reminder</span>');
+const ph8 = E(S8, { left: '250px', top: '360px', width: '580px', height: '1060px', borderRadius: '70px', background: INK, padding: '22px', boxSizing: 'border-box' }, `
+  <div style="width:100%;height:100%;border-radius:52px;background:linear-gradient(180deg,#3A2A6E,#5A17E6);position:relative;overflow:hidden">
+    <div style="position:absolute;left:0;width:100%;top:70px;text-align:center;font-size:110px;font-weight:300;color:#fff;letter-spacing:-0.03em">7:30</div>
+    <div style="position:absolute;left:0;width:100%;top:210px;text-align:center;font-size:26px;font-weight:600;color:rgba(255,255,255,0.8)">Monday, 2 November</div>
+    ${[['Rohit, aapki monthly fees 5 Nov ko due hai. 💪', '₹1,500'], ['Simran, quarterly package renew karein', '₹4,000'], ['Kabir, fees reminder: 2 din baaki', '₹1,500']].map(([m, a], k) => `<div class="nt" style="position:absolute;left:24px;top:${330 + k * 190}px;width:488px;height:170px;border-radius:28px;background:rgba(255,253,248,0.95);box-sizing:border-box;padding:22px 24px">
+      <div style="display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;color:${MUT}"><div style="width:34px;height:34px;border-radius:9px;background:${PUR}"></div>GYM FEES · now</div>
+      <div style="margin-top:12px;font-size:24px;font-weight:700;line-height:1.3;color:${INK}">${m}</div></div>`).join('')}</div>`);
+const nts = [...ph8.querySelectorAll('.nt')];
+
+// ---- S9: real-time owner view
+const s9a = T(S9, 'c', 230, 74, 'Owner: <span class="pur">real-time</span>');
+const live = E(S9, { left: '410px', top: '340px', width: '260px', height: '70px', borderRadius: '35px', background: INK, color: '#fff', fontSize: '28px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px' }, `<div class="ld" style="width:20px;height:20px;border-radius:10px;background:#E5484D"></div>LIVE`);
+const ldot = live.querySelector('.ld');
+const k1 = E(S9, { left: '90px', top: '450px', width: '430px', height: '280px' }, `<div style="position:absolute;left:30px;top:30px;font-size:26px;font-weight:800;color:${MUT}">FEES COLLECTED</div><div class="v" style="position:absolute;left:30px;top:90px;font-size:68px;font-weight:800;color:${PUR};font-variant-numeric:tabular-nums"></div><div style="position:absolute;left:30px;top:190px;font-size:24px;font-weight:700">172 members</div>`, 'card');
+const k2 = E(S9, { left: '560px', top: '450px', width: '430px', height: '280px' }, `<div style="position:absolute;left:30px;top:30px;font-size:26px;font-weight:800;color:${MUT}">PENDING</div><div class="v" style="position:absolute;left:30px;top:90px;font-size:68px;font-weight:800;color:#B4740F;font-variant-numeric:tabular-nums"></div><div style="position:absolute;left:30px;top:190px;font-size:24px;font-weight:700">28 members</div>`, 'card');
+const k3 = E(S9, { left: '90px', top: '770px', width: '900px', height: '560px' }, `<div style="position:absolute;left:36px;top:30px;font-size:26px;font-weight:800;color:${MUT}">MONTHLY REVENUE</div><div class="v" style="position:absolute;left:36px;top:76px;font-size:72px;font-weight:800;font-variant-numeric:tabular-nums"></div>
+  ${[0.45, 0.55, 0.5, 0.68, 0.74, 0.9].map((h, k) => `<div class="b9" data-h="${h}" style="position:absolute;left:${50 + k * 140}px;bottom:70px;width:96px;border-radius:14px 14px 4px 4px;background:${k === 5 ? PUR : '#D9CDB9'}"></div><div style="position:absolute;left:${50 + k * 140}px;bottom:24px;width:96px;text-align:center;font-size:22px;font-weight:700;color:${MUT}">${['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'][k]}</div>`).join('')}`, 'card');
+const k1v = k1.querySelector('.v'), k2v = k2.querySelector('.v'), k3v = k3.querySelector('.v'), b9s = [...k3.querySelectorAll('.b9')];
+
+// ---- S10: members aren't enough; records matter
+const s10a = T(S10, 'c', 300, 70, 'Sirf members hona');
+const s10b = T(S10, 'c', 395, 70, '<span class="amb">kaafi nahi…</span>');
+const s10c = T(S10, 'c', 560, 74, 'Har payment ka');
+const s10d = T(S10, 'c', 660, 92, '<span class="pur">proper record</span>');
+const rcpts = [0, 1, 2, 3, 4].map(k => E(S10, { left: (300 + (k - 2) * 10) + 'px', top: '820px', width: '480px', height: '520px', zIndex: 5 + k }, `
+  <div style="position:absolute;left:36px;top:34px;font-size:26px;font-weight:800;color:${MUT}">RECEIPT #${1040 + k}</div>
+  <div style="position:absolute;left:36px;top:84px;font-size:36px;font-weight:800">${['Rohit', 'Simran', 'Arjun', 'Neha', 'Kabir'][k]}</div>
+  ${[0, 1, 2].map(r => `<div style="position:absolute;left:36px;top:${160 + r * 50}px;width:${380 - r * 60}px;height:16px;border-radius:8px;background:#EDE4D4"></div>`).join('')}
+  <div style="position:absolute;left:36px;top:330px;font-size:56px;font-weight:800;font-variant-numeric:tabular-nums">${['₹1,500', '₹4,000', '₹6,000', '₹1,500', '₹12,000'][k]}</div>
+  <div style="position:absolute;left:36px;top:420px;display:flex;align-items:center;gap:12px;font-size:28px;font-weight:800;color:${PUR}">${check(44)}Paid & recorded</div>`, 'card'));
+
+// ---- S11: CTA
+const s11a = T(S11, 'c', 260, 62, 'Aap bhi apne gym ki fees');
+const s11b = T(S11, 'c', 350, 76, '<span class="amb">manually</span> manage kar rahe hain?');
+s11b.style.fontSize = '64px';
+const cbox = E(S11, { left: '90px', top: '600px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:42px;font-size:72px;font-weight:800;letter-spacing:0.08em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const s11c = T(S11, 'c', 840, 60, "Let's build your <span class=\"pur\">system</span>", { w: 800 });
+const emb11 = E(S11, { left: '420px', top: '980px', width: '240px', height: '110px' }, dumbbell(240, PUR));
+
+// ---- S12: end
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; S12.appendChild(endLogo);
+const e1 = T(S12, 'c', 740, 120, 'HeliosLabs');
+const e2 = T(S12, 'c', 900, 50, 'Comment <span class="pur">"GYM"</span>', { w: 700 });
+
+// ===================== subtitles (voiceover time) =====================
+const SUBS = [
+  [0.0, 1.85, 'Gym mein 200 members hain…'],
+  [1.85, 6.8, 'Lekin owner ko ye tak nahi pata ki kitne members ne is mahine fees pay ki hai!'],
+  [6.8, 11.5, 'Kisi ki monthly fees pending hai, kisi ka quarterly package expire ho chuka hai,'],
+  [11.5, 13.6, 'aur kisi ne advance payment di thi.'],
+  [13.6, 18.9, 'Problem ye thi ki saara record ek register aur Excel sheet mein maintain ho raha tha.'],
+  [18.9, 22.9, 'Kabhi payment update karna bhool jaate, kabhi renewal date miss ho jaati,'],
+  [22.9, 27.2, 'aur kabhi members ko fees ke liye baar-baar remind karna padta.'],
+  [27.2, 28.2, 'Aur sabse badi baat?'],
+  [28.2, 34.0, 'Month end par owner ko khud calculate karna padta tha ki actual collection kitna hua.'],
+  [34.0, 38.3, 'Humne unke liye ek custom Gym Fee Management System develop kiya.'],
+  [38.3, 45.85, 'Ab har member ka payment record, membership plan, renewal date aur pending fees ek hi dashboard par available hai.'],
+  [45.85, 49.95, 'Fees due hone par system automatically reminders bhej sakta hai.'],
+  [49.95, 53.9, 'Aur owner real-time mein dekh sakte hain ki kitni fees collect hui,'],
+  [53.9, 57.0, 'kitni pending hai aur monthly revenue kitna hai.'],
+  [57.0, 60.65, 'Business chalane ke liye sirf members hona kaafi nahi…'],
+  [60.65, 63.55, 'Har payment ka proper record hona bhi zaroori hai.'],
+  [63.55, 66.8, 'Aap bhi apne gym ki fees manually manage kar rahe hain?'],
+  [66.8, 71.0, "Comment GYM. Let's build your system."],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+const hsh = (k, a) => Math.sin(k * 12.9898 + a * 78.233) * 43758.5453 % 1;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- drop transitions: gravity fall (ease-in), slam at SC[k], damped bounce; camera shake right after impact
+  let shx = 0, shy = 0;
+  scenes.forEach((S, k) => {
+    const s = SC[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    let y = 0;
+    if (k > 0) { const p = clamp((t - (s - DROP)) / DROP); y = -1920 * (1 - p * p); const dt = t - s; if (dt > 0) y = -40 * Math.sin(dt * 22) * Math.exp(-dt * 9);
+      if (dt > 0 && dt < 0.45) { const a = 26 * Math.exp(-dt * 10); shx += a * Math.sin(dt * 95 + k); shy += a * Math.cos(dt * 83 + k * 2); } }
+    const pushed = clamp((t - next) / 0.1);                           // the scene underneath compresses on impact
+    S.style.transform = `translateY(${y}px) scale(${1 - 0.04 * pushed})`; S.style.filter = pushed > 0 ? `brightness(${1 - 0.25 * pushed})` : 'none';
+    S.style.visibility = (t >= s - DROP && t < next + 0.5) ? 'visible' : 'hidden';
+  });
+  world.style.transform = `translate(${shx}px, ${shy}px) scale(${1 + Math.hypot(shx, shy) / 400})`;
+
+  // ---- S0
+  { const p = expo(t, 0.15, 0.9); s0n.textContent = Math.round(200 * p); s0n.style.transform = `scale(${0.6 + 0.4 * clamp(sp(t, 0.1))})`; }
+  show(s0a, t, 0.94);
+  d0.forEach((d, i) => { d.style.transform = `scale(${clamp(sp(t, 0.2 + i * 0.006))})`; });
+  pop(plate0, t, 1.2);
+  // ---- S1
+  show(s1a, t, 2.2); show(s1b, t, 5.6);
+  d1.forEach((d, i) => { const r = hsh(i, 1), on = t > 3.96 + r * 1.2; d.style.background = on ? '#CDBFA8' : PUR; d.style.transform = `scale(${on ? 0.8 : 1})`; });
+  pop(q1, t, 4.44, 1e9, `rotate(${3 * Math.sin(t * 5)}deg)`);
+  // ---- S2
+  show(s2a, t, 7.1);
+  mcs.forEach((c, i) => { const p = clamp(sp(t, c.ts - 0.2)); c.style.transform = `translateX(${(1 - p) * (i % 2 ? 1100 : -1100)}px)`; c.style.visibility = t < c.ts - 0.2 ? 'hidden' : 'visible'; });
+  pop(mcs[0].bd, t, 8.06); { const p = clamp((t - 10.2) / 0.16); mcs[1].bd.style.visibility = t < 10.2 ? 'hidden' : 'visible'; mcs[1].bd.style.transform = `rotate(-6deg) scale(${lerp(2.2, 1, inout(p))})`; mcs[1].bd.style.opacity = clamp(p * 2); }
+  pop(mcs[2].bd, t, 12.58);
+  // ---- S3
+  show(s3a, t, 14.0);
+  { const p = clamp(sp(t, 15.9)); reg3.style.transform = `translateY(${(1 - p) * 1400}px) rotate(-3deg)`; reg3.style.visibility = t < 15.9 ? 'hidden' : 'visible';
+    const q = clamp(sp(t, 16.9)); xl3.style.transform = `translateY(${(1 - q) * 1400}px) rotate(3deg)`; xl3.style.visibility = t < 16.9 ? 'hidden' : 'visible'; }
+  show(s3b, t, 17.88);
+  // ---- S4
+  show(s4a, t, 19.1);
+  p4.forEach((c, i) => pop(c, t, c.ts - 0.15));
+  pop(qq4, t, 20.4, 1e9, `rotate(${10 * Math.sin(t * 4)}deg)`);
+  { const p = clamp((t - 22.32) / 0.25); xx4.style.clipPath = `inset(0 ${(1 - p) * 100}% 0 0)`; p4[1].ic.style.transform = `translateX(${t > 22.32 && t < 22.8 ? 8 * Math.sin((t - 22.32) * 60) : 0}px)`; }
+  rbs.forEach((b, k) => pop(b, t, [24.0, 25.26, 25.52, 26.06][k]));
+  // ---- S5
+  show(s5a, t, 27.45);
+  { const p = clamp(sp(t, 28.24)); cal5.style.transform = `translateY(${(1 - p) * 1400}px)`; cal5.style.visibility = t < 28.24 ? 'hidden' : 'visible'; s5a.style.top = '380px'; }
+  cls.forEach((c, k) => { const p = clamp((t - (30.7 + k * 0.28)) / 0.3); c.style.clipPath = `inset(0 ${(1 - p) * 100}% 0 0)`; });
+  pop(qc, t, 32.7, 1e9, `rotate(${t > 32.7 ? 3 * Math.sin((t - 32.7) * 12) * Math.exp(-(t - 32.7) * 2) : 0}deg)`);
+  calc5.style.transform = `rotate(${t > 30.7 ? 4 * Math.sin(t * 8) : 0}deg)`;
+  // ---- S6
+  show(s6a, t, 34.5); show(s6b, t, 35.88); show(s6c, t, 36.5);
+  { const p = clamp(sp(t, 36.9)); emb6.style.transform = `translateY(${(1 - p) * -600}px) scale(${0.5 + 0.5 * p})`; emb6.style.visibility = t < 36.9 ? 'hidden' : 'visible'; }
+  // ---- S7
+  show(s7a, t, 38.7);
+  { const p = clamp(sp(t, 38.5)); dash7.style.transform = `translateY(${(1 - p) * 1300}px)`; }
+  drs.forEach((d, k) => { const p = clamp(sp(t, [39.46, 40.66, 41.9, 43.02][k])); d.style.transform = `translateX(${(1 - p) * 950}px)`; d.style.boxShadow = `0 0 0 ${t > 44.46 ? 3 : 2}px ${t > 44.46 ? PUR : LIN}`; });
+  // ---- S8
+  show(s8a, t, 46.2);
+  { const p = clamp(sp(t, 46.3)); ph8.style.transform = `translateY(${(1 - p) * 1300}px)`; }
+  nts.forEach((n, k) => { const p = clamp(sp(t, 48.38 + k * 0.4)); n.style.transform = `translateY(${(1 - p) * -120}px) scale(${0.9 + 0.1 * p})`; n.style.opacity = p; });
+  // ---- S9
+  show(s9a, t, 50.38);
+  pop(live, t, 50.76); ldot.style.opacity = 0.5 + 0.5 * Math.sin(t * 8);
+  pop(k1, t, 51.0); k1v.textContent = t < 52.9 ? '' : rupee(258000 * expo(t, 52.9, 1.0));
+  pop(k2, t, 51.15); k2v.textContent = t < 54.54 ? '' : rupee(42000 * expo(t, 54.54, 0.8));
+  pop(k3, t, 51.3); k3v.textContent = t < 55.9 ? '' : rupee(300000 * expo(t, 55.9, 1.0)); b9s.forEach((b, k) => b.style.height = (330 * +b.dataset.h * clamp(sp(t, 55.5 + k * 0.08))) + 'px');
+  // ---- S10
+  show(s10a, t, 57.3); show(s10b, t, 59.1); show(s10c, t, 60.78); show(s10d, t, 61.62);
+  rcpts.forEach((r, k) => { const ts = 61.1 + k * 0.32, p = clamp((t - ts) / 0.22); const land = t - ts - 0.22;
+    r.style.transform = `translateY(${-1500 * (1 - p * p) + (land > 0 ? -12 * Math.sin(land * 25) * Math.exp(-land * 10) : 0)}px) rotate(${(k - 2) * 3}deg)`; r.style.visibility = t < ts ? 'hidden' : 'visible'; });
+  // ---- S11
+  show(s11a, t, 63.88); show(s11b, t, 65.22);
+  pop(cbox, t, 66.4);
+  { const s = 'GYM'; cm.textContent = s.slice(0, Math.floor(clamp((t - 66.97) / 0.3) * s.length)); sd.style.transform = `scale(${press(t, 67.4)})`; }
+  show(s11c, t, 67.64); pop(emb11, t, 68.2, 1e9, `translateY(${-30 * Math.abs(Math.sin((t - 68.2) * 4))}px)`);
+  // ---- S12
+  animLogo(endLogo, t, 69.15); show(e1, t, 69.4); show(e2, t, 69.7);
+
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 71.0;
+window.seek(0);
+</script>
+</body>
+</html>
