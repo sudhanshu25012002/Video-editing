@@ -5,3 +5,4 @@ remotion/node_modules/
 projects/*/build/
 projects/*/build-v/
 projects/*/build-v-vo/
+projects/*/build-v-orig/

@@ -334,6 +334,10 @@ window.seek = function (t) {
   if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
 };
 window.DURATION = 59.3;
+// Original-length voiceover mode (#v-orig): [original voice time, animation time] (the animation was timed to a tightened, 1.21x copy)
+const ORIG_MAP = [[0.0, 0.0], [3.829, 3.164], [3.926, 3.164], [11.505, 9.428], [11.639, 9.428], [19.498, 15.923], [19.74, 15.923], [21.399, 17.294], [21.452, 17.294], [25.239, 20.424], [25.41, 20.424], [28.48, 22.961], [28.548, 22.961], [35.758, 28.92], [35.962, 28.92], [52.544, 42.624], [52.62, 42.624], [53.853, 43.643], [53.923, 43.643], [56.393, 45.684], [56.678, 45.684], [58.931, 47.546], [59.029, 47.546], [65.65, 53.018], [65.917, 53.018], [67.896, 54.654], [68.156, 54.654], [71.76, 57.632], [73.51, 59.382]];
+function toAnim(a) { for (let i = 1; i < ORIG_MAP.length; i++) { const [o0, c0] = ORIG_MAP[i - 1], [o1, c1] = ORIG_MAP[i]; if (a <= o1) return o1 > o0 ? c0 + (c1 - c0) * (a - o0) / (o1 - o0) : c1; } return ORIG_MAP[ORIG_MAP.length - 1][1]; }
+if (location.hash.includes('orig')) { const base = window.seek; window.seek = a => base(toAnim(a)); window.DURATION = 73.51; }
 window.seek(0);
 </script>
 </body>

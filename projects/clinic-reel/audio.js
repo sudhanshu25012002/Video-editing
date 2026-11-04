@@ -16,11 +16,17 @@ const SFX = [
   ['swoosh', 48.78], ['pop', 50.26], ['pop', 51.86],                 // websites struck, problems -> technology
   ...Array.from({ length: 6 }, (_, k) => ['type', 54.95 + k * 0.085]), ['send', 55.55], ['chime', 56.8],   // comment SYSTEM, consultation
 ];
+// 'orig' mode: re-time everything from animation time to the original-length voiceover
+const ORIG = process.argv[2] === 'orig';
+const OM = ORIG ? JSON.parse(fs.readFileSync(path.join(__dirname, 'vo', 'orig_map.json'), 'utf8')) : null;
+const toOrig = c => { for (let i = 1; i < OM.length; i++) { const [o0, c0] = OM[i - 1], [o1, c1] = OM[i]; if (c <= c1 && c1 > c0) return o0 + (o1 - o0) * (c - c0) / (c1 - c0); } return OM[OM.length - 1][0]; };
+if (ORIG) { for (const k in P) P[k] = toOrig(P[k]); SFX.forEach(x => x[1] = toOrig(x[1])); }
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage();
   await p.goto('file://' + path.join(__dirname, 'audio.html'));
-  const b64 = await p.evaluate(([P, S]) => window.renderScore(59.3, P, S), [P, SFX]);
-  fs.mkdirSync(path.join(__dirname, 'build-v'), { recursive: true });
-  fs.writeFileSync(path.join(__dirname, 'build-v', 'music.wav'), Buffer.from(b64, 'base64'));
+  const D = ORIG ? OM[OM.length - 1][0] : 59.3;
+  const b64 = await p.evaluate(([P, S, D]) => window.renderScore(D, P, S), [P, SFX, D]);
+  const out = path.join(__dirname, ORIG ? 'build-v-orig' : 'build-v'); fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, 'music.wav'), Buffer.from(b64, 'base64'));
   await b.close(); console.log('music.wav written');
 })();
