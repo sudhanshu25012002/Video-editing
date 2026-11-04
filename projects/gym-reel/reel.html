@@ -135,7 +135,7 @@ const dash7 = E(S7, { left: '70px', top: '370px', width: '940px', height: '1020p
   <div style="position:absolute;left:0;top:0;width:940px;height:200px;background:${INK}"></div>
   <div style="position:absolute;left:40px;top:40px">${avatar(120, AMB, 'R')}</div>
   <div style="position:absolute;left:190px;top:50px;font-size:44px;font-weight:800;color:#fff">Rohit Mehra</div><div style="position:absolute;left:190px;top:110px;font-size:24px;font-weight:700;color:rgba(255,255,255,0.7)">Member #0147 · Since Jan 2026</div>
-  ${[['Payment record', '6 payments · last 01 Oct'], ['Membership plan', 'Monthly · ₹1,500'], ['Renewal date', '05 Nov 2026'], ['Pending fees', '₹1,500']].map(([a, b], k) => `<div class="dr" style="position:absolute;left:40px;top:${240 + k * 190}px;width:860px;height:160px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+  ${[['Payment record', '6 payments'], ['Membership plan', 'Monthly · ₹1,500'], ['Renewal date', '05 Nov 2026'], ['Pending fees', '₹1,500']].map(([a, b], k) => `<div class="dr" style="position:absolute;left:40px;top:${240 + k * 190}px;width:860px;height:160px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
      <div style="position:absolute;left:30px;top:30px;font-size:24px;font-weight:800;color:${MUT};letter-spacing:0.04em">${a.toUpperCase()}</div>
      <div style="position:absolute;left:30px;top:74px;font-size:44px;font-weight:800;color:${k === 3 ? '#B4740F' : INK}">${b}</div>
      ${k === 0 ? `<div style="position:absolute;right:30px;top:50px;display:flex;gap:10px">${[1, 1, 1, 1, 1, 0].map(p => `<div style="width:46px;height:60px;border-radius:10px;background:${p ? PUR : LIN}"></div>`).join('')}</div>` : ''}

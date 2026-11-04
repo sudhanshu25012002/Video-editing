@@ -22,7 +22,7 @@ fs.writeFileSync(path.join(tmp, 'page.html'), html);
   await Promise.all(pages.map(async p => {
     while (next < times.length) {
       const i = next++;
-      if (mode === 'full' && times[i] < FROM) continue;
+      if (mode === 'full' && (times[i] < FROM || times[i] > +(process.env.TO || 1e9))) continue;
       await p.evaluate(t => window.seek(t), times[i]);
       await p.screenshot({ path: path.join(outDir, String(i).padStart(5, '0') + '.jpg'), type: 'jpeg', quality: 92 });
       if (++done % 500 === 0) console.log(done, '/', times.length);
