@@ -1,0 +1,394 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Restaurant Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #E6DAC6; background-image: radial-gradient(#D5C7AF 3px, transparent 3px); background-size: 48px 48px; }
+  #world { position: absolute; left: 0; top: 0; width: 3480px; height: 3960px; transform-origin: 0 0; }
+  .a { position: absolute; }
+  .room { position: absolute; width: 1080px; height: 1920px; overflow: hidden; background: #F3ECDF; border-radius: 60px; box-shadow: 0 30px 80px rgba(28,23,38,0.12); }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .chip { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); padding: 12px 26px; border-radius: 30px; background: #1C1726; color: #E8A33D; font-size: 26px; font-weight: 800; letter-spacing: 0.08em; white-space: nowrap; }
+  .touch { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 32px; background: rgba(28,23,38,0.35); box-shadow: 0 0 0 5px rgba(255,253,248,0.9), 0 8px 20px rgba(28,23,38,0.25); z-index: 50; pointer-events: none; }
+  .ripple { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 32px; box-shadow: 0 0 0 4px #5A17E6; z-index: 49; }
+  .sheet { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; background: #F3ECDF; border-radius: 60px 60px 0 0; box-shadow: 0 -30px 80px rgba(28,23,38,0.25); overflow: hidden; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+  .mtitle { position: absolute; left: 0; width: 1080px; top: 210px; text-align: center; z-index: 450; }
+  .mtitle span { display: inline-block; padding: 18px 34px; border-radius: 26px; background: #FFFDF8; font-size: 56px; font-weight: 800; letter-spacing: -0.03em; box-shadow: 0 16px 40px rgba(28,23,38,0.15); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world"></div>
+  <div class="mtitle" id="mt1"><span>Ab <span class="amb">interesting part</span>…</span></div>
+  <div class="mtitle" id="mt2"><span>Smart restaurant <span class="pur">ordering system</span></span></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+const world = document.getElementById('world');
+const ROOMS = { T: [0, 0], P: [1200, 0], R: [2400, 0], K: [2400, 2040], S: [1200, 2040], N: [0, 2040] };
+const LABEL = { T: '1 · TABLE', P: '2 · PHONE', R: '3 · RECEPTION', K: '4 · KITCHEN', S: '5 · SERVE', N: '✓ NO CONFUSION' };
+const MAPLABEL = { T: 'Table', P: 'QR menu', R: 'Reception', K: 'Kitchen', S: 'Serve', N: 'No confusion' };
+// flow path drawn under the rooms (shows in the gaps and on the map view)
+const pathSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); pathSvg.setAttribute('width', 3480); pathSvg.setAttribute('height', 3960); pathSvg.style.position = 'absolute';
+const C = k => [ROOMS[k][0] + 540, ROOMS[k][1] + 960];
+const FLOW = ['T', 'P', 'R', 'K', 'S'];
+pathSvg.innerHTML = FLOW.slice(1).map((k, i) => { const [x0, y0] = C(FLOW[i]), [x1, y1] = C(k); return `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${PUR}" stroke-width="30" stroke-linecap="round" stroke-dasharray="2 60"/>`; }).join('');
+world.appendChild(pathSvg);
+const room = {}; Object.keys(ROOMS).forEach(k => { const r = E(world, { left: ROOMS[k][0] + 'px', top: ROOMS[k][1] + 'px' }, `<div class="chip">${LABEL[k]}</div>`, 'room'); room[k] = r; });
+const mapLabels = Object.keys(ROOMS).map(k => E(world, { left: ROOMS[k][0] + 'px', top: (ROOMS[k][1] + 760) + 'px', width: '1080px', textAlign: 'center', zIndex: 20 },
+  `<span style="display:inline-block;padding:40px 80px;border-radius:120px;background:${k === 'N' ? PUR : INK};color:#fff;font-size:150px;font-weight:800;letter-spacing:-0.03em;white-space:nowrap">${MAPLABEL[k]}</span>`));
+
+// touch indicator: moves between keys, ripple on each tap. keys: [time, x, y]
+function toucher(parent, keys, from, to) {
+  const dot = E(parent, {}, '', 'touch'), rip = E(parent, {}, '', 'ripple');
+  return t => {
+    let x = keys[0][1] + 140, y = keys[0][2] + 260, last = null;
+    for (const [ts, kx, ky] of keys) { const p = expo(t, ts - 0.4, 0.35); x = lerp(x, kx, p); y = lerp(y, ky, p); if (t >= ts) last = [ts, kx, ky]; }
+    const vis = t >= from && t < to; dot.style.visibility = vis ? 'visible' : 'hidden'; dot.style.left = x + 'px'; dot.style.top = y + 'px';
+    const pr = last ? (t - last[0]) : 9; dot.style.transform = `scale(${pr < 0.15 ? 0.8 : 1})`;
+    rip.style.visibility = vis && pr < 0.45 ? 'visible' : 'hidden'; if (last) { rip.style.left = last[1] + 'px'; rip.style.top = last[2] + 'px'; }
+    rip.style.transform = `scale(${1 + pr * 4})`; rip.style.opacity = 1 - pr / 0.45;
+  };
+}
+function qrHTML(s) { let h = ''; const n = 21, c = s / n; let sd = 7;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const fin = (a, b) => x >= a && x < a + 7 && y >= b && y < b + 7; let on;
+    if (fin(0, 0) || fin(14, 0) || fin(0, 14)) { const lx = x % 7 === x ? x : x - 14, ly = y < 7 ? y : y - 14, X = x < 7 ? x : x - 14; const ax = Math.abs(X - 3), ay = Math.abs((y < 7 ? y : y - 14) - 3); on = Math.max(ax, ay) !== 2; }
+    else { sd = (sd * 16807) % 2147483647; on = sd % 3 === 0; }
+    if (on) h += `<rect x="${x * c}" y="${y * c}" width="${c + 0.4}" height="${c + 0.4}"/>`; }
+  return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" fill="${INK}">${h}</svg>`; }
+const lamp = x => `<div style="position:absolute;left:${x}px;top:0;width:4px;height:150px;background:${INK}"></div><div style="position:absolute;left:${x - 50}px;top:150px;width:104px;height:56px;border-radius:52px 52px 6px 6px;background:${AMB}"></div><div style="position:absolute;left:${x - 70}px;top:206px;width:144px;height:120px;background:radial-gradient(ellipse at top, rgba(232,163,61,0.35), transparent 70%)"></div>`;
+const tableHTML = (num) => `<div style="position:absolute;left:220px;top:1060px;width:640px;height:34px;border-radius:12px;background:#8C5A3C"></div>
+  <div style="position:absolute;left:240px;top:1094px;width:600px;height:70px;background:#FFFDF8;border-radius:0 0 30px 30px;box-shadow:0 0 0 2px ${LIN}"></div>
+  <div style="position:absolute;left:300px;top:1164px;width:24px;height:220px;background:#6E4630"></div><div style="position:absolute;left:756px;top:1164px;width:24px;height:220px;background:#6E4630"></div>
+  <div style="position:absolute;left:470px;top:980px;width:90px;height:80px;border-radius:10px;background:${INK};color:${AMB};font-size:40px;font-weight:800;display:flex;align-items:center;justify-content:center">${num}</div>`;
+const chair = (x, flip) => `<div style="position:absolute;left:${x}px;top:960px;width:26px;height:420px;border-radius:13px;background:#6E4630;${flip ? '' : ''}"></div><div style="position:absolute;left:${flip ? x - 130 : x}px;top:1180px;width:156px;height:28px;border-radius:10px;background:#8C5A3C"></div><div style="position:absolute;left:${flip ? x - 110 : x + 110}px;top:1208px;width:20px;height:176px;background:#6E4630"></div>`;
+const restaurantBG = `<div style="position:absolute;left:0;top:0;width:1080px;height:1000px;background:#EFE3CF"></div>
+  <div style="position:absolute;left:0;top:1000px;width:1080px;height:920px;background:#E3D3BA"></div>
+  <div style="position:absolute;left:0;top:990px;width:1080px;height:14px;background:#D2BE9E"></div>${lamp(260)}${lamp(540)}${lamp(820)}
+  <div style="position:absolute;left:370px;top:420px;width:340px;height:120px;border-radius:24px;background:${INK};color:${AMB};font-size:56px;font-weight:800;display:flex;align-items:center;justify-content:center;letter-spacing:0.06em">BISTRO</div>`;
+
+// ===================== ROOM T: arriving at the restaurant =====================
+const T_ = room.T; T_.insertAdjacentHTML('beforeend', restaurantBG + `<div class="tbl">${tableHTML(7)}</div>` + chair(180, false) + chair(874, true));
+const tGlow = E(T_, { left: '200px', top: '940px', width: '680px', height: '260px', borderRadius: '40px', boxShadow: `0 0 0 8px ${PUR}`, zIndex: 3 });
+const cust = E(T_, { left: '0px', top: '820px', zIndex: 4 }, person(150, PUR));
+const waiter = E(T_, { left: '860px', top: '800px', zIndex: 4 }, person(160, INK) + `<div style="position:absolute;left:30px;top:120px;width:100px;height:26px;border-radius:6px;background:#fff"></div>`);
+const welcome = E(T_, { left: '620px', top: '660px', padding: '18px 26px', borderRadius: '26px 26px 6px 26px', background: WHT, fontSize: '34px', fontWeight: 800, boxShadow: '0 10px 30px rgba(28,23,38,0.15)', zIndex: 5, transformOrigin: '100% 100%', whiteSpace: 'nowrap' }, 'Welcome! 🙏');
+const qrStand = E(T_, { left: '600px', top: '880px', width: '130px', height: '180px', borderRadius: '14px', background: WHT, boxShadow: `0 0 0 3px ${INK}`, zIndex: 3, transformOrigin: '50% 100%' }, `<div style="position:absolute;left:15px;top:14px">${qrHTML(100)}</div><div style="position:absolute;left:0;width:130px;top:126px;text-align:center;font-size:18px;font-weight:800">SCAN</div>`);
+const t1 = T(T_, 'c', 230, 78, 'Imagine kijiye…');
+const t2 = T(T_, 'c', 230, 78, 'Ek <span class="pur">table</span> milti hai');
+const t3 = T(T_, 'c', 230, 78, 'Table par <span class="pur">QR code</span>');
+
+// ===================== ROOM P: the phone =====================
+const P_ = room.P;
+const pA = T(P_, 'c', 196, 64, 'QR code <span class="pur">scan</span>');
+const pB = T(P_, 'c', 196, 64, 'Complete <span class="pur">digital menu</span>');
+const pC = T(P_, 'c', 196, 64, 'Browse · select · <span class="amb">quantity</span>');
+const pD = T(P_, 'c', 196, 64, 'Order <span class="pur">place!</span>');
+const phone = E(P_, { left: '250px', top: '290px', width: '580px', height: '1170px', borderRadius: '72px', background: INK, boxShadow: '0 40px 90px rgba(28,23,38,0.3)' });
+const scr = E(phone, { left: '22px', top: '22px', width: '536px', height: '1126px', borderRadius: '52px', background: '#141019', overflow: 'hidden' });
+// scan view
+const vf = E(scr, { left: '98px', top: '310px', width: '340px', height: '340px' }, `<div style="position:absolute;left:40px;top:40px;width:260px;height:260px;background:#fff;border-radius:16px"><div style="position:absolute;left:20px;top:20px">${qrHTML(220)}</div></div>` +
+  [[0, 0, '0 0'], [1, 0, '100% 0'], [0, 1, '0 100%'], [1, 1, '100% 100%']].map(([x, y]) => `<div style="position:absolute;${x ? 'right' : 'left'}:0;${y ? 'bottom' : 'top'}:0;width:70px;height:70px;border-${x ? 'right' : 'left'}:8px solid ${AMB};border-${y ? 'bottom' : 'top'}:8px solid ${AMB};border-radius:${x ? (y ? '0 0 22px 0' : '0 22px 0 0') : (y ? '0 0 0 22px' : '22px 0 0 0')}"></div>`).join(''));
+const scanLine = E(vf, { left: '20px', width: '300px', height: '6px', borderRadius: '3px', background: AMB, boxShadow: `0 0 20px ${AMB}` });
+const scanTxt = E(scr, { left: '0px', width: '536px', top: '720px', textAlign: 'center', color: '#fff', fontSize: '28px', fontWeight: 700 }, 'Point camera at the QR');
+const scanOk = E(scr, { left: '88px', top: '800px', width: '360px', height: '90px', borderRadius: '45px', background: PUR, color: '#fff', fontSize: '28px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }, `${check(44, AMB)}Table 7 · Bistro`);
+// loading
+const load = E(scr, { left: '0px', top: '0px', width: '536px', height: '1126px', background: WHT }, `<div style="position:absolute;left:168px;top:380px;width:200px;height:200px;border-radius:50px;background:${INK};color:${AMB};font-size:40px;font-weight:800;display:flex;align-items:center;justify-content:center">BISTRO</div>
+  <div style="position:absolute;left:118px;top:640px;width:300px;height:14px;border-radius:7px;background:#EDE4D4"><div class="lb" style="height:14px;border-radius:7px;background:${PUR}"></div></div><div style="position:absolute;left:0;width:536px;top:690px;text-align:center;font-size:26px;font-weight:700;color:${MUT}">Opening menu…</div>`);
+const loadBar = load.querySelector('.lb');
+// menu
+const DISH = [['🧀', 'Paneer Tikka', 280], ['🍗', 'Butter Chicken', 380], ['🍛', 'Veg Biryani', 320], ['🥞', 'Masala Dosa', 180], ['🥭', 'Mango Lassi', 120], ['🍨', 'Kulfi', 90]];
+const menu = E(scr, { left: '0px', top: '0px', width: '536px', height: '1126px', background: WHT });
+menu.innerHTML = `<div style="position:absolute;left:0;top:0;width:536px;height:160px;background:${PUR}"></div>
+  <div style="position:absolute;left:30px;top:60px;font-size:40px;font-weight:800;color:#fff">Bistro</div><div style="position:absolute;right:30px;top:64px;padding:8px 18px;border-radius:18px;background:${AMB};font-size:24px;font-weight:800">Table 7</div>
+  <div style="position:absolute;left:30px;top:116px;font-size:20px;font-weight:600;color:rgba(255,255,255,0.8)">Scan · Order · Relax</div>
+  <div style="position:absolute;left:0;top:160px;width:536px;height:70px;border-bottom:2px solid ${LIN};display:flex;gap:26px;padding-left:30px;align-items:center;font-size:22px;font-weight:800;color:${MUT}"><span class="tb" style="color:${INK}">Starters</span><span class="tb">Mains</span><span class="tb">Drinks</span><span class="tb">Desserts</span></div>
+  <div class="tu" style="position:absolute;top:222px;height:6px;border-radius:3px;background:${PUR}"></div>
+  <div class="lw" style="position:absolute;left:0;top:232px;width:536px;height:894px;overflow:hidden"><div class="li" style="position:absolute;left:0;top:0;width:536px">
+  ${DISH.map(([em, n, pr], k) => `<div style="position:absolute;left:20px;top:${k * 150 + 14}px;width:496px;height:130px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:14px;top:14px;width:102px;height:102px;border-radius:18px;background:${TILE[k % 3]};font-size:60px;display:flex;align-items:center;justify-content:center">${em}</div>
+     <div style="position:absolute;left:136px;top:28px;font-size:26px;font-weight:800">${n}</div><div style="position:absolute;left:136px;top:72px;font-size:24px;font-weight:700;color:${MUT}">₹${pr}</div>
+     <div class="ad" style="position:absolute;right:16px;top:39px;width:112px;height:52px;border-radius:26px;background:${PUR};color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center"></div></div>`).join('')}</div></div>
+  <div class="cb" style="position:absolute;left:20px;top:1000px;width:496px;height:96px;border-radius:24px;background:${INK};color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:space-between;padding:0 26px;box-sizing:border-box"><span class="ct"></span><span style="color:${AMB}">View cart →</span></div>`;
+const tabs = [...menu.querySelectorAll('.tb')], tu = menu.querySelector('.tu'), li = menu.querySelector('.li'), ads = [...menu.querySelectorAll('.ad')], cb = menu.querySelector('.cb'), ct = menu.querySelector('.ct');
+const QTY = [[[16.76, 1], [18.94, 2]], [[17.4, 1]], [], [], [[19.5, 1]], []];
+const qtyAt = (k, t) => { let q = 0; QTY[k].forEach(([ts, v]) => { if (t >= ts) q = v; }); return q; };
+// cart sheet + success
+const cart = E(menu, { left: '0px', top: '300px', width: '536px', height: '826px', borderRadius: '36px 36px 0 0', background: WHT, boxShadow: '0 -20px 50px rgba(28,23,38,0.2)' }, `
+  <div style="position:absolute;left:218px;top:14px;width:100px;height:8px;border-radius:4px;background:${LIN}"></div>
+  <div style="position:absolute;left:30px;top:40px;font-size:34px;font-weight:800">Your order · Table 7</div>
+  ${[['Paneer Tikka', 2, 560], ['Butter Chicken', 1, 380], ['Mango Lassi', 1, 120]].map(([n, q, a], k) => `<div style="position:absolute;left:30px;top:${110 + k * 76}px;width:476px;font-size:26px;font-weight:700;display:flex;justify-content:space-between"><span><b style="color:${PUR}">${q}×</b> ${n}</span><span>₹${a}</span></div>`).join('')}
+  <div style="position:absolute;left:30px;top:350px;font-size:20px;font-weight:800;color:${MUT};letter-spacing:0.05em">SPECIAL INSTRUCTIONS</div>
+  <div style="position:absolute;left:30px;top:384px;width:476px;height:80px;border-radius:16px;box-shadow:inset 0 0 0 2px ${LIN};font-size:26px;font-weight:600;display:flex;align-items:center;padding-left:20px;box-sizing:border-box"><span class="ins"></span><span class="car" style="width:3px;height:30px;background:${PUR};margin-left:2px"></span></div>
+  <div style="position:absolute;left:30px;top:500px;width:476px;height:2px;background:${LIN}"></div>
+  <div style="position:absolute;left:30px;top:524px;width:476px;font-size:30px;font-weight:800;display:flex;justify-content:space-between"><span>Total</span><span>₹1,060</span></div>
+  <div class="po" style="position:absolute;left:30px;top:690px;width:476px;height:100px;border-radius:26px;background:${PUR};color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center">Place order</div>`);
+const ins = cart.querySelector('.ins'), car = cart.querySelector('.car'), po = cart.querySelector('.po');
+const okP = E(scr, { left: '0px', top: '0px', width: '536px', height: '1126px', background: PUR, color: '#fff' }, `<div class="ok" style="position:absolute;left:168px;top:330px">${check(200, AMB)}</div>
+  <div style="position:absolute;left:0;width:536px;top:580px;text-align:center;font-size:44px;font-weight:800">Order placed!</div><div style="position:absolute;left:0;width:536px;top:650px;text-align:center;font-size:28px;font-weight:700;opacity:0.85">#1042 · Table 7</div>`);
+const okIc = okP.querySelector('.ok');
+const SX = 272, SY = 312;   // screen offset inside the phone room
+const touchP = toucher(P_, [[16.76, SX + 462, SY + 232 + 75], [17.4, SX + 462, SY + 232 + 225], [18.94, SX + 500, SY + 232 + 75], [19.5, SX + 462, SY + 232 + 675], [20.5, SX + 268, SY + 1048], [21.72, SX + 268, SY + 300 + 740]], 16.2, 22.0);
+
+// order ticket that travels between rooms
+const ticket = E(world, { width: '320px', height: '170px', borderRadius: '26px', background: WHT, boxShadow: `0 0 0 6px ${PUR}, 0 20px 60px rgba(90,23,230,0.45)`, zIndex: 30 },
+  `<div style="position:absolute;left:0;top:0;width:320px;height:56px;background:${PUR};color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;padding-left:20px;box-sizing:border-box">ORDER #1042</div>
+   <div style="position:absolute;left:20px;top:72px;font-size:40px;font-weight:800">Table 7</div><div style="position:absolute;left:20px;top:124px;font-size:20px;font-weight:700;color:${MUT}">4 items · ₹1,060</div>`);
+
+// ===================== ROOM R: reception dashboard =====================
+const R_ = room.R;
+const rA = T(R_, 'c', 196, 64, 'Seedha <span class="pur">reception</span> par');
+const rB = T(R_, 'c', 196, 64, 'Sab kuch <span class="pur">clearly</span>');
+const mon = E(R_, { left: '50px', top: '300px', width: '980px', height: '1140px' }, '', 'card');
+mon.innerHTML = `<div style="position:absolute;left:0;top:0;width:980px;height:90px;background:${INK}"></div>
+  <div style="position:absolute;left:30px;top:26px;font-size:30px;font-weight:800;color:#fff">Order management</div>
+  <div style="position:absolute;right:30px;top:28px;display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;color:#fff"><div class="lv" style="width:16px;height:16px;border-radius:8px;background:#E5484D"></div>LIVE</div>
+  <div style="position:absolute;left:0;top:90px;width:300px;height:1050px;background:#F6F0E6"></div>
+  ${[['#1040', 'Table 2', 'Served', '#D9CDB9'], ['#1041', 'Table 12', 'In kitchen', AMB]].map(([o, tb, st, c], k) => `<div style="position:absolute;left:20px;top:${290 + k * 150}px;width:260px;height:130px;border-radius:20px;background:#fff;box-shadow:0 0 0 2px ${LIN}"><div style="position:absolute;left:18px;top:16px;font-size:22px;font-weight:800;color:${MUT}">${o}</div><div style="position:absolute;left:18px;top:48px;font-size:28px;font-weight:800">${tb}</div><div style="position:absolute;left:18px;top:88px;padding:4px 12px;border-radius:12px;background:${c};font-size:18px;font-weight:800">${st}</div></div>`).join('')}
+  <div class="no" style="position:absolute;left:20px;top:120px;width:260px;height:150px;border-radius:20px;background:#fff;box-shadow:0 0 0 4px ${PUR}"><div style="position:absolute;left:18px;top:16px;font-size:22px;font-weight:800;color:${PUR}">#1042</div><div style="position:absolute;right:16px;top:14px;padding:4px 12px;border-radius:12px;background:${PUR};color:#fff;font-size:18px;font-weight:800">NEW</div><div style="position:absolute;left:18px;top:52px;font-size:32px;font-weight:800">Table 7</div><div style="position:absolute;left:18px;top:100px;font-size:20px;font-weight:700;color:${MUT}">just now · 4 items</div></div>
+  <div class="dp" style="position:absolute;left:330px;top:120px;width:620px;height:990px">
+    <div style="position:absolute;left:0;top:0;font-size:40px;font-weight:800">Order #1042</div>
+    <div class="h0 hb" style="position:absolute;left:-14px;top:70px;width:648px;height:150px;border-radius:22px"></div>
+    <div style="position:absolute;left:0;top:86px;font-size:20px;font-weight:800;color:${MUT};letter-spacing:0.05em">TABLE NUMBER</div><div style="position:absolute;left:0;top:116px;font-size:76px;font-weight:800;color:${PUR}">7</div>
+    <div class="h1 hb" style="position:absolute;left:-14px;top:236px;width:648px;height:330px;border-radius:22px"></div>
+    <div style="position:absolute;left:0;top:250px;font-size:20px;font-weight:800;color:${MUT};letter-spacing:0.05em">SELECTED DISHES</div>
+    ${[['🧀', 'Paneer Tikka', 2], ['🍗', 'Butter Chicken', 1], ['🥭', 'Mango Lassi', 1]].map(([em, n, q], k) => `<div style="position:absolute;left:0;top:${290 + k * 88}px;width:620px;height:76px;display:flex;align-items:center;gap:16px;font-size:30px;font-weight:700"><span style="font-size:40px">${em}</span>${n}<span class="qb" style="position:absolute;right:10px;padding:8px 20px;border-radius:16px;background:${INK};color:#fff;font-size:28px;font-weight:800">× ${q}</span></div>`).join('')}
+    <div class="h2 hb" style="position:absolute;left:-14px;top:582px;width:648px;height:180px;border-radius:22px"></div>
+    <div style="position:absolute;left:0;top:598px;font-size:20px;font-weight:800;color:${MUT};letter-spacing:0.05em">SPECIAL INSTRUCTIONS</div>
+    <div style="position:absolute;left:0;top:636px;width:610px;height:100px;border-radius:18px;background:#FDF1DC;font-size:32px;font-weight:700;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">📝 Less spicy, no onion</div>
+    <div class="fw" style="position:absolute;left:0;top:830px;width:610px;height:110px;border-radius:28px;background:${PUR};color:#fff;font-size:34px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:14px"></div></div>`;
+const newOrd = mon.querySelector('.no'), dp = mon.querySelector('.dp'), hbs = [...mon.querySelectorAll('.hb')], qbs = [...mon.querySelectorAll('.qb')], fw = mon.querySelector('.fw'), lv = mon.querySelector('.lv');
+const touchR = toucher(R_, [[42.22, 50 + 330 + 305, 300 + 120 + 885]], 41.5, 42.9);
+
+// ===================== ROOM K: kitchen display =====================
+const K_ = room.K;
+const kA = T(K_, 'c', 196, 64, 'Kitchen ki <span class="pur">screen</span> par');
+const kB = T(K_, 'c', 196, 64, 'Order <span class="pur">ready!</span>');
+const kds = E(K_, { left: '50px', top: '300px', width: '980px', height: '900px', borderRadius: '36px', background: INK, boxShadow: '0 30px 70px rgba(28,23,38,0.3)' }, `
+  <div style="position:absolute;left:34px;top:26px;font-size:30px;font-weight:800;color:#fff">Kitchen display</div><div style="position:absolute;right:34px;top:30px;font-size:22px;font-weight:800;color:${AMB}">3 active</div>
+  ${[['#1039', 'TABLE 3', ['Dal Makhani', 'Naan ×3']], ['#1041', 'TABLE 12', ['Veg Biryani', 'Raita']]].map(([o, tb, it], k) => `<div style="position:absolute;left:${30 + k * 312}px;top:96px;width:292px;height:600px;border-radius:22px;background:#2C2440;overflow:hidden">
+     <div style="height:60px;background:${AMB};font-size:22px;font-weight:800;display:flex;align-items:center;padding-left:18px">${o} · Preparing</div>
+     <div style="padding:18px;font-size:34px;font-weight:800;color:#fff">${tb}</div>${it.map(s => `<div style="padding:8px 18px;font-size:24px;font-weight:600;color:rgba(255,255,255,0.8)">☐ ${s}</div>`).join('')}</div>`).join('')}
+  <div class="nk" style="position:absolute;left:654px;top:96px;width:296px;height:740px;border-radius:22px;background:#FFFDF8;overflow:hidden">
+     <div class="nkh" style="height:60px;font-size:22px;font-weight:800;color:#fff;display:flex;align-items:center;padding-left:18px"></div>
+     <div class="tb7" style="margin:16px 14px 8px;padding:10px 12px;border-radius:16px;font-size:44px;font-weight:800">TABLE 7</div>
+     ${['Paneer Tikka ×2', 'Butter Chicken ×1', 'Mango Lassi ×1'].map(s => `<div class="ki" style="display:flex;align-items:center;gap:12px;padding:12px 18px;font-size:24px;font-weight:700"><span class="kb" style="width:30px;height:30px;border-radius:8px;box-shadow:inset 0 0 0 3px ${INK};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:20px;flex:none"></span>${s}</div>`).join('')}
+     <div style="margin:14px;padding:14px;border-radius:14px;background:#FDF1DC;font-size:22px;font-weight:700">📝 Less spicy, no onion</div>
+     <div class="st" style="position:absolute;left:14px;bottom:18px;width:268px;height:80px;border-radius:20px;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center"></div></div>`);
+const nk = kds.querySelector('.nk'), nkh = kds.querySelector('.nkh'), tb7 = kds.querySelector('.tb7'), kbs = [...kds.querySelectorAll('.kb')], kst = kds.querySelector('.st');
+const chef = E(K_, { left: '460px', top: '1230px', width: '160px', height: '240px' }, `<div style="position:absolute;left:30px;top:-40px;width:100px;height:70px;border-radius:40px 40px 10px 10px;background:#fff;box-shadow:0 0 0 3px ${LIN}"></div>${person(160, PUR)}`);
+const bell = E(K_, { left: '700px', top: '1290px', width: '120px', height: '110px' }, `<svg width="120" height="110" viewBox="0 0 120 110"><path d="M20 80 Q20 30 60 30 Q100 30 100 80 Z" fill="${AMB}"/><rect x="10" y="80" width="100" height="14" rx="7" fill="${INK}"/><circle cx="60" cy="24" r="8" fill="${INK}"/></svg>`);
+
+// ===================== ROOM S: serving =====================
+const S_ = room.S; S_.insertAdjacentHTML('beforeend', restaurantBG + `<div>${tableHTML(7)}</div>` + chair(180, false));
+const sA = T(S_, 'c', 230, 66, 'Correct table par <span class="pur">serve</span>');
+const sCust = E(S_, { left: '140px', top: '820px', zIndex: 4 }, person(150, PUR));
+const sWaiter = E(S_, { left: '0px', top: '800px', zIndex: 5 }, person(160, INK) + `<div style="position:absolute;left:-60px;top:110px;width:200px;height:18px;border-radius:9px;background:#B9A88C"></div><div class="tr" style="position:absolute;left:-40px;top:62px;font-size:54px;white-space:nowrap">🧀🍗</div>`);
+const trayItems = sWaiter.querySelector('.tr');
+const plates = E(S_, { left: '330px', top: '988px', fontSize: '66px', zIndex: 4, whiteSpace: 'nowrap', letterSpacing: '20px' }, '🧀 🍗 🥭');
+const t7ring = E(S_, { left: '450px', top: '960px', width: '130px', height: '120px', borderRadius: '24px', boxShadow: `0 0 0 8px ${PUR}`, zIndex: 3 });
+const t7tag = E(S_, { left: '400px', top: '820px', padding: '12px 22px', borderRadius: '20px', background: PUR, color: '#fff', fontSize: '28px', fontWeight: 800, zIndex: 6, whiteSpace: 'nowrap' }, `Table 7 ✓`);
+const yum = E(S_, { left: '60px', top: '700px', padding: '16px 24px', borderRadius: '26px 26px 26px 6px', background: WHT, fontSize: '34px', fontWeight: 800, boxShadow: '0 10px 30px rgba(28,23,38,0.15)', zIndex: 6, transformOrigin: '0 100%', whiteSpace: 'nowrap' }, 'Wah! 😋');
+
+// ===================== ROOM N: no confusion =====================
+const N_ = room.N;
+const nA = T(N_, 'c', 230, 84, 'Ab <span class="pur">no</span>…');
+const NO = [['😵‍💫', 'Confusion', 55.1], ['📝', 'Handwritten order slips', 56.4], ['🙋', 'Baar-baar waiter ko bulana', 58.3]];
+const nos = NO.map(([em, s, ts], k) => { const c = E(N_, { left: '90px', top: (380 + k * 330) + 'px', width: '900px', height: '290px' }, `
+  <div style="position:absolute;left:44px;top:55px;width:180px;height:180px;border-radius:40px;background:#F1E9DC;font-size:100px;display:flex;align-items:center;justify-content:center">${em}</div>
+  <div class="tx" style="position:absolute;left:260px;top:100px;width:600px;font-size:40px;font-weight:800;line-height:1.2">${s}</div>
+  <div class="sk" style="position:absolute;left:250px;top:140px;height:8px;border-radius:4px;background:${INK}"></div>
+  <div class="nb" style="position:absolute;right:30px;top:24px;padding:10px 26px;border-radius:20px;background:${PUR};color:#fff;font-size:34px;font-weight:800">NO</div>`, 'card'); c.ts = ts; c.sk = c.querySelector('.sk'); c.nb = c.querySelector('.nb'); c.tx = c.querySelector('.tx'); return c; });
+
+// ===================== overlay sheets: HeliosLabs, CTA, end =====================
+const OV = [64.0, 72.1, 76.35];
+const sheets = OV.map((ts, k) => { const s = E(document.getElementById('stage'), { zIndex: 410 + k }, '', 'sheet'); return s; });
+const [H_, C_, Z_] = sheets;
+const hLogo = logoSVG(220); hLogo.style.left = '430px'; hLogo.style.top = '330px'; H_.appendChild(hLogo);
+const hA = T(H_, 'c', 610, 64, 'HeliosLabs mein hum banate hain');
+const hB = T(H_, 'c', 700, 84, 'custom <span class="pur">digital solutions</span>');
+const ops = E(H_, { left: '90px', top: '880px', width: '900px', height: '480px' }, `
+  <div style="position:absolute;left:36px;top:30px;font-size:30px;font-weight:800">Daily operations</div>
+  <svg style="position:absolute;left:40px;top:110px" width="820" height="260" viewBox="0 0 820 260">
+    <path class="tg" d="M20 130 C120 10 160 250 240 120 S360 20 330 170 S470 240 500 90 S640 10 600 170 S760 220 800 130" fill="none" stroke="#C9B89C" stroke-width="12" stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
+    <path class="st" d="M20 130 L780 130" fill="none" stroke="${PUR}" stroke-width="14" stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
+    <path class="ah" d="M740 95 L790 130 L740 165" fill="none" stroke="${PUR}" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="sm" style="position:absolute;left:300px;top:370px;width:300px;height:80px;border-radius:40px;background:${PUR};color:#fff;font-size:34px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px">${check(44, AMB)}Simple</div>`, 'card');
+const tg = ops.querySelector('.tg'), stP = ops.querySelector('.st'), ah = ops.querySelector('.ah'), smB = ops.querySelector('.sm');
+const cA = T(C_, 'c', 300, 66, 'Aap bhi apne restaurant ke liye');
+const cB = T(C_, 'c', 395, 80, 'aisa <span class="pur">system</span> chahte hain?');
+const cbox = E(C_, { left: '60px', top: '640px', width: '960px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:150px;top:52px;font-size:56px;font-weight:800;letter-spacing:0.04em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:150px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const cC = T(C_, 'c', 860, 56, 'Comment <span class="pur">"RESTAURANT"</span>', { w: 700 });
+const touchC = toucher(C_, [[75.95, 60 + 960 - 105, 640 + 85]], 75.4, 76.4);
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; Z_.appendChild(endLogo);
+const e1 = T(Z_, 'c', 740, 120, 'HeliosLabs');
+const e2 = T(Z_, 'c', 900, 50, 'Comment <span class="pur">"RESTAURANT"</span>', { w: 700 });
+
+// ===================== camera =====================
+const MAP = [1740, 2160, 0.3], QRF = [665, 960, 2.4];
+const at = k => [...C(k), 1];
+const CAM = [[0, ...at('T')], [6.8, ...at('T')], [7.5, ...QRF], [8.3, ...at('P')], [22.95, ...at('P')], [24.0, ...MAP], [25.6, ...MAP], [27.4, ...at('R')],
+  [42.4, ...at('R')], [43.4, ...at('K')], [50.85, ...at('K')], [51.7, ...at('S')], [54.5, ...at('S')], [55.25, ...at('N')], [60.8, ...at('N')], [61.9, ...MAP], [80, ...MAP]];
+function cam(t) {
+  let i = 0; while (i + 1 < CAM.length && CAM[i + 1][0] <= t) i++;
+  const a = CAM[i], b = CAM[Math.min(i + 1, CAM.length - 1)], p = inout(clamp((t - a[0]) / Math.max(0.01, b[0] - a[0])));
+  // zoom in log space; a little pull-back mid-move when travelling between rooms at the same zoom
+  let z = Math.exp(lerp(Math.log(a[3]), Math.log(b[3]), p)); if (a[3] === 1 && b[3] === 1 && (a[1] !== b[1] || a[2] !== b[2])) z *= 1 - 0.45 * Math.sin(Math.PI * p);
+  return [lerp(a[1], b[1], p), lerp(a[2], b[2], p), z];
+}
+// ticket route (world coords): phone screen → reception list → kitchen display → stays in kitchen
+const TK = [[22.3, 1200 + 540, 960, 0.6], [26.3, 1200 + 540, 960, 1.6], [27.4, 2400 + 200, 495, 0.75], [42.3, 2400 + 200, 495, 0.75], [43.3, 2400 + 850, 2040 + 470, 0.8]];
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.0, 3.0, 'Imagine kijiye, aap ek restaurant mein jaate hain.'],
+  [3.0, 4.7, 'Aapko ek table milti hai,'],
+  [4.7, 7.6, 'aur table par ek QR code rakha hota hai.'],
+  [7.6, 9.8, 'Aap QR code scan karte hain,'],
+  [9.8, 14.5, 'aur aapke phone par restaurant ka complete digital menu open ho jaata hai.'],
+  [14.5, 18.4, 'Ab aap menu browse kar sakte hain, dishes select kar sakte hain,'],
+  [18.4, 20.2, 'quantity choose kar sakte hain'],
+  [20.2, 22.8, 'aur directly apna order place kar sakte hain.'],
+  [22.8, 25.2, 'Lekin ab interesting part dekhiye…'],
+  [25.2, 27.5, 'Jaise hi aap order place karte hain,'],
+  [27.5, 32.1, 'woh restaurant ke reception ya order management dashboard par pahunch jaata hai.'],
+  [32.1, 39.7, 'Order ke saath table number, selected dishes, quantity aur special instructions sab clearly mentioned hote hain.'],
+  [39.7, 43.6, 'Reception se order directly kitchen ko forward kar diya jaata hai.'],
+  [43.6, 50.0, 'Kitchen staff ko screen par pata hota hai ki kaunsa order kis table ka hai aur kya prepare karna hai.'],
+  [50.0, 54.6, 'Order ready hone ke baad staff usse correct table par serve kar sakta hai.'],
+  [54.6, 60.7, 'No confusion, no handwritten order slips, no baar-baar waiter ko bulane ka wait.'],
+  [60.7, 63.9, 'Ye hai ek smart restaurant ordering system.'],
+  [63.9, 68.4, 'Aur HeliosLabs mein hum aise custom digital solutions build karte hain'],
+  [68.4, 71.9, 'jo businesses ke daily operations ko simple banaate hain.'],
+  [71.9, 74.85, 'Aap bhi apne restaurant ke liye aisa system chahte hain?'],
+  [74.85, 78.4, 'Comment "RESTAURANT".'],
+];
+const subBox = document.querySelector('#sub span');
+const mt1 = document.getElementById('mt1'), mt2 = document.getElementById('mt2');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  const [cx, cy, z] = cam(t);
+  world.style.transform = `translate(${540 - cx * z}px, ${960 - cy * z}px) scale(${z})`;
+  const mapV = clamp((0.62 - z) / 0.25);
+  mapLabels.forEach(l => { l.style.opacity = mapV; l.style.visibility = mapV > 0.01 ? 'visible' : 'hidden'; });
+  pathSvg.style.opacity = 0.35 + 0.65 * mapV;
+  { const a = clamp(sp(t, 23.3)) * (1 - clamp(sp(t, 25.4))); mt1.style.transform = `translateY(${(1 - a) * -40}px)`; mt1.style.opacity = a; mt1.style.visibility = a > 0.01 ? 'visible' : 'hidden';
+    const b = clamp(sp(t, 61.4)) * (1 - clamp(sp(t, 64.0))); mt2.style.transform = `translateY(${(1 - b) * -40}px)`; mt2.style.opacity = b; mt2.style.visibility = b > 0.01 ? 'visible' : 'hidden'; }
+  // ticket
+  { let x = TK[0][1], y = TK[0][2], s = TK[0][3];
+    for (let i = 1; i < TK.length; i++) { const [t0, x0, y0, s0] = TK[i - 1], [t1, x1, y1, s1] = TK[i]; if (t >= t0) { const p = inout(clamp((t - t0) / (t1 - t0))); x = lerp(x0, x1, p); y = lerp(y0, y1, p) - Math.sin(Math.PI * p) * (Math.abs(x1 - x0) + Math.abs(y1 - y0)) * 0.12; s = lerp(s0, s1, p); } }
+    const pin = clamp(sp(t, 22.3)) * (t < 30 ? 1 - clamp((t - 27.35) / 0.25) : clamp((t - 42.25) / 0.15)), vis = (t >= 22.3 && t < 27.6) || (t >= 42.25 && t < 43.55);
+    ticket.style.left = (x - 160) + 'px'; ticket.style.top = (y - 85) + 'px'; ticket.style.transform = `scale(${s * pin * (t > 43.3 ? 1 - clamp((t - 43.3) / 0.25) : 1)})`; ticket.style.visibility = vis ? 'visible' : 'hidden'; }
+
+  // ---- T
+  show(t1, t, 0.2, 3.0); show(t2, t, 3.15, 4.75); show(t3, t, 4.85);
+  { const p = inout(clamp((t - 1.0) / 1.5)); cust.style.left = lerp(-200, 120, p) + 'px'; cust.style.top = (820 - (p < 1 ? 10 * Math.abs(Math.sin(p * 14)) : 0)) + 'px';
+    pop(waiter, t, 1.4); pop(welcome, t, 1.62, 3.4); }
+  { const g = t > 3.48 ? Math.sin(Math.PI * clamp((t - 3.48) / 1.1)) : 0; tGlow.style.opacity = g; tGlow.style.visibility = g > 0.01 ? 'visible' : 'hidden'; tGlow.style.transform = `scale(${0.96 + 0.04 * g})`; }
+  pop(qrStand, t, 5.88);
+  // ---- P
+  show(pA, t, 8.4, 12.3); show(pB, t, 12.4, 15.1); show(pC, t, 15.36, 20.3); show(pD, t, 21.42);
+  { const sl = (t - 8.64) * 2.2; scanLine.style.top = (20 + 300 * (0.5 - 0.5 * Math.cos(Math.max(0, sl) * Math.PI))) + 'px'; scanLine.style.visibility = t > 8.64 && t < 9.38 ? 'visible' : 'hidden';
+    vf.style.transform = `scale(${t > 9.38 ? 1 + 0.06 * Math.sin(Math.PI * clamp((t - 9.38) / 0.3)) : 1})`; scanTxt.style.visibility = t < 9.38 ? 'visible' : 'hidden'; pop(scanOk, t, 9.38);
+    const l = clamp(sp(t, 10.3)); load.style.transform = `translateY(${(1 - l) * 1126}px)`; load.style.visibility = t < 10.3 ? 'hidden' : 'visible'; loadBar.style.width = (300 * inout(clamp((t - 10.6) / 2.6))) + 'px';
+    const m = clamp(sp(t, 13.24)); menu.style.transform = `translateY(${(1 - m) * 1126}px)`; menu.style.visibility = t < 13.24 ? 'hidden' : 'visible'; }
+  { const sc = 170 * inout(clamp((t - 15.36) / 0.6)) * (1 - inout(clamp((t - 16.05) / 0.5))); li.style.transform = `translateY(${-sc}px)`;
+    const tabK = t > 15.7 && t < 16.1 ? 1 : 0; tabs.forEach((e, k) => e.style.color = k === tabK ? INK : MUT); tu.style.left = (30 + tabK * 128) + 'px'; tu.style.width = (tabK ? 80 : 104) + 'px';
+    let n = 0, tot = 0; ads.forEach((a, k) => { const q = qtyAt(k, t); n += q; tot += q * DISH[k][2]; a.innerHTML = q ? `<span style="padding:0 10px">–</span>${q}<span style="padding:0 10px">+</span>` : 'Add';
+      a.style.background = q ? INK : PUR; a.style.width = (q ? 150 : 112) + 'px'; const lastTap = Math.max(...QTY[k].map(([ts]) => t >= ts ? ts : -9), -9); a.style.transform = `scale(${press(t, lastTap)})`; });
+    ct.textContent = `${n} item${n > 1 ? 's' : ''} · ₹${tot.toLocaleString('en-IN')}`; const cbIn = clamp(sp(t, 16.8)); cb.style.transform = `translateY(${(1 - cbIn) * 200}px) scale(${press(t, 20.5)})`; cb.style.visibility = t < 16.8 ? 'hidden' : 'visible';
+    const cs = clamp(sp(t, 20.6)); cart.style.transform = `translateY(${(1 - cs) * 900}px)`; cart.style.visibility = t < 20.6 ? 'hidden' : 'visible';
+    const s = 'Less spicy, no onion'; ins.textContent = s.slice(0, Math.floor(clamp((t - 20.85) / 0.7) * s.length)); car.style.opacity = Math.sin(t * 12) > 0 && t < 21.6 ? 1 : 0;
+    po.style.transform = `scale(${press(t, 21.72)})`;
+    const ok = clamp(sp(t, 21.95)); okP.style.clipPath = `circle(${ok * 1300}px at 268px 1040px)`; okP.style.visibility = t < 21.95 ? 'hidden' : 'visible'; okIc.style.transform = `scale(${clamp(sp(t, 22.15))})`; }
+  touchP(t);
+  // ---- R
+  show(rA, t, 28.52, 37.2); show(rB, t, 37.38);
+  lv.style.opacity = 0.5 + 0.5 * Math.sin(t * 7);
+  { const p = clamp(sp(t, 27.3)); newOrd.style.transform = `translateX(${(1 - p) * -320}px) scale(${1 + (t > 27.3 ? 0.06 * Math.sin(Math.PI * clamp((t - 27.5) / 0.3)) : 0)})`; newOrd.style.visibility = t < 27.3 ? 'hidden' : 'visible';
+    const d = clamp(sp(t, 29.86)); dp.style.transform = `translateY(${(1 - d) * 80}px)`; dp.style.opacity = d; }
+  hbs.forEach((h, k) => { const ts = [33.0, 34.18, 36.32][k], te = [34.1, 36.2, 37.3][k]; const on = clamp((t - ts) / 0.2) * (1 - clamp((t - te) / 0.3)); const all = t > 37.38 && t < 39.9 ? 1 : 0;
+    h.style.background = `rgba(90,23,230,${0.1 * Math.max(on, all * 0.7)})`; h.style.boxShadow = `inset 0 0 0 ${on > 0.05 ? 4 : all ? 2 : 0}px ${PUR}`; });
+  qbs.forEach((q, k) => { q.style.transform = `scale(${1 + 0.25 * Math.sin(Math.PI * clamp((t - 35.38 - k * 0.15) / 0.35))})`; q.style.background = t > 35.38 + k * 0.15 && t < 36.3 ? PUR : INK; });
+  fw.innerHTML = t < 42.3 ? 'Forward to kitchen →' : `${check(44, AMB)}Sent to kitchen`; fw.style.transform = `scale(${press(t, 42.22)})`; fw.style.background = t < 42.3 ? PUR : INK;
+  touchR(t);
+  // ---- K
+  show(kA, t, 44.68, 50.0); show(kB, t, 50.22);
+  { const p = clamp(sp(t, 43.35)); nk.style.transform = `translateY(${(1 - p) * -900}px)`; nk.style.visibility = t < 43.35 ? 'hidden' : 'visible';
+    nkh.style.background = t < 50.5 ? PUR : '#1F7A4D'; nkh.textContent = t < 50.5 ? '#1042 · NEW' : '#1042 · READY';
+    const h = t > 47.44 && t < 48.6; tb7.style.background = h ? AMB : 'transparent'; tb7.style.transform = `scale(${1 + 0.06 * Math.sin(Math.PI * clamp((t - 47.44) / 0.3))})`;
+    kbs.forEach((b, k) => { const on = t > 48.94 + k * 0.3; b.style.background = on ? PUR : 'transparent'; b.style.boxShadow = on ? 'none' : `inset 0 0 0 3px ${INK}`; b.textContent = on ? '✓' : ''; });
+    kst.style.background = t < 50.5 ? '#FDF1DC' : PUR; kst.style.color = t < 50.5 ? '#B4740F' : '#fff'; kst.textContent = t < 48.94 ? 'New order' : t < 50.5 ? 'Preparing…' : 'READY ✓'; kst.style.transform = `scale(${1 + 0.08 * Math.sin(Math.PI * clamp((t - 50.5) / 0.3))})`; }
+  pop(chef, t, 43.76); bell.style.transform = `rotate(${t > 50.5 && t < 51.3 ? 12 * Math.sin((t - 50.5) * 30) * (1 - (t - 50.5) / 0.8) : 0}deg)`;
+  // ---- S
+  show(sA, t, 52.2);
+  { const p = inout(clamp((t - 51.6) / 1.6)); sWaiter.style.left = lerp(1100, 700, p) + 'px'; sWaiter.style.top = (800 - (p > 0 && p < 1 ? 10 * Math.abs(Math.sin(p * 12)) : 0)) + 'px';
+    trayItems.style.visibility = t < 53.38 ? 'visible' : 'hidden'; pop(plates, t, 53.38);
+    const r = clamp(sp(t, 52.42)) * (1 - clamp(sp(t, 53.4))); t7ring.style.opacity = r; t7ring.style.visibility = r > 0.01 ? 'visible' : 'hidden'; pop(t7tag, t, 52.6, 54.2); pop(yum, t, 53.9); }
+  // ---- N
+  show(nA, t, 55.0);
+  nos.forEach(c => { pop(c, t, c.ts - 0.2); const p = inout(clamp((t - c.ts - 0.3) / 0.3)); c.sk.style.width = (p * Math.min(600, c.tx.scrollWidth + 20)) + 'px'; c.tx.style.color = p > 0.5 ? MUT : INK;
+    const nb = clamp((t - c.ts - 0.45) / 0.14); c.nb.style.visibility = t < c.ts + 0.45 ? 'hidden' : 'visible'; c.nb.style.transform = `rotate(-8deg) scale(${lerp(2, 1, inout(nb))})`; });
+  // ---- overlay sheets slide up like app bottom sheets
+  sheets.forEach((s, k) => { const p = clamp(sp(t, OV[k])); s.style.transform = `translateY(${(1 - p) * 1920}px)`; s.style.visibility = t < OV[k] ? 'hidden' : 'visible'; });
+  animLogo(hLogo, t, 64.18); show(hA, t, 64.6); show(hB, t, 65.72);
+  { pop(ops, t, 66.9); tg.style.strokeDashoffset = 1 - inout(clamp((t - 67.6) / 1.4)); tg.style.opacity = 1 - clamp((t - 70.6) / 0.4);
+    stP.style.strokeDashoffset = 1 - inout(clamp((t - 70.7) / 0.5)); stP.style.visibility = t < 70.7 ? 'hidden' : 'visible'; ah.style.opacity = clamp((t - 71.1) / 0.1); pop(smB, t, 71.04); }
+  show(cA, t, 72.3); show(cB, t, 73.4); pop(cbox, t, 74.2);
+  { const s = 'RESTAURANT'; cm.textContent = s.slice(0, Math.floor(clamp((t - 75.05) / 0.75) * s.length)); sd.style.transform = `scale(${press(t, 75.95)})`; }
+  show(cC, t, 75.1); touchC(t);
+  animLogo(endLogo, t, 76.55); show(e1, t, 76.8); show(e2, t, 77.1);
+
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 78.4;
+window.seek(0);
+</script>
+</body>
+</html>
