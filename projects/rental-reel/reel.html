@@ -1,0 +1,372 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rental Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .a { position: absolute; }
+  .scene { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .bub { position: absolute; padding: 16px 24px; background: #FFFDF8; font-size: 30px; font-weight: 700; box-shadow: 0 10px 30px rgba(28,23,38,0.15); white-space: nowrap; z-index: 8; }
+  #car { position: absolute; left: 0; top: 0; z-index: 300; }
+  #streak { position: absolute; z-index: 299; height: 220px; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="streak"></div><div id="car"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+// ---------- character rig: jointed SVG person (hips, knees, shoulders, elbows, head, face) ----------
+const ROLE = {
+  customer: { skin: '#C98B5E', hair: '#2B1E1A', shirt: PUR, sleeve: PUR, pants: INK, shoe: '#3A2A22' },
+  waiter: { skin: '#A8714A', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: INK, shoe: '#111' },
+  chef: { skin: '#8D5A3B', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: '#3A3150', shoe: '#111' },
+  father: { skin: '#B07A52', hair: '#241914', shirt: AMB, sleeve: AMB, pants: INK, shoe: '#3A2A22' },
+  child: { skin: '#C48A5C', hair: '#1E1612', shirt: WHT, sleeve: WHT, pants: '#3A3150', shoe: '#111' },
+  teacher: { skin: '#D19A6E', hair: '#2A1C16', shirt: PUR, sleeve: PUR, pants: INK, shoe: '#3A2A22' },
+  staff: { skin: '#A26B45', hair: '#1C1410', shirt: '#E9E2D6', sleeve: '#E9E2D6', pants: '#3A3150', shoe: '#111' },
+};
+function makePerson(parent, role, SC, z = 4) {
+  const c = ROLE[role], NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', 300 * SC); svg.setAttribute('height', 560 * SC); svg.setAttribute('viewBox', '-40 -100 300 560');
+  Object.assign(svg.style, { position: 'absolute', overflow: 'visible', zIndex: z });
+  const leg = s => { const hx = s === 'L' ? 90 : 130; return `<g class="hip${s}"><rect x="${hx - 12}" y="262" width="24" height="100" rx="12" fill="${c.pants}"/><g class="knee${s}"><rect x="${hx - 11}" y="348" width="22" height="90" rx="11" fill="${c.pants}"/><ellipse cx="${hx}" cy="440" rx="21" ry="10" fill="${c.shoe}"/></g></g>`; };
+  const arm = s => { const sx = s === 'L' ? 62 : 158; return `<g class="sh${s}"><rect x="${sx - 10}" y="130" width="20" height="88" rx="10" fill="${c.sleeve}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/><g class="el${s}"><rect x="${sx - 9}" y="206" width="18" height="74" rx="9" fill="${c.skin}"/><circle cx="${sx}" cy="284" r="12" fill="${c.skin}"/></g></g>`; };
+  const extra = role === 'waiter' ? `<path d="M72 134 L102 134 L110 196 L118 134 L148 134 L146 272 H74 Z" fill="${INK}"/><path d="M98 122 L110 129 L98 136 Z M122 122 L110 129 L122 136 Z" fill="${INK}"/><rect x="74" y="236" width="72" height="40" rx="6" fill="#EFE7DA"/>`
+    : role === 'chef' ? `${[160, 190, 220].map(y => `<circle cx="98" cy="${y}" r="4" fill="${INK}"/><circle cx="122" cy="${y}" r="4" fill="${INK}"/>`).join('')}<path d="M96 124 L110 146 L124 124 Z" fill="${AMB}"/>`
+    : role === 'child' ? `<path d="M104 128 L116 128 L120 200 L110 214 L100 200 Z" fill="${PUR}"/><path d="M80 128 L104 128 L96 146 Z M140 128 L116 128 L124 146 Z" fill="#E9E2D6"/>`
+    : role === 'staff' ? `<path d="M90 128 L110 196 L130 128" fill="none" stroke="${PUR}" stroke-width="5"/><rect x="98" y="192" width="24" height="32" rx="4" fill="#fff" stroke="${PUR}" stroke-width="3"/>`
+    : role === 'teacher' ? `<path d="M88 128 Q110 156 132 128" fill="none" stroke="${AMB}" stroke-width="4"/><circle cx="110" cy="152" r="6" fill="${AMB}"/>`
+    : role === 'father' ? `<path d="M92 126 L110 146 L128 126" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="5"/>`
+    : `<path d="M96 126 L110 142 L124 126" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="4"/>`;
+  const hair = role === 'chef' ? `<rect x="78" y="-12" width="64" height="46" rx="8" fill="#fff" stroke="${LIN}" stroke-width="3"/>${[82, 110, 138].map(x => `<circle cx="${x}" cy="-14" r="24" fill="#fff" stroke="${LIN}" stroke-width="3"/>`).join('')}<rect x="76" y="20" width="68" height="16" rx="6" fill="#fff" stroke="${LIN}" stroke-width="3"/>`
+    : role === 'waiter' ? `<path d="M68 64 Q66 24 110 24 Q154 24 152 64 Q146 42 124 40 Q96 38 84 50 Q74 56 68 64 Z" fill="${c.hair}"/>`
+    : role === 'teacher' ? `<circle cx="110" cy="22" r="22" fill="${c.hair}"/><path d="M66 90 Q58 26 110 24 Q162 26 154 90 Q150 56 138 44 Q112 58 84 46 Q72 58 66 90 Z" fill="${c.hair}"/>`
+    : role === 'child' ? `<path d="M68 66 Q64 22 110 22 Q156 22 152 66 Q144 50 130 46 L124 54 L116 44 L104 54 L96 44 Q78 48 68 66 Z" fill="${c.hair}"/>`
+    : role === 'father' ? `<path d="M68 62 Q66 22 110 22 Q154 22 152 62 Q146 40 110 38 Q76 40 68 62 Z" fill="${c.hair}"/><path d="M94 86 Q110 80 126 86 Q118 92 110 88 Q102 92 94 86 Z" fill="${c.hair}"/>`
+    : `<path d="M68 68 Q64 22 110 22 Q156 22 152 68 Q150 44 132 40 Q116 52 90 44 Q74 50 68 68 Z" fill="${c.hair}"/>`;
+  svg.innerHTML = leg('R') + `<path d="M70 252 H150 L152 300 H68 Z" fill="${c.pants}"/>` + leg('L').replace('<g class="hipL">', '<g class="hipL">') + arm('R') +
+    `<path d="M58 130 Q110 116 162 130 L150 280 H70 Z" fill="${c.shirt}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/>${extra}
+     <g class="head"><rect x="100" y="98" width="20" height="34" fill="${c.skin}"/><circle cx="68" cy="74" r="9" fill="${c.skin}"/><circle cx="152" cy="74" r="9" fill="${c.skin}"/>
+       <circle cx="110" cy="70" r="42" fill="${c.skin}"/>${hair}
+       <g class="eo"><ellipse class="e1" cx="95" cy="72" rx="5" ry="5.5" fill="${INK}"/><ellipse class="e2" cx="125" cy="72" rx="5" ry="5.5" fill="${INK}"/></g>
+       <path class="eh" d="M88 74 Q95 66 102 74 M118 74 Q125 66 132 74" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+       <circle cx="86" cy="88" r="7" fill="#E8645A" opacity="0.22"/><circle cx="134" cy="88" r="7" fill="#E8645A" opacity="0.22"/>
+       <path class="ms" d="M97 90 Q110 102 123 90" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><ellipse class="mo" cx="110" cy="95" rx="9" ry="8" fill="#7A2E2E"/></g>` + arm('L');
+  parent.appendChild(svg);
+  const q = s => svg.querySelector(s), parts = { hipL: q('.hipL'), hipR: q('.hipR'), kneeL: q('.kneeL'), kneeR: q('.kneeR'), shL: q('.shL'), shR: q('.shR'), elL: q('.elL'), elR: q('.elR'), head: q('.head') };
+  const piv = { hipL: [90, 270], hipR: [130, 270], kneeL: [90, 356], kneeR: [130, 356], shL: [62, 140], shR: [158, 140], elL: [62, 214], elR: [158, 214], head: [110, 112] };
+  const eo = q('.eo'), eh = q('.eh'), ms = q('.ms'), mo = q('.mo'), e1 = q('.e1'), e2 = q('.e2');
+  const P = { x: 0, y: 0, sc: SC };
+  return {
+    svg, P,
+    set(p, t) { P.x = p.x; P.y = p.y; svg.style.left = (p.x - 40 * SC) + 'px'; svg.style.top = (p.y - 100 * SC) + 'px';
+      Object.keys(parts).forEach(k => parts[k].setAttribute('transform', `rotate(${(p[k] || 0).toFixed(2)} ${piv[k][0]} ${piv[k][1]})`));
+      const happy = p.eyes === 'happy', blink = !happy && ((t + (p.seed || 0)) % 3.1) < 0.12;
+      eo.style.display = happy ? 'none' : 'inline'; eh.style.display = happy ? 'inline' : 'none'; [e1, e2].forEach(e => e.setAttribute('ry', blink ? 0.8 : 5.5));
+      const open = p.mouth === 'open'; ms.style.display = open ? 'none' : 'inline'; mo.style.display = open ? 'inline' : 'none'; if (open) mo.setAttribute('ry', 5 + 3 * Math.abs(Math.sin(t * 14))); },
+    hand(s, p) { const S = s === 'L' ? [62, 140] : [158, 140], a1 = (p['sh' + s] || 0) * Math.PI / 180, a2 = a1 + (p['el' + s] || 0) * Math.PI / 180;
+      const lx = S[0] - 74 * Math.sin(a1) - 70 * Math.sin(a2), ly = S[1] + 74 * Math.cos(a1) + 70 * Math.cos(a2); return [p.x + lx * SC, p.y + ly * SC]; },
+  };
+}
+const STAND = sc => 1390 - 450 * sc, SEAT = sc => 1176 - 270 * sc;
+const walkPose = (ph, amp = 1) => ({ hipL: 16 * amp * Math.sin(ph), hipR: -16 * amp * Math.sin(ph), kneeL: -8 * amp * Math.max(0, Math.sin(ph)), kneeR: 8 * amp * Math.max(0, -Math.sin(ph)),
+  shL: 10 + 10 * amp * Math.sin(ph), shR: -10 + 10 * amp * Math.sin(ph), elL: -10, elR: 10, head: 2 * Math.sin(ph) * amp, bob: -7 * amp * Math.abs(Math.sin(ph)) });
+const seatedPose = { hipL: -90, hipR: -84, kneeL: 90, kneeR: 84, shL: -40, elL: -50, shR: -60, elR: -30 };
+const mixPose = (a, b, p) => { const o = { ...a }; Object.keys(b).forEach(k => { if (typeof b[k] === 'number') o[k] = lerp(a[k] || 0, b[k], p); else o[k] = p > 0.5 ? b[k] : a[k]; }); return o; };
+// side-view car (faces right); wheels have spokes so they can spin
+const carSVG = (w, body = PUR, roof = '#4A12C0', id = '') => `<svg width="${w}" height="${w * 0.42}" viewBox="0 0 500 210" style="overflow:visible">
+  <path d="M30 150 Q24 110 60 104 L140 96 Q170 52 230 46 L330 44 Q370 46 400 92 L460 104 Q486 110 486 140 L486 160 Q486 170 476 170 L40 170 Q30 170 30 160 Z" fill="${body}"/>
+  <path d="M160 96 Q186 62 232 58 L300 56 L300 96 Z" fill="#CFE3F2"/><path d="M314 56 L330 56 Q362 60 384 96 L314 96 Z" fill="#CFE3F2"/>
+  <rect x="300" y="56" width="14" height="44" fill="${roof}"/><rect x="40" y="128" width="440" height="8" rx="4" fill="${roof}" opacity="0.6"/>
+  <ellipse cx="470" cy="128" rx="12" ry="9" fill="#FFE7A8"/><rect x="34" y="122" width="16" height="14" rx="4" fill="#E5484D"/>
+  ${[120, 390].map(cx => `<g class="wh${id}" data-cx="${cx}"><circle cx="${cx}" cy="168" r="40" fill="${INK}"/><circle cx="${cx}" cy="168" r="20" fill="#CFC6B8"/>${[0, 60, 120].map(a => `<rect x="${cx - 3}" y="150" width="6" height="36" fill="${INK}" transform="rotate(${a} ${cx} 168)"/>`).join('')}</g>`).join('')}</svg>`;
+const carIcon = (c = PUR) => `<svg width="120" height="56" viewBox="0 0 120 56"><path d="M8 40 Q6 28 16 26 L36 24 Q44 12 60 11 L84 11 Q94 12 102 24 L112 27 Q116 30 116 38 L116 44 L8 44 Z" fill="${c}"/><circle cx="32" cy="44" r="9" fill="${INK}"/><circle cx="92" cy="44" r="9" fill="${INK}"/><path d="M42 24 Q48 15 60 15 L72 15 L72 24 Z M76 15 L84 15 Q92 16 98 24 L76 24 Z" fill="#CFE3F2"/></svg>`;
+const phoneProp = (w, h) => `<div style="position:absolute;left:0;top:0;width:${w}px;height:${h}px;border-radius:${w * 0.18}px;background:${INK}"></div><div style="position:absolute;left:${w * 0.08}px;top:${w * 0.08}px;width:${w * 0.84}px;height:${h - w * 0.16}px;border-radius:${w * 0.12}px;background:${PUR}"></div>`;
+const road = `<div style="position:absolute;left:0;top:1250px;width:1080px;height:140px;background:#D9CDB9"></div><div style="position:absolute;left:0;top:1314px;width:1080px;height:10px;background-image:linear-gradient(90deg,#FFFDF8 50%,transparent 50%);background-size:120px 10px"></div>`;
+
+// ===================== scenes; a speeding car wipes each one in =====================
+const SC = [0, 2.34, 6.6, 11.7, 18.3, 24.9, 28.8, 36.3, 43.3, 49.0, 52.6];
+const scenes = SC.map((s, k) => E(stage, { zIndex: 1 + k }, '', 'scene'));
+const [S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10] = scenes;
+const car = document.getElementById('car'), streak = document.getElementById('streak');
+car.innerHTML = carSVG(420, PUR, '#4A12C0', 'M'); const wheelsM = [...car.querySelectorAll('.whM')];
+const WIPE = 0.55;   // seconds for the car to cross
+
+// ---- S0: 20 rental cars
+const s0a = T(S0, 'c', 230, 74, 'Aapke paas <span class="pur">20 rental cars</span>');
+const fleet = Array.from({ length: 20 }, (_, i) => E(S0, { left: (90 + (i % 4) * 230) + 'px', top: (400 + Math.floor(i / 4) * 170) + 'px', width: '210px', height: '150px', zIndex: 3 },
+  `<div style="position:absolute;left:45px;top:30px">${carIcon([PUR, AMB, INK, '#8B5CF6'][i % 4])}</div><div style="position:absolute;left:0;width:210px;top:104px;text-align:center;font-size:20px;font-weight:800;color:${MUT}">DL 0${1 + (i % 9)} · ${1200 + i * 37}</div>`, 'card'));
+const cnt0 = E(S0, { left: '390px', top: '1270px', width: '300px', height: '120px', borderRadius: '60px', background: INK, color: '#fff', fontSize: '60px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums', zIndex: 5 }, '');
+
+// ---- S1: customer searching online
+const s1a = T(S1, 'c', 230, 74, 'Kaunsi car <span class="amb">available</span> hai?');
+const s1z = T(S1, 'c', 230, 70, 'Customers ko <span class="pur">pata kaise</span> chalega?');
+const srch = E(S1, { left: '90px', top: '360px', width: '900px', height: '640px', zIndex: 4 }, `
+  <div style="position:absolute;left:30px;top:30px;width:840px;height:100px;border-radius:50px;box-shadow:0 0 0 3px ${LIN};display:flex;align-items:center;padding-left:34px;box-sizing:border-box;font-size:34px;font-weight:600">🔍&nbsp;&nbsp;<span class="q"></span><span class="cr" style="width:3px;height:40px;background:${PUR};margin-left:3px"></span></div>
+  ${['Car rental near me — Rental A', 'Self-drive cars — Rental B', 'Cars on rent — Rental C'].map((s, k) => `<div class="rs" style="position:absolute;left:30px;top:${160 + k * 150}px;width:840px;height:130px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:24px;top:30px">${carIcon(k === 1 ? AMB : PUR)}</div><div style="position:absolute;left:170px;top:28px;font-size:28px;font-weight:800">${s}</div>
+     <div style="position:absolute;left:170px;top:76px;font-size:22px;font-weight:700;color:${MUT}">Call for availability</div>
+     <div class="qa" style="position:absolute;right:24px;top:30px;width:70px;height:70px;border-radius:35px;background:${AMB};font-size:44px;font-weight:800;display:flex;align-items:center;justify-content:center">?</div></div>`).join('')}`, 'card');
+const sq = srch.querySelector('.q'), scr = srch.querySelector('.cr'), rss = [...srch.querySelectorAll('.rs')], qas = [...srch.querySelectorAll('.qa')];
+const cu1 = makePerson(S1, 'customer', 0.95, 5);
+const ph1 = E(S1, { width: '40px', height: '72px', zIndex: 8 }, phoneProp(40, 72));
+
+// ---- S2: calls + WhatsApp piling up
+const s2a = T(S2, 'c', 230, 70, 'Calls + <span class="amb">WhatsApp</span> par bookings');
+const MSGS = [['📞', 'Missed call · +91 98••• 21', 8.66], ['📞', 'Missed call · +91 99••• 07', 8.95], ['💬', 'Kal ke liye car available hai?', 9.68], ['💬', 'Innova 2 din ke liye chahiye', 9.98], ['📞', 'Missed call · +91 97••• 54', 10.34], ['💬', 'Booking confirm hua kya?', 10.6], ['💬', 'Rate kya hai per day?', 10.9]];
+const msgs = MSGS.map(([em, s, ts], k) => { const e = E(S2, { left: (110 + (k % 2) * 40) + 'px', top: (350 + k * 110) + 'px', width: '820px', height: '92px', zIndex: 4 + k }, `<div style="position:absolute;left:18px;top:14px;width:64px;height:64px;border-radius:18px;background:${em === '📞' ? '#FDE8E4' : '#E3F4E8'};font-size:36px;display:flex;align-items:center;justify-content:center">${em}</div><div style="position:absolute;left:100px;top:28px;font-size:28px;font-weight:700">${s}</div>`, 'card'); e.ts = ts; return e; });
+const badge2 = E(S2, { left: '850px', top: '300px', width: '120px', height: '120px', borderRadius: '60px', background: '#E5484D', color: '#fff', fontSize: '48px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }, '');
+const st2 = makePerson(S2, 'staff', 0.9, 21);
+
+// ---- S3: everything manual
+const s3a = T(S3, 'c', 230, 74, 'Sab kuch <span class="amb">manually</span>');
+const TASK = [['📋', 'Availability check', 12.82], ['📒', 'Bookings note', 14.9], ['🧮', 'Payments track', 16.72]];
+const tasks = TASK.map(([em, s, ts], k) => { const e = E(S3, { left: '90px', top: (380 + k * 220) + 'px', width: '900px', height: '190px', zIndex: 4 }, `
+  <div style="position:absolute;left:30px;top:35px;width:120px;height:120px;border-radius:30px;background:#F1E9DC;font-size:70px;display:flex;align-items:center;justify-content:center">${em}</div>
+  <div style="position:absolute;left:180px;top:48px;font-size:40px;font-weight:800">${s}</div><div style="position:absolute;left:180px;top:104px;font-size:26px;font-weight:700;color:${MUT}">by hand · register</div>
+  <div class="sc" style="position:absolute;left:640px;top:70px;width:220px;height:50px">${[0, 1, 2].map(i => `<div style="position:absolute;left:0;top:${i * 18}px;height:8px;border-radius:4px;background:#CDBFA8" class="ln"></div>`).join('')}</div>`, 'card'); e.ts = ts; e.lns = [...e.querySelectorAll('.ln')]; return e; });
+const st3 = makePerson(S3, 'staff', 0.9, 6);
+const desk3 = E(S3, { left: '220px', top: '1260px', width: '640px', height: '40px', borderRadius: '10px', background: '#8C5A3C', zIndex: 7 }, `<div style="position:absolute;left:40px;top:40px;width:560px;height:200px;background:#7A4D33"></div>`);
+const pen3 = E(S3, { width: '14px', height: '70px', borderRadius: '7px', background: AMB, zIndex: 8 });
+
+// ---- S4: double booking, customer lost
+const s4a = T(S4, 'c', 230, 74, '<span class="amb">Double booking!</span>');
+const s4b = T(S4, 'c', 230, 74, 'Customer <span class="amb">chala gaya</span>…');
+const cal4 = E(S4, { left: '90px', top: '360px', width: '900px', height: '420px', zIndex: 4 }, `
+  <div style="position:absolute;left:30px;top:26px;display:flex;align-items:center;gap:20px">${carIcon(PUR)}<div style="font-size:34px;font-weight:800">Swift · DL 01 1234</div></div>
+  <div style="position:absolute;left:30px;top:120px;font-size:24px;font-weight:800;color:${MUT}">SAT, 14 NOV</div>
+  <div class="b1" style="position:absolute;left:30px;top:170px;width:400px;height:110px;border-radius:20px;background:#EFE7FD;box-shadow:inset 0 0 0 3px ${PUR};font-size:28px;font-weight:800;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">Booking · Rohan</div>
+  <div class="b2" style="position:absolute;left:470px;top:170px;width:400px;height:110px;border-radius:20px;background:#FDF1DC;box-shadow:inset 0 0 0 3px ${AMB};font-size:28px;font-weight:800;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">Booking · Neha</div>
+  <div class="x" style="position:absolute;left:400px;top:180px;width:100px;height:100px;border-radius:50px;background:#E5484D;color:#fff;font-size:56px;font-weight:800;display:flex;align-items:center;justify-content:center">✕</div>
+  <div style="position:absolute;left:30px;top:310px;font-size:28px;font-weight:700;color:#C0392B" class="cf">Same car, same din, do bookings</div>`, 'card');
+const b41 = cal4.querySelector('.b1'), b42 = cal4.querySelector('.b2'), x4 = cal4.querySelector('.x'), cf4 = cal4.querySelector('.cf');
+const chat4 = E(S4, { left: '90px', top: '360px', width: '560px', height: '420px', zIndex: 5 }, `<div style="position:absolute;left:0;top:0;width:560px;height:80px;background:#25A35A;color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;padding-left:24px;box-sizing:border-box">Car Rental · last seen yesterday</div>
+  <div style="position:absolute;right:20px;top:110px;padding:16px 22px;border-radius:20px 20px 6px 20px;background:#E3F4E8;font-size:26px;font-weight:700">Hello? Car available hai?</div><div style="position:absolute;right:20px;top:190px;padding:16px 22px;border-radius:20px 20px 6px 20px;background:#E3F4E8;font-size:26px;font-weight:700">Reply karo please 🙏</div>
+  <div class="nr" style="position:absolute;left:20px;top:300px;padding:14px 22px;border-radius:20px;background:#F1EEE8;font-size:24px;font-weight:700;color:${MUT}">No reply… ⏳</div>`, 'card');
+const shop4 = E(S4, { left: '690px', top: '880px', width: '330px', height: '380px', zIndex: 3 }, `<div style="position:absolute;left:0;top:0;width:330px;height:80px;border-radius:16px 16px 0 0;background:#3A3150;color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center">COMPETITOR</div>
+  <div style="position:absolute;left:0;top:80px;width:330px;height:300px;background:#E9DFCF"></div><div style="position:absolute;left:110px;top:200px;width:110px;height:180px;border-radius:8px 8px 0 0;background:#3A3150"></div><div style="position:absolute;left:20px;top:110px">${carIcon('#8B8B8B')}</div>`);
+const cu4 = makePerson(S4, 'customer', 0.95, 6);
+const ph4 = E(S4, { width: '40px', height: '72px', zIndex: 8 }, phoneProp(40, 72));
+S4.insertAdjacentHTML('beforeend', road);
+
+// ---- S5: the solution
+const s5a = T(S5, 'c', 380, 70, 'Humne plan kiya ek');
+const s5b = T(S5, 'c', 480, 96, '<span class="pur">complete digital</span>');
+const s5c = T(S5, 'c', 590, 96, '<span class="pur">solution</span>');
+const sol = [['🌐', 'Website'], ['📊', 'Dashboard']].map(([em, s], k) => E(S5, { left: (150 + k * 420) + 'px', top: '820px', width: '360px', height: '300px', zIndex: 4 }, `<div style="position:absolute;left:0;width:360px;top:40px;text-align:center;font-size:120px">${em}</div><div style="position:absolute;left:0;width:360px;top:200px;text-align:center;font-size:40px;font-weight:800">${s}</div>`, 'card'));
+const plus5 = E(S5, { left: '510px', top: '930px', width: '60px', height: '60px', borderRadius: '30px', background: PUR, color: '#fff', fontSize: '40px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }, '+');
+
+// ---- S6: customer website
+const s6a = T(S6, 'c', 196, 64, 'Customers ki <span class="pur">website</span>');
+const ph6 = E(S6, { left: '250px', top: '290px', width: '580px', height: '1170px', borderRadius: '72px', background: INK, boxShadow: '0 40px 90px rgba(28,23,38,0.3)' });
+const sc6 = E(ph6, { left: '22px', top: '22px', width: '536px', height: '1126px', borderRadius: '52px', background: WHT, overflow: 'hidden' });
+const CARS = [['Swift', 'Hatchback · 5 seats', 1499, PUR], ['Innova Crysta', 'SUV · 7 seats', 2999, AMB], ['City', 'Sedan · 5 seats', 1999, INK], ['Thar', 'SUV · 4 seats', 3499, '#8B5CF6']];
+sc6.innerHTML = `<div style="position:absolute;left:0;top:0;width:536px;height:150px;background:${PUR}"></div><div style="position:absolute;left:30px;top:56px;font-size:36px;font-weight:800;color:#fff">DriveEasy Rentals</div><div style="position:absolute;left:30px;top:104px;font-size:20px;font-weight:600;color:rgba(255,255,255,0.8)">Self-drive · Delivery at home</div>
+  <div class="lw" style="position:absolute;left:0;top:150px;width:536px;height:976px;overflow:hidden"><div class="li" style="position:absolute;left:0;top:0;width:536px">
+  ${CARS.map(([n, d, pr, c], k) => `<div style="position:absolute;left:20px;top:${20 + k * 230}px;width:496px;height:210px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+    <div style="position:absolute;left:14px;top:30px;width:190px;height:150px;border-radius:18px;background:${TILE[k % 3]};display:flex;align-items:center;justify-content:center">${carIcon(c)}</div>
+    <div style="position:absolute;left:222px;top:30px;font-size:28px;font-weight:800">${n}</div><div style="position:absolute;left:222px;top:72px;font-size:20px;font-weight:600;color:${MUT}">${d}</div>
+    <div style="position:absolute;left:222px;top:110px;font-size:26px;font-weight:800;color:${PUR}">₹${pr.toLocaleString('en-IN')}<span style="font-size:18px;color:${MUT}">/day</span></div>
+    <div style="position:absolute;left:222px;top:152px;padding:6px 14px;border-radius:14px;background:#E3F4E8;color:#1F7A4D;font-size:18px;font-weight:800">● Available</div></div>`).join('')}</div></div>
+  <div class="dt" style="position:absolute;left:0;top:300px;width:536px;height:826px;border-radius:36px 36px 0 0;background:${WHT};box-shadow:0 -20px 50px rgba(28,23,38,0.2)">
+    <div style="position:absolute;left:218px;top:14px;width:100px;height:8px;border-radius:4px;background:${LIN}"></div>
+    <div style="position:absolute;left:30px;top:40px;width:476px;height:220px;border-radius:24px;background:#FDF1DC;display:flex;align-items:center;justify-content:center;transform:scale(1.6)">${carIcon(AMB)}</div>
+    <div style="position:absolute;left:30px;top:290px;font-size:36px;font-weight:800">Innova Crysta</div>
+    ${[['💺', '7 seats'], ['❄️', 'AC'], ['⛽', 'Diesel'], ['🧳', '3 bags']].map(([e, s], i) => `<div style="position:absolute;left:${30 + (i % 2) * 240}px;top:${350 + Math.floor(i / 2) * 64}px;font-size:26px;font-weight:700">${e} ${s}</div>`).join('')}
+    <div style="position:absolute;left:30px;top:490px;font-size:34px;font-weight:800;color:${PUR}">₹2,999 / day</div><div style="position:absolute;left:30px;top:540px;font-size:22px;font-weight:600;color:${MUT}">14–16 Nov · 2 days</div>
+    <div class="rq" style="position:absolute;left:30px;top:690px;width:476px;height:100px;border-radius:26px;background:${PUR};color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px"></div></div>`;
+const li6 = sc6.querySelector('.li'), dt6 = sc6.querySelector('.dt'), rq6 = sc6.querySelector('.rq');
+const dot6 = E(S6, { width: '64px', height: '64px', marginLeft: '-32px', marginTop: '-32px', borderRadius: '32px', background: 'rgba(28,23,38,0.35)', boxShadow: '0 0 0 5px rgba(255,253,248,0.9)', zIndex: 50 });
+
+// ---- S7: management dashboard
+const s7a = T(S7, 'c', 200, 66, 'Owner ka <span class="pur">dashboard</span>');
+const dash = E(S7, { left: '50px', top: '320px', width: '980px', height: '880px' }, '', 'card');
+dash.innerHTML = `<div style="position:absolute;left:0;top:0;width:980px;height:90px;background:${INK}"></div><div style="position:absolute;left:30px;top:26px;font-size:30px;font-weight:800;color:#fff">DriveEasy · Fleet manager</div>
+  ${[['🚗', 'Vehicles', '20'], ['🗓️', 'Availability', '12 free'], ['📒', 'Bookings', '8 today'], ['💰', 'Payments', '₹1.8L']].map(([e, n, v], k) => `<div class="tl" style="position:absolute;left:${30 + k * 232}px;top:120px;width:212px;height:170px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}"><div style="position:absolute;left:20px;top:18px;font-size:40px">${e}</div><div style="position:absolute;left:20px;top:76px;font-size:22px;font-weight:800;color:${MUT}">${n}</div><div style="position:absolute;left:20px;top:110px;font-size:36px;font-weight:800">${v}</div></div>`).join('')}
+  <div style="position:absolute;left:30px;top:320px;width:920px;height:530px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}"></div>
+  <div style="position:absolute;left:60px;top:344px;font-size:22px;font-weight:800;color:${MUT}">VEHICLE</div>${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => `<div style="position:absolute;left:${330 + i * 85}px;top:344px;width:70px;text-align:center;font-size:20px;font-weight:800;color:${MUT}">${d}</div>`).join('')}
+  ${['Swift · 1234', 'Innova · 5678', 'City · 2468', 'Thar · 1357', 'Creta · 9753'].map((v, r) => `<div class="vr" style="position:absolute;left:60px;top:${390 + r * 88}px;width:860px;height:70px"><div style="position:absolute;left:0;top:18px;font-size:24px;font-weight:700">${v}</div>
+     ${[0, 1, 2, 3, 4, 5, 6].map(i => { const busy = ((r * 3 + i * 2) % 5) < 2; return `<div class="cl" data-b="${busy ? 1 : 0}" style="position:absolute;left:${270 + i * 85}px;top:8px;width:70px;height:54px;border-radius:12px"></div>`; }).join('')}</div>`).join('')}`;
+const tl7 = [...dash.querySelectorAll('.tl')], vr7 = [...dash.querySelectorAll('.vr')], cl7 = [...dash.querySelectorAll('.cl')];
+const ow7 = makePerson(S7, 'father', 0.62, 6);
+
+// ---- S8: closing
+const s8a = T(S8, 'c', 230, 66, 'Aap car rental business');
+const s8b = T(S8, 'c', 320, 80, '<span class="pur">chalate hain?</span>');
+const s8c = T(S8, 'c', 230, 66, 'Sirf gaadiyan nahi…');
+const s8d = T(S8, 'c', 320, 80, 'business ko bhi <span class="pur">upgrade</span>');
+S8.insertAdjacentHTML('beforeend', road);
+const fleet8 = [0, 1, 2].map(k => E(S8, { top: '1150px', zIndex: 4 }, carSVG(300, [PUR, AMB, INK][k], ['#4A12C0', '#C98320', '#3A3150'][k], 'F' + k)));
+const up8 = E(S8, { left: '240px', top: '520px', width: '600px', height: '480px', zIndex: 5 }, `<div style="position:absolute;left:30px;top:30px;width:260px;height:200px;border-radius:24px;background:#EFE7FD;display:flex;align-items:center;justify-content:center;font-size:90px">🌐</div><div style="position:absolute;left:310px;top:30px;width:260px;height:200px;border-radius:24px;background:#FDF1DC;display:flex;align-items:center;justify-content:center;font-size:90px">📊</div>
+  <div style="position:absolute;left:30px;top:260px;width:540px;height:180px;border-radius:24px;background:${PUR};color:#fff;font-size:44px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:16px">⬆ Upgrade</div>`, 'card');
+
+// ---- S9: CTA
+const s9a = T(S9, 'c', 300, 66, 'Comment karein');
+const cbox = E(S9, { left: '90px', top: '420px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6' },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:46px;font-size:68px;font-weight:800;letter-spacing:0.08em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm = cbox.querySelector('.cm'), sd = cbox.querySelector('.sd');
+const s9b = T(S9, 'c', 700, 60, "Let's build it with <span class=\"pur\">HeliosLabs</span>", { w: 800 });
+S9.insertAdjacentHTML('beforeend', road);
+const car9 = E(S9, { top: '1130px', zIndex: 4 }, carSVG(380, PUR, '#4A12C0', 'C'));
+const wh9 = [...car9.querySelectorAll('.whC')];
+
+// ---- S10: end
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; S10.appendChild(endLogo);
+const e1 = T(S10, 'c', 740, 120, 'HeliosLabs');
+const e2 = T(S10, 'c', 900, 50, 'Comment <span class="pur">"RENTAL"</span>', { w: 700 });
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.0, 2.2, 'Aapke paas 20 rental cars hain…'],
+  [2.2, 6.6, 'lekin customers ko pata kaise chalega ki kaunsi car available hai?'],
+  [6.6, 11.7, 'Ek car rental business mein customers calls aur WhatsApp par bookings maang rahe the.'],
+  [11.7, 16.35, 'Staff manually availability check kar raha tha, bookings note kar raha tha'],
+  [16.35, 18.3, 'aur payments track kar raha tha.'],
+  [18.3, 20.9, 'Kabhi same car ki double booking ho jaati,'],
+  [20.9, 24.9, 'toh kabhi customer bina reply mile hi competitor ke paas chala jaata.'],
+  [24.9, 28.8, 'Humne unke liye ek complete digital solution plan kiya.'],
+  [28.8, 36.3, 'Ek website jahan customers cars explore kar sakein, rental details check kar sakein aur booking requests bhej sakein.'],
+  [36.3, 43.3, 'Aur ek management dashboard jahan owner vehicles, availability, bookings aur payments manage kar sake.'],
+  [43.3, 45.45, 'Aap car rental business chalate hain?'],
+  [45.45, 49.0, 'Sirf gaadiyan nahi, apne business ko bhi upgrade kijiye.'],
+  [49.0, 54.6, "Comment RENTAL and let's build it with HeliosLabs."],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+const spin = (els, t, speed) => els.forEach(g => { const cx = g.dataset.cx; g.setAttribute('transform', `rotate(${(t * speed) % 360} ${cx} 168)`); });
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- car wipe: the car crosses the screen; the next scene is revealed behind it (direction alternates)
+  let carOn = false;
+  scenes.forEach((S, k) => {
+    const s = SC[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    S.style.display = (t >= s - WIPE * 0.6 && t < next + 0.05) ? 'block' : 'none';
+    if (k === 0) { S.style.clipPath = 'none'; return; }
+    const a = s - WIPE * 0.6, p = clamp((t - a) / WIPE), ltr = k % 2 === 1, x = lerp(-460, 1540, p * p * (3 - 2 * p));   // car front position
+    const rear = ltr ? x - 420 : 1080 - (x - 420);
+    if (p <= 0) S.style.clipPath = 'inset(0 100% 0 0)';
+    else if (p >= 1) S.style.clipPath = 'none';
+    else S.style.clipPath = ltr ? `inset(0 ${Math.max(0, 1080 - rear - 60)}px 0 0)` : `inset(0 0 0 ${Math.max(0, 1080 - rear - 60)}px)`;
+    if (p > 0 && p < 1) { carOn = true; const cx = ltr ? x - 420 : 1080 - x;
+      car.style.transform = `translate(${cx}px, 870px) ${ltr ? '' : 'scaleX(-1)'}`; car.style.transformOrigin = '210px 88px';
+      streak.style.left = (ltr ? cx - 520 : cx + 420) + 'px'; streak.style.top = '890px'; streak.style.width = '520px';
+      streak.style.background = `linear-gradient(${ltr ? 90 : 270}deg, transparent, rgba(90,23,230,0.18) 60%, rgba(90,23,230,0.32))`;
+      spin(wheelsM, t, 2200); }
+  });
+  car.style.visibility = streak.style.visibility = carOn ? 'visible' : 'hidden';
+
+  // ---- S0
+  show(s0a, t, 0.2);
+  fleet.forEach((c, i) => pop(c, t, 0.3 + i * 0.045));
+  pop(cnt0, t, 0.6); cnt0.textContent = Math.round(20 * expo(t, 0.72, 0.8)) + ' cars';
+  // ---- S1
+  show(s1z, t, 2.7, 4.85); show(s1a, t, 4.98);
+  pop(srch, t, 2.6);
+  { const q = 'car rental near me'; sq.textContent = q.slice(0, Math.floor(clamp((t - 2.92) / 1.1) * q.length)); scr.style.opacity = Math.sin(t * 12) > 0 ? 1 : 0;
+    rss.forEach((r, k) => { const p = clamp(sp(t, 4.1 + k * 0.15)); r.style.transform = `translateY(${(1 - p) * 60}px)`; r.style.opacity = p; });
+    qas.forEach((qq, k) => pop(qq, t, 5.62 + k * 0.1, 1e9, `rotate(${8 * Math.sin(t * 4 + k)}deg)`));
+    const p = { x: 40, y: 1390 - 450 * 0.95 - 20, shL: 8, shR: -55, elR: -100, head: 6, seed: 0.3, mouth: t > 5.7 ? 'open' : 'smile' }; cu1.set(p, t);
+    const [hx, hy] = cu1.hand('R', p); ph1.style.left = (hx - 10) + 'px'; ph1.style.top = (hy - 64) + 'px'; }
+  // ---- S2
+  show(s2a, t, 7.0);
+  msgs.forEach((m, k) => { const p = clamp(sp(t, m.ts)); m.style.transform = `translateX(${(1 - p) * (k % 2 ? 1100 : -1100)}px) rotate(${(k % 2 ? 1 : -1) * 1.5}deg)`; m.style.visibility = t < m.ts ? 'hidden' : 'visible'; });
+  { const n = MSGS.filter(m => t >= m[2]).length * 3 + (t > 8.6 ? 2 : 0); badge2.textContent = n; pop(badge2, t, 8.66, 1e9, `scale(${1 + 0.1 * Math.max(0, Math.sin(t * 9))})`);
+    const s = { x: 760, y: STAND(0.9) + 40, shL: 150 + 12 * Math.sin(t * 7), elL: 20, shR: -150 - 12 * Math.sin(t * 7), elR: -20, head: 6 * Math.sin(t * 5), seed: 0.9, mouth: 'open' }; st2.set(s, t); }
+  // ---- S3
+  show(s3a, t, 12.22);
+  tasks.forEach((c, k) => { pop(c, t, c.ts - 0.15); c.lns.forEach((l, i) => l.style.width = (220 * (0.5 + 0.4 * ((i + k) % 2)) * clamp((t - c.ts - i * 0.3) / 0.5)) + 'px'); });
+  { const writing = t > 14.9 && t < 16.3; const s = { x: 400, y: STAND(0.9), shL: 30, elL: -70, shR: -35, elR: -60 + (writing ? 12 * Math.sin(t * 22) : 0), head: 8 + 3 * Math.sin(t * 2), seed: 1.3 }; st3.set(s, t);
+    const [hx, hy] = st3.hand('R', s); pen3.style.left = (hx - 4) + 'px'; pen3.style.top = (hy - 60) + 'px'; pen3.style.transform = 'rotate(20deg)'; }
+  // ---- S4
+  show(s4a, t, 19.58, 20.8); show(s4b, t, 21.1);
+  { const p = clamp(sp(t, 18.7)) * (1 - clamp(sp(t, 21.0))); cal4.style.transform = `translateY(${(1 - p) * 60}px) scale(${0.95 + 0.05 * p})`; cal4.style.opacity = p; cal4.style.visibility = p < 0.01 ? 'hidden' : 'visible';
+    const c = inout(clamp((t - 19.58) / 0.35)); b41.style.transform = `translateX(${c * 110}px)`; b42.style.transform = `translateX(${-c * 110}px)`; pop(x4, t, 19.9); cf4.style.opacity = clamp((t - 20.0) / 0.3);
+    const q = clamp(sp(t, 21.2)); chat4.style.transform = `translateY(${(1 - q) * 80}px)`; chat4.style.opacity = q; chat4.style.visibility = t < 21.2 ? 'hidden' : 'visible'; chat4.querySelector('.nr').style.opacity = t > 22.18 ? 0.6 + 0.4 * Math.sin(t * 6) : 0;
+    pop(shop4, t, 22.8);
+    const walk = clamp((t - 23.1) / 1.2), ph = (t - 23.1) * Math.PI * 3.4, wp = walkPose(ph, t > 23.1 && walk < 1 ? 1 : 0);
+    const p4 = { ...wp, x: lerp(120, 620, inout(walk)), y: STAND(0.95) + (t > 23.1 && walk < 1 ? wp.bob : 0), seed: 0.6, head: t < 23.1 ? -6 : 0, mouth: t > 22.3 && t < 23.0 ? 'open' : 'smile' };
+    if (t < 23.1) { p4.shR = -55; p4.elR = -100; } cu4.set(p4, t); const [hx, hy] = cu4.hand('R', p4); ph4.style.left = (hx - 10) + 'px'; ph4.style.top = (hy - 64) + 'px'; ph4.style.visibility = t < 23.1 ? 'visible' : 'hidden';
+    cu4.svg.style.opacity = 1 - clamp((t - 24.1) / 0.3); }
+  // ---- S5
+  show(s5a, t, 25.3); show(s5b, t, 26.32); show(s5c, t, 26.9);
+  sol.forEach((c, k) => pop(c, t, 27.4 + k * 0.2)); pop(plus5, t, 27.55);
+  // ---- S6
+  show(s6a, t, 29.08);
+  { const p = clamp(sp(t, 29.1)); ph6.style.transform = `translateY(${(1 - p) * 1300}px)`;
+    const sc = 300 * inout(clamp((t - 31.08) / 0.8)) * (1 - inout(clamp((t - 32.0) / 0.4))); li6.style.transform = `translateY(${-sc}px)`;
+    const d = clamp(sp(t, 32.52)); dt6.style.transform = `translateY(${(1 - d) * 900}px)`; dt6.style.visibility = t < 32.52 ? 'hidden' : 'visible';
+    const sent = t > 34.95; rq6.innerHTML = sent ? `${check(44, AMB)}Request sent` : 'Request booking'; rq6.style.background = sent ? INK : PUR; rq6.style.transform = `scale(${press(t, 34.9)})`;
+    const keys = [[31.08, 540, 1000], [32.3, 540, 820], [34.9, 540, 312 + 300 + 740]]; let x = 700, y = 1300; keys.forEach(([ts, kx, ky]) => { const e = expo(t, ts - 0.4, 0.35); x = lerp(x, kx, e); y = lerp(y, ky, e); });
+    dot6.style.left = x + 'px'; dot6.style.top = y + 'px'; dot6.style.visibility = t > 30.6 && t < 35.4 ? 'visible' : 'hidden'; dot6.style.transform = `scale(${[31.08, 32.3, 34.9].some(k => t > k && t < k + 0.15) ? 0.8 : 1})`; }
+  // ---- S7
+  show(s7a, t, 37.0);
+  { const p = clamp(sp(t, 36.7)); dash.style.transform = `translateY(${(1 - p) * 1300}px)`;
+    tl7.forEach((e, k) => { const ts = [39.1, 40.02, 40.98, 41.76][k], on = t > ts; e.style.boxShadow = `0 0 0 ${on ? 4 : 2}px ${on ? PUR : LIN}`; e.style.transform = `scale(${1 + 0.06 * Math.sin(Math.PI * clamp((t - ts) / 0.3))})`; });
+    vr7.forEach((r, k) => { const q = clamp(sp(t, 39.1 + k * 0.08)); r.style.transform = `translateX(${(1 - q) * 900}px)`; });
+    cl7.forEach((c, i) => { const on = t > 40.02 + (i % 7) * 0.04; const busy = c.dataset.b === '1'; c.style.background = !on ? '#EDE4D4' : busy ? (t > 40.98 ? PUR : '#C9B89C') : '#CDEBD6'; c.innerHTML = busy && t > 41.76 ? `<div style="font-size:18px;font-weight:800;color:#fff;text-align:center;line-height:54px">₹</div>` : ''; });
+    const o = { x: 860, y: STAND(0.62) + 20, shL: 8, shR: -8, seed: 0.5 }; const pt = inout(clamp((t - 38.78) / 0.3)); o.shL = lerp(8, 140, pt); o.elL = lerp(0, 20, pt); o.eyes = t > 41.8 ? 'happy' : 'open'; ow7.set(o, t); ow7.svg.style.visibility = t < 37.5 ? 'hidden' : 'visible'; }
+  // ---- S8
+  show(s8a, t, 43.56, 45.4); show(s8b, t, 44.4, 45.45); show(s8c, t, 45.58); show(s8d, t, 47.22);
+  fleet8.forEach((f, k) => { const p = inout(clamp((t - 45.58 - k * 0.15) / 0.9)); f.style.left = lerp(-340 - k * 330, 20 + k * 350, p) + 'px'; spin([...f.querySelectorAll('.whF' + k)], t * (p < 1 ? 1 : 0) + 45.58, 900); });
+  pop(up8, t, 47.9); up8.style.transform += ` translateY(${t > 48.02 ? -10 * Math.sin(Math.PI * clamp((t - 48.02) / 0.4)) : 0}px)`;
+  // ---- S9
+  show(s9a, t, 49.14); pop(cbox, t, 49.2);
+  { const s = 'RENTAL'; cm.textContent = s.slice(0, Math.floor(clamp((t - 49.42) / 0.5) * s.length)); sd.style.transform = `scale(${press(t, 50.0)})`; }
+  show(s9b, t, 50.42);
+  { const p = inout(clamp((t - 50.6) / 1.4)); car9.style.left = lerp(-420, 350, p) + 'px'; spin(wh9, t, p < 1 ? 900 : 0); }
+  // ---- S10
+  animLogo(endLogo, t, 52.75); show(e1, t, 53.0); show(e2, t, 53.3);
+
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 54.6;
+window.seek(0);
+</script>
+</body>
+</html>
