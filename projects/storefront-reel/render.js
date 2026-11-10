@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const mode = process.argv[2] || 'beats', N = +(process.argv[3] || 4), VERT = process.argv[4] === 'v', SUFFIX = process.argv[5] || '';
 const VW = VERT ? 1080 : 1920, VH = VERT ? 1920 : 1080, HASH = (VERT ? '#v' : '#') + (SUFFIX ? '-' + SUFFIX : '');
-const html = fs.readFileSync(path.join(__dirname, 'reel.html'), 'utf8').replace('LOGO_B64', fs.readFileSync(path.join(__dirname, 'logo.b64'), 'utf8').trim()).replace('STORE_SVG', fs.existsSync(path.join(__dirname, 'storefront-logo.svg')) ? fs.readFileSync(path.join(__dirname, 'storefront-logo.svg'), 'utf8') : '');
+const html = fs.readFileSync(path.join(__dirname, 'reel.html'), 'utf8').replace('LOGO_B64', fs.readFileSync(path.join(__dirname, 'logo.b64'), 'utf8').trim()).replace(/LOGO_BIG/g, fs.existsSync(path.join(__dirname, 'logo_big.b64')) ? fs.readFileSync(path.join(__dirname, 'logo_big.b64'), 'utf8').trim() : '').replace('STORE_SVG', fs.existsSync(path.join(__dirname, 'storefront-logo.svg')) ? fs.readFileSync(path.join(__dirname, 'storefront-logo.svg'), 'utf8') : '');
 const tmp = path.join(__dirname, (VERT ? 'build-v' : 'build') + (SUFFIX ? '-' + SUFFIX : '')); fs.mkdirSync(tmp, { recursive: true });
 fs.writeFileSync(path.join(tmp, 'page.html'), html);
 (async () => {

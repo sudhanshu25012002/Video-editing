@@ -16,7 +16,7 @@
   #bars { position: absolute; left: 40px; right: 40px; top: 20px; height: 8px; display: flex; gap: 8px; z-index: 450; }
   #bars > div { flex: 1; height: 8px; border-radius: 4px; background: rgba(28,23,38,0.15); overflow: hidden; }
   #bars > div > i { display: block; height: 100%; background: #5A17E6; }
-  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 88px; height: 88px; z-index: 500; }
   #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
   #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
 </style>
@@ -204,7 +204,7 @@ const sps = [...store.querySelectorAll('.sp')];
 const conf = Array.from({ length: 26 }, (_, k) => E(S6, { width: '16px', height: '26px', borderRadius: '4px', background: [PUR, AMB, '#E5484D', '#3B7A4D', '#8B5CF6'][k % 5], zIndex: 9 }));
 
 // ---- S7: HeliosLabs Storefront
-const s7logo = E(S7, { left: '400px', top: '260px', width: '280px', height: '300px', zIndex: 5 }, `STORE_SVG`);
+const s7logo = E(S7, { left: '390px', top: '250px', width: '300px', height: '300px', zIndex: 5 }, `<img src="data:image/png;base64,LOGO_BIG" style="width:300px;height:300px">`);
 const s7a = T(S7, 'c', 610, 92, 'HeliosLabs <span class="pur">Storefront</span>');
 const BM = [['🛠️', 'We build', 'Design, products, payments', 41.56], ['⚙️', 'We manage', 'Updates, orders, support', 42.16]];
 const bms = BM.map(([em, a, b, ts], k) => { const e = E(S7, { left: '120px', top: (790 + k * 250) + 'px', width: '840px', height: '210px', zIndex: 4 }, `<div style="position:absolute;left:30px;top:45px;width:120px;height:120px;border-radius:30px;background:#EFE7FD;font-size:64px;display:flex;align-items:center;justify-content:center">${em}</div>
@@ -221,9 +221,9 @@ const st8 = E(S8, { left: '600px', top: '470px', width: '360px', height: '620px'
   <div style="position:absolute;left:16px;bottom:16px;width:328px;height:56px;border-radius:16px;background:${INK};color:#fff;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center">Your online store</div>`, 'card');
 
 // ---- S9: end
-const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; S9.appendChild(endLogo);
-const e1 = T(S9, 'c', 740, 120, 'HeliosLabs');
-const e2 = T(S9, 'c', 900, 50, '<span class="pur">Storefront</span> · online stores for brands', { w: 700 });
+const endLogo = E(S9, { left: '370px', top: '360px', width: '340px', height: '340px', zIndex: 5 }, `<img src="data:image/png;base64,LOGO_BIG" style="width:340px;height:340px">`);
+const e1 = T(S9, 'c', 760, 100, 'HeliosLabs <span class="pur">Storefront</span>');
+const e2 = T(S9, 'c', 900, 46, 'Online stores for your brand', { w: 600, color: MUT });
 
 // ===================== subtitles =====================
 const SUBS = [
@@ -306,7 +306,7 @@ window.seek = function (t) {
   pop(ig8, t, 44.8); pop(arr8, t, 46.6);
   { const p = clamp(sp(t, 46.7)); st8.style.transform = `translateX(${(1 - p) * 600}px) scale(${0.9 + 0.1 * p})`; st8.style.visibility = t < 46.7 ? 'hidden' : 'visible'; ig8.style.opacity = 1 - 0.4 * clamp((t - 47.14) / 0.4); }
   // ---- S9
-  animLogo(endLogo, t, 48.45); show(e1, t, 48.7); show(e2, t, 49.0);
+  pop(endLogo, t, 48.45, 1e9, `rotate(${(1 - clamp(sp(t, 48.45))) * -10}deg)`); show(e1, t, 48.7); show(e2, t, 49.0);
 
   const sub = SUBS.find(([a, b]) => t >= a && t < b);
   subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
