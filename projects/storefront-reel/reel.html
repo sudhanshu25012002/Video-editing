@@ -1,0 +1,319 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Storefront Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #1C1726; perspective: 2200px; perspective-origin: 540px 960px; }
+  .a { position: absolute; }
+  .scene { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; backface-visibility: hidden; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  #bars { position: absolute; left: 40px; right: 40px; top: 20px; height: 8px; display: flex; gap: 8px; z-index: 450; }
+  #bars > div { flex: 1; height: 8px; border-radius: 4px; background: rgba(28,23,38,0.15); overflow: hidden; }
+  #bars > div > i { display: block; height: 100%; background: #5A17E6; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 84px; height: 84px; border-radius: 19px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1500px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bars"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+// ---------- character rig: jointed SVG person (hips, knees, shoulders, elbows, head, face) ----------
+const ROLE = {
+  customer: { skin: '#C98B5E', hair: '#2B1E1A', shirt: PUR, sleeve: PUR, pants: INK, shoe: '#3A2A22' },
+  waiter: { skin: '#A8714A', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: INK, shoe: '#111' },
+  chef: { skin: '#8D5A3B', hair: '#1C1410', shirt: WHT, sleeve: WHT, pants: '#3A3150', shoe: '#111' },
+  father: { skin: '#B07A52', hair: '#241914', shirt: AMB, sleeve: AMB, pants: INK, shoe: '#3A2A22' },
+  child: { skin: '#C48A5C', hair: '#1E1612', shirt: WHT, sleeve: WHT, pants: '#3A3150', shoe: '#111' },
+  teacher: { skin: '#D19A6E', hair: '#2A1C16', shirt: PUR, sleeve: PUR, pants: INK, shoe: '#3A2A22' },
+  staff: { skin: '#A26B45', hair: '#1C1410', shirt: '#E9E2D6', sleeve: '#E9E2D6', pants: '#3A3150', shoe: '#111' },
+};
+function makePerson(parent, role, SC, z = 4) {
+  const c = ROLE[role], NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', 300 * SC); svg.setAttribute('height', 560 * SC); svg.setAttribute('viewBox', '-40 -100 300 560');
+  Object.assign(svg.style, { position: 'absolute', overflow: 'visible', zIndex: z });
+  const leg = s => { const hx = s === 'L' ? 90 : 130; return `<g class="hip${s}"><rect x="${hx - 12}" y="262" width="24" height="100" rx="12" fill="${c.pants}"/><g class="knee${s}"><rect x="${hx - 11}" y="348" width="22" height="90" rx="11" fill="${c.pants}"/><ellipse cx="${hx}" cy="440" rx="21" ry="10" fill="${c.shoe}"/></g></g>`; };
+  const arm = s => { const sx = s === 'L' ? 62 : 158; return `<g class="sh${s}"><rect x="${sx - 10}" y="130" width="20" height="88" rx="10" fill="${c.sleeve}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/><g class="el${s}"><rect x="${sx - 9}" y="206" width="18" height="74" rx="9" fill="${c.skin}"/><circle cx="${sx}" cy="284" r="12" fill="${c.skin}"/></g></g>`; };
+  const extra = role === 'waiter' ? `<path d="M72 134 L102 134 L110 196 L118 134 L148 134 L146 272 H74 Z" fill="${INK}"/><path d="M98 122 L110 129 L98 136 Z M122 122 L110 129 L122 136 Z" fill="${INK}"/><rect x="74" y="236" width="72" height="40" rx="6" fill="#EFE7DA"/>`
+    : role === 'chef' ? `${[160, 190, 220].map(y => `<circle cx="98" cy="${y}" r="4" fill="${INK}"/><circle cx="122" cy="${y}" r="4" fill="${INK}"/>`).join('')}<path d="M96 124 L110 146 L124 124 Z" fill="${AMB}"/>`
+    : role === 'child' ? `<path d="M104 128 L116 128 L120 200 L110 214 L100 200 Z" fill="${PUR}"/><path d="M80 128 L104 128 L96 146 Z M140 128 L116 128 L124 146 Z" fill="#E9E2D6"/>`
+    : role === 'staff' ? `<path d="M90 128 L110 196 L130 128" fill="none" stroke="${PUR}" stroke-width="5"/><rect x="98" y="192" width="24" height="32" rx="4" fill="#fff" stroke="${PUR}" stroke-width="3"/>`
+    : role === 'teacher' ? `<path d="M88 128 Q110 156 132 128" fill="none" stroke="${AMB}" stroke-width="4"/><circle cx="110" cy="152" r="6" fill="${AMB}"/>`
+    : role === 'father' ? `<path d="M92 126 L110 146 L128 126" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="5"/>`
+    : `<path d="M96 126 L110 142 L124 126" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="4"/>`;
+  const hair = role === 'chef' ? `<rect x="78" y="-12" width="64" height="46" rx="8" fill="#fff" stroke="${LIN}" stroke-width="3"/>${[82, 110, 138].map(x => `<circle cx="${x}" cy="-14" r="24" fill="#fff" stroke="${LIN}" stroke-width="3"/>`).join('')}<rect x="76" y="20" width="68" height="16" rx="6" fill="#fff" stroke="${LIN}" stroke-width="3"/>`
+    : role === 'waiter' ? `<path d="M68 64 Q66 24 110 24 Q154 24 152 64 Q146 42 124 40 Q96 38 84 50 Q74 56 68 64 Z" fill="${c.hair}"/>`
+    : role === 'teacher' ? `<circle cx="110" cy="22" r="22" fill="${c.hair}"/><path d="M66 90 Q58 26 110 24 Q162 26 154 90 Q150 56 138 44 Q112 58 84 46 Q72 58 66 90 Z" fill="${c.hair}"/>`
+    : role === 'child' ? `<path d="M68 66 Q64 22 110 22 Q156 22 152 66 Q144 50 130 46 L124 54 L116 44 L104 54 L96 44 Q78 48 68 66 Z" fill="${c.hair}"/>`
+    : role === 'father' ? `<path d="M68 62 Q66 22 110 22 Q154 22 152 62 Q146 40 110 38 Q76 40 68 62 Z" fill="${c.hair}"/><path d="M94 86 Q110 80 126 86 Q118 92 110 88 Q102 92 94 86 Z" fill="${c.hair}"/>`
+    : `<path d="M68 68 Q64 22 110 22 Q156 22 152 68 Q150 44 132 40 Q116 52 90 44 Q74 50 68 68 Z" fill="${c.hair}"/>`;
+  svg.innerHTML = leg('R') + `<path d="M70 252 H150 L152 300 H68 Z" fill="${c.pants}"/>` + leg('L').replace('<g class="hipL">', '<g class="hipL">') + arm('R') +
+    `<path d="M58 130 Q110 116 162 130 L150 280 H70 Z" fill="${c.shirt}" stroke="${role === 'customer' ? 'none' : LIN}" stroke-width="2"/>${extra}
+     <g class="head"><rect x="100" y="98" width="20" height="34" fill="${c.skin}"/><circle cx="68" cy="74" r="9" fill="${c.skin}"/><circle cx="152" cy="74" r="9" fill="${c.skin}"/>
+       <circle cx="110" cy="70" r="42" fill="${c.skin}"/>${hair}
+       <g class="eo"><ellipse class="e1" cx="95" cy="72" rx="5" ry="5.5" fill="${INK}"/><ellipse class="e2" cx="125" cy="72" rx="5" ry="5.5" fill="${INK}"/></g>
+       <path class="eh" d="M88 74 Q95 66 102 74 M118 74 Q125 66 132 74" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+       <circle cx="86" cy="88" r="7" fill="#E8645A" opacity="0.22"/><circle cx="134" cy="88" r="7" fill="#E8645A" opacity="0.22"/>
+       <path class="ms" d="M97 90 Q110 102 123 90" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><ellipse class="mo" cx="110" cy="95" rx="9" ry="8" fill="#7A2E2E"/></g>` + arm('L');
+  parent.appendChild(svg);
+  const q = s => svg.querySelector(s), parts = { hipL: q('.hipL'), hipR: q('.hipR'), kneeL: q('.kneeL'), kneeR: q('.kneeR'), shL: q('.shL'), shR: q('.shR'), elL: q('.elL'), elR: q('.elR'), head: q('.head') };
+  const piv = { hipL: [90, 270], hipR: [130, 270], kneeL: [90, 356], kneeR: [130, 356], shL: [62, 140], shR: [158, 140], elL: [62, 214], elR: [158, 214], head: [110, 112] };
+  const eo = q('.eo'), eh = q('.eh'), ms = q('.ms'), mo = q('.mo'), e1 = q('.e1'), e2 = q('.e2');
+  const P = { x: 0, y: 0, sc: SC };
+  return {
+    svg, P,
+    set(p, t) { P.x = p.x; P.y = p.y; svg.style.left = (p.x - 40 * SC) + 'px'; svg.style.top = (p.y - 100 * SC) + 'px';
+      Object.keys(parts).forEach(k => parts[k].setAttribute('transform', `rotate(${(p[k] || 0).toFixed(2)} ${piv[k][0]} ${piv[k][1]})`));
+      const happy = p.eyes === 'happy', blink = !happy && ((t + (p.seed || 0)) % 3.1) < 0.12;
+      eo.style.display = happy ? 'none' : 'inline'; eh.style.display = happy ? 'inline' : 'none'; [e1, e2].forEach(e => e.setAttribute('ry', blink ? 0.8 : 5.5));
+      const open = p.mouth === 'open'; ms.style.display = open ? 'none' : 'inline'; mo.style.display = open ? 'inline' : 'none'; if (open) mo.setAttribute('ry', 5 + 3 * Math.abs(Math.sin(t * 14))); },
+    hand(s, p) { const S = s === 'L' ? [62, 140] : [158, 140], a1 = (p['sh' + s] || 0) * Math.PI / 180, a2 = a1 + (p['el' + s] || 0) * Math.PI / 180;
+      const lx = S[0] - 74 * Math.sin(a1) - 70 * Math.sin(a2), ly = S[1] + 74 * Math.cos(a1) + 70 * Math.cos(a2); return [p.x + lx * SC, p.y + ly * SC]; },
+  };
+}
+const STAND = sc => 1390 - 450 * sc, SEAT = sc => 1176 - 270 * sc;
+const walkPose = (ph, amp = 1) => ({ hipL: 16 * amp * Math.sin(ph), hipR: -16 * amp * Math.sin(ph), kneeL: -8 * amp * Math.max(0, Math.sin(ph)), kneeR: 8 * amp * Math.max(0, -Math.sin(ph)),
+  shL: 10 + 10 * amp * Math.sin(ph), shR: -10 + 10 * amp * Math.sin(ph), elL: -10, elR: 10, head: 2 * Math.sin(ph) * amp, bob: -7 * amp * Math.abs(Math.sin(ph)) });
+const seatedPose = { hipL: -90, hipR: -84, kneeL: 90, kneeR: 84, shL: -40, elL: -50, shR: -60, elR: -30 };
+const mixPose = (a, b, p) => { const o = { ...a }; Object.keys(b).forEach(k => { if (typeof b[k] === 'number') o[k] = lerp(a[k] || 0, b[k], p); else o[k] = p > 0.5 ? b[k] : a[k]; }); return o; };
+const phoneProp = (w, h) => `<div style="position:absolute;left:0;top:0;width:${w}px;height:${h}px;border-radius:${w * 0.18}px;background:${INK}"></div><div style="position:absolute;left:${w * 0.08}px;top:${w * 0.08}px;width:${w * 0.84}px;height:${h - w * 0.16}px;border-radius:${w * 0.12}px;background:${PUR}"></div>`;
+const PROD = [['👜', 'Tote Bag', 1499, '#F1D9C7'], ['👗', 'Linen Dress', 2299, '#E7DDF7'], ['👟', 'Sneakers', 2999, '#DCEBDF'], ['🧣', 'Silk Scarf', 899, '#F6E6C8'], ['🕶️', 'Sunglasses', 1299, '#E3E0DA'], ['👒', 'Sun Hat', 799, '#F3DCDC'], ['⌚', 'Watch', 3499, '#DDE4F1'], ['💍', 'Ring', 1899, '#F0E3F3'], ['🎒', 'Backpack', 1999, '#E5EBD9']];
+const igGrid = (n, s) => PROD.slice(0, n).map(([e], k) => `<div class="gi" style="position:absolute;left:${(k % 3) * (s + 6)}px;top:${Math.floor(k / 3) * (s + 6)}px;width:${s}px;height:${s}px;background:${PROD[k][3]};display:flex;align-items:center;justify-content:center;font-size:${s * 0.5}px">${e}</div>`).join('');
+
+// ===================== scenes; instagram-story cube turns between them =====================
+const SC = [0, 4.75, 14.6, 19.8, 22.9, 30.6, 36.5, 39.4, 44.5, 48.3];
+const scenes = SC.map((s, k) => E(stage, { zIndex: 1 + k }, '', 'scene'));
+const [S0, S1, S2, S3, S4, S5, S6, S7, S8, S9] = scenes;
+const TURN = 0.5;
+const barsEl = document.getElementById('bars'); SC.forEach(() => barsEl.insertAdjacentHTML('beforeend', '<div><i></i></div>')); const barFill = [...barsEl.querySelectorAll('i')];
+
+// ---- S0: liked the product, didn't order
+const s0a = T(S0, 'c', 1250, 74, 'Know <span class="pur">why?</span>');
+const post = E(S0, { left: '190px', top: '230px', width: '700px', height: '960px' }, `
+  <div style="position:absolute;left:24px;top:22px;width:64px;height:64px;border-radius:32px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Y</div>
+  <div style="position:absolute;left:104px;top:28px;font-size:28px;font-weight:800">yourbrand</div><div style="position:absolute;left:104px;top:62px;font-size:20px;font-weight:600;color:${MUT}">Sponsored</div>
+  <div style="position:absolute;left:0;top:110px;width:700px;height:620px;background:#F1D9C7;display:flex;align-items:center;justify-content:center;font-size:300px">👜</div>
+  <div class="ht" style="position:absolute;left:28px;top:752px;font-size:54px;line-height:1">♡</div><div style="position:absolute;left:104px;top:756px;font-size:46px;line-height:1">💬</div><div style="position:absolute;left:180px;top:758px;font-size:44px;line-height:1">➤</div>
+  <div class="lk" style="position:absolute;left:28px;top:832px;font-size:26px;font-weight:800"></div><div style="position:absolute;left:28px;top:876px;font-size:24px;font-weight:600;color:${MUT}">Tote Bag · New collection</div>`, 'card');
+const heart = post.querySelector('.ht'), likes = post.querySelector('.lk');
+const bigHeart = E(S0, { left: '390px', top: '480px', width: '300px', height: '300px', fontSize: '260px', lineHeight: '300px', textAlign: 'center', zIndex: 5 }, '❤️');
+const noOrder = E(S0, { left: '290px', top: '1050px', width: '500px', height: '110px', borderRadius: '55px', background: INK, color: '#fff', fontSize: '36px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', zIndex: 6 }, `🛒 Order <span style="color:#E5484D">✕</span>`);
+
+// ---- S1: the DM questions
+const s1a = T(S1, 'c', 200, 64, 'Question… after <span class="amb">question</span>…');
+const dm = E(S1, { left: '120px', top: '300px', width: '840px', height: '930px' }, `
+  <div style="position:absolute;left:0;top:0;width:840px;height:100px;border-bottom:2px solid ${LIN};display:flex;align-items:center;gap:16px;padding-left:28px;box-sizing:border-box"><div style="width:60px;height:60px;border-radius:30px;background:${PUR};color:#fff;font-weight:800;font-size:28px;display:flex;align-items:center;justify-content:center">Y</div><div style="font-size:28px;font-weight:800">yourbrand</div><div style="margin-left:auto;margin-right:28px;font-size:22px;font-weight:700;color:${MUT}">Message</div></div>`, 'card');
+const QS = [['What\'s the price? 💰', 6.88], ['Which sizes are available? 📏', 8.58], ['Can you send more pictures? 📸', 10.98], ['How do I place an order? 🛒', 14.0]];
+const qb = QS.map(([s, ts], k) => { const e = E(dm, { right: '28px', top: (140 + k * 150) + 'px', padding: '22px 30px', borderRadius: '30px 30px 8px 30px', background: PUR, color: '#fff', fontSize: '32px', fontWeight: 700, whiteSpace: 'nowrap', transformOrigin: '100% 100%' }, s); e.ts = ts; return e; });
+const qn = E(S1, { left: '790px', top: '1180px', width: '170px', height: '90px', borderRadius: '45px', background: AMB, fontSize: '40px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 6 }, '');
+const cu1 = makePerson(S1, 'customer', 0.62, 7);
+const ph1 = E(S1, { width: '30px', height: '54px', zIndex: 8 }, phoneProp(30, 54));
+
+// ---- S2: waiting… moves on
+const s2a = T(S2, 'c', 200, 64, 'Waiting for a <span class="amb">reply</span>…');
+const s2b = T(S2, 'c', 200, 64, '…then <span class="amb">another brand</span>');
+const wait = E(S2, { left: '120px', top: '300px', width: '840px', height: '560px' }, `
+  <div style="position:absolute;right:28px;top:40px;padding:22px 30px;border-radius:30px 30px 8px 30px;background:${PUR};color:#fff;font-size:32px;font-weight:700">How do I place an order? 🛒</div>
+  <div style="position:absolute;right:30px;top:130px;font-size:22px;font-weight:700;color:${MUT}">Seen</div>
+  <div class="ty" style="position:absolute;left:28px;top:200px;padding:20px 28px;border-radius:30px 30px 30px 8px;background:#F1EEE8;font-size:40px;font-weight:800;letter-spacing:6px;color:${MUT}">• • •</div>
+  <div class="tm" style="position:absolute;left:28px;top:330px;display:flex;align-items:center;gap:18px;font-size:34px;font-weight:800">⏳ <span></span></div>`, 'card');
+const ty2 = wait.querySelector('.ty'), tm2 = wait.querySelector('.tm span');
+const other = E(S2, { left: '560px', top: '900px', width: '420px', height: '520px', zIndex: 4 }, `<div style="position:absolute;left:0;top:0;width:420px;height:80px;background:#3A3150;color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center">another brand</div>
+  <div style="position:absolute;left:30px;top:110px;width:360px;height:220px;border-radius:20px;background:#E9DFCF;display:flex;align-items:center;justify-content:center;font-size:130px">👜</div>
+  <div class="ob" style="position:absolute;left:30px;top:370px;width:360px;height:90px;border-radius:24px;background:#1F7A4D;color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center"></div>`, 'card');
+const ob2 = other.querySelector('.ob');
+const cu2 = makePerson(S2, 'customer', 0.95, 6);
+const ph2 = E(S2, { width: '40px', height: '72px', zIndex: 8 }, phoneProp(40, 72));
+
+// ---- S3: instagram is great for showcasing
+const s3a = T(S3, 'c', 200, 70, 'Instagram = <span class="pur">showcase</span> ✓');
+const prof = E(S3, { left: '160px', top: '310px', width: '760px', height: '1050px' }, `
+  <div style="position:absolute;left:34px;top:34px;width:130px;height:130px;border-radius:65px;background:${PUR};box-shadow:0 0 0 6px #FFFDF8, 0 0 0 10px ${AMB};color:#fff;font-size:56px;font-weight:800;display:flex;align-items:center;justify-content:center">Y</div>
+  ${[['128', 'posts'], ['12.4k', 'followers'], ['310', 'following']].map(([n, l], k) => `<div style="position:absolute;left:${220 + k * 180}px;top:60px;width:160px;text-align:center"><div style="font-size:36px;font-weight:800">${n}</div><div style="font-size:22px;font-weight:600;color:${MUT}">${l}</div></div>`).join('')}
+  <div style="position:absolute;left:34px;top:190px;font-size:30px;font-weight:800">yourbrand</div><div style="position:absolute;left:34px;top:232px;font-size:24px;font-weight:600;color:${MUT}">Bags · Dresses · Accessories ✨ DM to order</div>
+  <div style="position:absolute;left:0;top:300px;width:760px">${igGrid(9, 249)}</div>`, 'card');
+const gis = [...prof.querySelectorAll('.gi')];
+
+// ---- S4: but one place?
+const s4a = T(S4, 'c', 200, 66, 'But where is <span class="pur">one place</span>?');
+const CHK = [['🛍️', 'Explore entire collection', 25.56], ['📋', 'Check product details', 27.82], ['🛒', 'Easily place an order', 29.28]];
+const chk = CHK.map(([em, s, ts], k) => { const e = E(S4, { left: '120px', top: (420 + k * 250) + 'px', width: '840px', height: '210px', zIndex: 4 }, `
+  <div style="position:absolute;left:30px;top:45px;width:120px;height:120px;border-radius:30px;background:#F1E9DC;font-size:66px;display:flex;align-items:center;justify-content:center">${em}</div>
+  <div style="position:absolute;left:180px;top:76px;font-size:40px;font-weight:800">${s}</div>
+  <div class="q" style="position:absolute;right:30px;top:60px;width:90px;height:90px;border-radius:45px;background:${AMB};font-size:54px;font-weight:800;display:flex;align-items:center;justify-content:center">?</div>`, 'card'); e.ts = ts; e.q = e.querySelector('.q'); return e; });
+
+// ---- S5: imagine everything in one place
+const s5a = T(S5, 'c', 200, 66, '<span class="pur">Imagine</span>…');
+const s5b = T(S5, 'c', 290, 76, 'everything in <span class="pur">one place</span>');
+const ITEMS = [['👗', 'Products', 32.02, -1], ['🗂️', 'Collections', 32.94, 1], ['₹', 'Prices', 33.84, -1], ['🛒', 'Ordering', 34.66, 1]];
+const its = ITEMS.map(([em, s, ts, side], k) => { const e = E(S5, { width: '330px', height: '130px', zIndex: 6 }, `<div style="position:absolute;left:20px;top:20px;width:90px;height:90px;border-radius:24px;background:${k % 2 ? '#FDF1DC' : '#EFE7FD'};font-size:${em === '₹' ? 56 : 50}px;font-weight:800;color:${PUR};display:flex;align-items:center;justify-content:center">${em}</div><div style="position:absolute;left:130px;top:42px;font-size:34px;font-weight:800">${s}</div>`, 'card'); e.ts = ts; e.side = side; e.k = k; return e; });
+const box5 = E(S5, { left: '240px', top: '900px', width: '600px', height: '440px', zIndex: 5 }, `<div style="position:absolute;left:0;top:0;width:600px;height:110px;border-radius:30px 30px 0 0;background:${PUR}"></div>
+  ${[0, 1, 2, 3, 4].map(i => `<div style="position:absolute;left:${i * 120}px;top:0;width:60px;height:110px;background:${i % 2 ? PUR : '#FFFDF8'}"></div><div style="position:absolute;left:${i * 120}px;top:80px;width:120px;height:60px;border-radius:0 0 60px 60px;background:${i % 2 ? '#D8A6FA' : PUR}"></div>`).join('')}
+  <div style="position:absolute;left:30px;top:170px;width:540px;height:240px;border-radius:24px;background:#FFFDF8;box-shadow:0 0 0 3px ${LIN}"></div><div class="cnt" style="position:absolute;left:30px;top:250px;width:540px;text-align:center;font-size:40px;font-weight:800;color:${PUR}"></div>`);
+const cnt5 = box5.querySelector('.cnt');
+
+// ---- S6: your very own online store
+const s6a = T(S6, 'c', 200, 70, 'Your very own <span class="pur">online store!</span>');
+const store = E(S6, { left: '140px', top: '310px', width: '800px', height: '1080px' }, '', 'card');
+store.innerHTML = `<div style="position:absolute;left:0;top:0;width:800px;height:70px;background:#F1EEE8;display:flex;align-items:center;gap:10px;padding-left:24px;box-sizing:border-box">${['#E5484D', '#E8A33D', '#3B7A4D'].map(c => `<div style="width:16px;height:16px;border-radius:8px;background:${c}"></div>`).join('')}<div style="margin-left:20px;width:520px;height:40px;border-radius:20px;background:#fff;font-size:22px;font-weight:700;color:${MUT};display:flex;align-items:center;padding-left:20px">🔒 yourbrand.in</div></div>
+  <div style="position:absolute;left:0;top:70px;width:800px;height:100px;background:${PUR}"></div><div style="position:absolute;left:30px;top:96px;font-size:40px;font-weight:800;color:#fff">yourbrand</div>
+  <div style="position:absolute;right:30px;top:100px;display:flex;gap:26px;font-size:22px;font-weight:700;color:#fff;align-items:center">Collections · Sale · <span style="font-size:34px">🛒</span></div>
+  <div class="hero" style="position:absolute;left:30px;top:200px;width:740px;height:220px;border-radius:24px;background:linear-gradient(120deg,#F1D9C7,#E7DDF7);"><div style="position:absolute;left:30px;top:50px;font-size:44px;font-weight:800">New Collection</div><div style="position:absolute;left:30px;top:120px;padding:12px 24px;border-radius:20px;background:${INK};color:#fff;font-size:24px;font-weight:800">Shop now →</div><div style="position:absolute;right:30px;top:20px;font-size:150px">👗</div></div>
+  ${PROD.slice(0, 6).map(([e, n, p, c], k) => `<div class="sp" style="position:absolute;left:${30 + (k % 3) * 250}px;top:${450 + Math.floor(k / 3) * 300}px;width:230px;height:280px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:12px;top:12px;width:206px;height:150px;border-radius:16px;background:${c};display:flex;align-items:center;justify-content:center;font-size:80px">${e}</div>
+     <div style="position:absolute;left:16px;top:176px;font-size:22px;font-weight:800">${n}</div><div style="position:absolute;left:16px;top:208px;font-size:22px;font-weight:800;color:${PUR}">₹${p.toLocaleString('en-IN')}</div>
+     <div style="position:absolute;right:12px;top:232px;padding:6px 14px;border-radius:14px;background:${PUR};color:#fff;font-size:18px;font-weight:800">Add</div></div>`).join('')}`;
+const sps = [...store.querySelectorAll('.sp')];
+const conf = Array.from({ length: 26 }, (_, k) => E(S6, { width: '16px', height: '26px', borderRadius: '4px', background: [PUR, AMB, '#E5484D', '#3B7A4D', '#8B5CF6'][k % 5], zIndex: 9 }));
+
+// ---- S7: HeliosLabs Storefront
+const s7logo = E(S7, { left: '400px', top: '260px', width: '280px', height: '300px', zIndex: 5 }, `STORE_SVG`);
+const s7a = T(S7, 'c', 610, 92, 'HeliosLabs <span class="pur">Storefront</span>');
+const BM = [['🛠️', 'We build', 'Design, products, payments', 41.56], ['⚙️', 'We manage', 'Updates, orders, support', 42.16]];
+const bms = BM.map(([em, a, b, ts], k) => { const e = E(S7, { left: '120px', top: (790 + k * 250) + 'px', width: '840px', height: '210px', zIndex: 4 }, `<div style="position:absolute;left:30px;top:45px;width:120px;height:120px;border-radius:30px;background:#EFE7FD;font-size:64px;display:flex;align-items:center;justify-content:center">${em}</div>
+  <div style="position:absolute;left:180px;top:50px;font-size:44px;font-weight:800">${a}</div><div style="position:absolute;left:180px;top:112px;font-size:28px;font-weight:600;color:${MUT}">${b}</div><div style="position:absolute;right:30px;top:60px">${check(90)}</div>`, 'card'); e.ts = ts; return e; });
+
+// ---- S8: more than an instagram page
+const s8a = T(S8, 'c', 200, 64, 'Your brand deserves');
+const s8b = T(S8, 'c', 290, 76, '<span class="pur">more</span> than a page');
+const ig8 = E(S8, { left: '140px', top: '520px', width: '360px', height: '520px', zIndex: 4 }, `<div style="position:absolute;left:20px;top:20px;width:70px;height:70px;border-radius:35px;background:${PUR}"></div><div style="position:absolute;left:105px;top:40px;font-size:24px;font-weight:800">yourbrand</div><div style="position:absolute;left:0;top:110px;width:360px">${igGrid(9, 116)}</div><div style="position:absolute;left:0;bottom:16px;width:360px;text-align:center;font-size:24px;font-weight:800;color:${MUT}">Instagram page</div>`, 'card');
+const arr8 = E(S8, { left: '505px', top: '720px', fontSize: '80px', fontWeight: 800, color: PUR, zIndex: 5 }, '→');
+const st8 = E(S8, { left: '600px', top: '470px', width: '360px', height: '620px', zIndex: 4 }, `<div style="position:absolute;left:0;top:0;width:360px;height:70px;background:${PUR};color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;padding-left:20px;box-sizing:border-box">yourbrand.in</div>
+  <div style="position:absolute;left:16px;top:86px;width:328px;height:120px;border-radius:16px;background:linear-gradient(120deg,#F1D9C7,#E7DDF7)"></div>
+  ${PROD.slice(0, 4).map(([e, n, p, c], k) => `<div style="position:absolute;left:${16 + (k % 2) * 168}px;top:${222 + Math.floor(k / 2) * 170}px;width:160px;height:156px;border-radius:14px;background:${c};font-size:64px;display:flex;align-items:center;justify-content:center">${e}</div>`).join('')}
+  <div style="position:absolute;left:16px;bottom:16px;width:328px;height:56px;border-radius:16px;background:${INK};color:#fff;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center">Your online store</div>`, 'card');
+
+// ---- S9: end
+const endLogo = logoSVG(300); endLogo.style.left = '390px'; endLogo.style.top = '400px'; S9.appendChild(endLogo);
+const e1 = T(S9, 'c', 740, 120, 'HeliosLabs');
+const e2 = T(S9, 'c', 900, 50, '<span class="pur">Storefront</span> · online stores for brands', { w: 700 });
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.0, 3.8, 'A customer liked your product… but still didn\'t place an order.'],
+  [3.8, 5.0, 'Know why?'],
+  [5.0, 7.7, 'First, they had to ask for the price…'],
+  [7.7, 9.95, 'Then the available sizes…'],
+  [9.95, 12.1, 'Then request more pictures…'],
+  [12.1, 14.8, 'And finally, even ask how to place an order.'],
+  [14.8, 19.8, 'And sometimes, while they\'re waiting for a reply, they simply move on to another brand.'],
+  [19.8, 22.9, 'Instagram is great for showcasing your products…'],
+  [22.9, 30.6, 'But do your customers have one place where they can explore your entire collection, check product details and easily place an order?'],
+  [30.6, 36.5, 'Imagine all your products, collections, prices and ordering… in one place.'],
+  [36.5, 39.4, 'Your very own online store!'],
+  [39.4, 44.5, 'With HeliosLabs Storefront, we build and manage an online store for your business.'],
+  [44.5, 50.3, 'Because your brand deserves more than just an Instagram page.'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- story cube: the outgoing face turns away to the left as the next face turns in from the right
+  scenes.forEach((S, k) => {
+    const s = SC[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    const pin = k === 0 ? 1 : inout(clamp((t - (s - TURN)) / TURN)), pout = inout(clamp((t - (next - TURN)) / TURN));
+    const vis = t >= s - TURN && t < next;
+    S.style.display = vis ? 'block' : 'none';
+    const ang = pout > 0 ? -90 * pout : 90 * (1 - pin);
+    S.style.transform = `translateZ(-540px) rotateY(${ang}deg) translateZ(540px)`;
+    S.style.filter = Math.abs(ang) > 0.5 ? `brightness(${1 - Math.abs(ang) / 200})` : 'none';
+  });
+  barFill.forEach((b, k) => { const s = SC[k], next = k + 1 < SC.length ? SC[k + 1] : 50.3; b.style.width = (100 * clamp((t - s) / (next - s))) + '%'; });
+
+  // ---- S0
+  pop(post, t, 0.1);
+  { const liked = t > 0.56; heart.textContent = liked ? '❤️' : '♡'; heart.style.transform = `scale(${liked ? 1 + 0.3 * Math.sin(Math.PI * clamp((t - 0.56) / 0.3)) : 1})`; likes.textContent = liked ? '1,248 likes' : '1,247 likes';
+    const b = clamp(sp(t, 0.56)) * (1 - clamp((t - 1.3) / 0.3)); bigHeart.style.transform = `scale(${b})`; bigHeart.style.opacity = b; bigHeart.style.visibility = b > 0.01 ? 'visible' : 'hidden'; }
+  pop(noOrder, t, 2.52, 1e9, `translateX(${t > 3.0 && t < 3.5 ? 10 * Math.sin((t - 3.0) * 50) : 0}px)`);
+  show(s0a, t, 4.04);
+  // ---- S1
+  show(s1a, t, 5.08);
+  { const p = clamp(sp(t, 4.8)); dm.style.transform = `translateY(${(1 - p) * 900}px)`; }
+  qb.forEach((q, k) => pop(q, t, q.ts));
+  { const n = QS.filter(q => t >= q[1]).length; qn.textContent = n ? `${n} / 4 ❓` : ''; pop(qn, t, 6.88, 1e9, `scale(${1 + 0.12 * Math.sin(Math.PI * clamp((t - (QS[Math.max(0, n - 1)] || [0, 0])[1]) / 0.25))})`);
+    const typing = QS.some(([, ts]) => t > ts - 0.9 && t < ts); const p = { x: 140, y: 1390 - 450 * 0.62 + 20, shL: 8, shR: -55, elR: -100 + (typing ? 8 * Math.sin(t * 30) : 0), head: 6, seed: 0.4, mouth: t > 14.1 ? 'open' : 'smile' }; cu1.set(p, t);
+    const [hx, hy] = cu1.hand('R', p); ph1.style.left = (hx - 8) + 'px'; ph1.style.top = (hy - 46) + 'px'; }
+  // ---- S2
+  show(s2a, t, 15.0, 17.8); show(s2b, t, 17.94);
+  { pop(wait, t, 14.8); ty2.style.opacity = t < 17.0 ? 0.4 + 0.6 * (Math.floor(t * 3) % 2) : 0.15;
+    const mins = Math.floor(lerp(1, 120, expo(t, 16.0, 1.6))); tm2.textContent = t < 15.8 ? '1 min…' : mins < 60 ? `${mins} min…` : `${Math.floor(mins / 60)} hr ${mins % 60} min…`;
+    pop(other, t, 18.1); const ok = t > 19.14; ob2.innerHTML = ok ? `${check(40, AMB)} Order placed` : 'Buy now'; ob2.style.transform = `scale(${press(t, 19.14)})`;
+    const walk = clamp((t - 18.3) / 0.9), ph = (t - 18.3) * Math.PI * 3.4, wp = walkPose(ph, t > 18.3 && walk < 1 ? 1 : 0);
+    const p = { ...wp, x: lerp(60, 330, inout(walk)), y: STAND(0.95) + (t > 18.3 && walk < 1 ? wp.bob : 0), seed: 0.7, head: t < 18.3 ? 8 : 0, mouth: t > 16.5 && t < 18 ? 'open' : 'smile', eyes: t > 19.2 ? 'happy' : 'open' };
+    if (t < 18.3 || walk >= 1) { p.shR = -55; p.elR = -100; } cu2.set(p, t); const [hx, hy] = cu2.hand('R', p); ph2.style.left = (hx - 10) + 'px'; ph2.style.top = (hy - 64) + 'px'; }
+  // ---- S3
+  show(s3a, t, 20.3);
+  { const p = clamp(sp(t, 20.0)); prof.style.transform = `translateY(${(1 - p) * 1000}px)`; gis.forEach((g, k) => { const q = clamp(sp(t, 21.4 + k * 0.08)); g.style.transform = `scale(${q})`; }); }
+  // ---- S4
+  show(s4a, t, 24.24);
+  chk.forEach(c => { pop(c, t, c.ts - 0.2); pop(c.q, t, c.ts + 0.3, 1e9, `rotate(${8 * Math.sin(t * 4)}deg)`); });
+  // ---- S5
+  show(s5a, t, 30.84); show(s5b, t, 35.4);
+  pop(box5, t, 31.2);
+  its.forEach(e => { const p = clamp(sp(t, e.ts)), f = inout(clamp((t - 35.64 - e.k * 0.06) / 0.5)); const x0 = e.side < 0 ? 60 : 690, y0 = 420 + e.k * 110;
+    e.style.left = lerp(x0 + (1 - p) * e.side * 600, 375, f) + 'px'; e.style.top = lerp(y0, 1000, f) + 'px'; e.style.transform = `scale(${1 - 0.7 * f})`; e.style.opacity = 1 - clamp((f - 0.85) / 0.15); e.style.visibility = t < e.ts ? 'hidden' : 'visible'; });
+  cnt5.textContent = t < 35.9 ? '' : 'All in one place ✓'; cnt5.style.transform = `scale(${clamp(sp(t, 35.9))})`;
+  // ---- S6
+  show(s6a, t, 37.1);
+  { const p = clamp(sp(t, 36.9)); store.style.transform = `translateY(${(1 - p) * 1100}px)`; sps.forEach((s, k) => { const q = clamp(sp(t, 37.5 + k * 0.1)); s.style.transform = `scale(${q})`; });
+    conf.forEach((c, k) => { const u = t - 38.5; const on = u > 0 && u < 1.6; c.style.visibility = on ? 'visible' : 'hidden'; const a = (k / 26) * Math.PI * 2;
+      c.style.left = (540 + Math.cos(a) * 420 * Math.min(1, u * 2.2)) + 'px'; c.style.top = (700 + Math.sin(a) * 300 * Math.min(1, u * 2.2) + 380 * u * u) + 'px'; c.style.transform = `rotate(${u * 600 + k * 40}deg)`; }); }
+  // ---- S7
+  { const p = clamp(sp(t, 39.65)); s7logo.style.transform = `scale(${p}) rotate(${(1 - p) * -12}deg)`; s7logo.style.visibility = t < 39.65 ? 'hidden' : 'visible'; }
+  show(s7a, t, 40.0);
+  bms.forEach(b => pop(b, t, b.ts - 0.1));
+  // ---- S8
+  show(s8a, t, 45.0); show(s8b, t, 46.08);
+  pop(ig8, t, 44.8); pop(arr8, t, 46.6);
+  { const p = clamp(sp(t, 46.7)); st8.style.transform = `translateX(${(1 - p) * 600}px) scale(${0.9 + 0.1 * p})`; st8.style.visibility = t < 46.7 ? 'hidden' : 'visible'; ig8.style.opacity = 1 - 0.4 * clamp((t - 47.14) / 0.4); }
+  // ---- S9
+  animLogo(endLogo, t, 48.45); show(e1, t, 48.7); show(e2, t, 49.0);
+
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 50.3;
+window.seek(0);
+</script>
+</body>
+</html>
