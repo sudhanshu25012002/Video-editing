@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Behind Every Click Ep2</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; background-image: linear-gradient(rgba(90,23,230,0.06) 2px, transparent 2px), linear-gradient(90deg, rgba(90,23,230,0.06) 2px, transparent 2px); background-size: 60px 60px; }
+  .a { position: absolute; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .scene { position: absolute; inset: 0; overflow: hidden; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .mono { font-family: 'DejaVu Sans Mono', 'Courier New', monospace; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; white-space: nowrap; font-weight: 800; }
+  #glitch { position: absolute; inset: 0; z-index: 450; pointer-events: none; }
+  #glitch > div { position: absolute; left: 0; width: 1080px; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 92px; height: 92px; z-index: 500; }
+  #ep { position: absolute; right: 44px; top: 76px; z-index: 500; padding: 12px 22px; border-radius: 26px; background: #1C1726; color: #fff; font-size: 24px; font-weight: 800; letter-spacing: 0.05em; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1530px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+  .touch { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 35px; background: rgba(28,23,38,0.30); box-shadow: 0 0 0 5px rgba(255,253,248,0.95), 0 8px 20px rgba(28,23,38,0.25); z-index: 420; }
+  .ripple { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 35px; box-shadow: 0 0 0 4px #5A17E6; z-index: 419; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glitch"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="ep">BEHIND EVERY CLICK · EP 2</div>
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+const GRN = '#1F9D55', CY = '#22B8CF', PINK = '#FF3D7F';
+const logoImg = s => `<img src="data:image/png;base64,LOGO_BIG" style="width:${s}px;height:${s}px;display:block">`;
+const SC = [0, 4.6, 9.2, 30.6, 36.1, 39.9, 43.3];
+const scenes = SC.map((s, k) => E(stage, { zIndex: 1 + k }, '', 'scene'));
+const [S0, S1, S2, S3, S4, S5, S6] = scenes;
+const tdot = E(stage, {}, '', 'touch'), trip = E(stage, {}, '', 'ripple');
+const TP = [[0.5, 800, 1350], [2.4, 700, 1060], [3.18, 700, 1060], [5.8, 700, 1300], [6.42, 720, 860], [9.4, 700, 1300], [10.18, 690, 615], [22.9, 300, 1300], [23.14, 300, 450], [35.9, 540, 1400], [36.32, 540, 1040]];
+const TAPS = [3.18, 6.42, 10.18, 23.14, 36.32];
+const TON = [[0.4, 4.2], [9.3, 10.8], [22.8, 23.7], [35.8, 37.0]];
+const glitch = document.getElementById('glitch');
+const gbars = Array.from({ length: 12 }, () => E(glitch, {}));
+function browserWin(parent, x, y, w, h) {
+  const b = E(parent, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }, `
+    <div style="position:absolute;left:0;top:0;width:${w}px;height:70px;background:#F1EEE8;display:flex;align-items:center;gap:10px;padding-left:24px;box-sizing:border-box">${['#E5484D', '#E8A33D', GRN].map(c => `<div style="width:16px;height:16px;border-radius:8px;background:${c}"></div>`).join('')}
+      <div class="url mono" style="margin-left:18px;width:${w - 200}px;height:42px;border-radius:21px;background:#fff;font-size:22px;color:${MUT};display:flex;align-items:center;padding-left:20px;box-sizing:border-box"></div></div>
+    <div style="position:absolute;left:0;top:70px;width:${w}px;height:84px;background:${PUR}"></div><div style="position:absolute;left:30px;top:92px;font-size:34px;font-weight:800;color:#fff">myshop</div>
+    <div class="cart" style="position:absolute;right:30px;top:86px;width:60px;height:60px;font-size:44px;line-height:60px;text-align:center">🛒<div class="bd" style="position:absolute;right:-10px;top:-6px;min-width:36px;height:36px;border-radius:18px;background:${AMB};color:${INK};font-size:22px;font-weight:900;line-height:36px;text-align:center"></div></div>
+    <div class="body" style="position:absolute;left:0;top:154px;width:${w}px;height:${h - 154}px"></div>`, 'card');
+  b.url = b.querySelector('.url'); b.body = b.querySelector('.body'); b.cart = b.querySelector('.cart'); b.bd = b.querySelector('.bd'); return b;
+}
+const productPage = (em, name, price, bg) => `<div style="position:absolute;left:30px;top:30px;width:400px;height:400px;border-radius:26px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:200px">${em}</div>
+  <div style="position:absolute;left:470px;top:40px;font-size:44px;font-weight:800">${name}</div><div style="position:absolute;left:470px;top:104px;font-size:38px;font-weight:800;color:${PUR}">${price}</div>
+  <div style="position:absolute;left:470px;top:170px;display:flex;gap:12px">${['S', 'M', 'L'].map((s, i) => `<div style="width:64px;height:64px;border-radius:16px;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;background:${i === 1 ? INK : '#F1EEE8'};color:${i === 1 ? '#fff' : INK}">${s}</div>`).join('')}</div>`;
+
+// ===================== S0: hook — what happens when you click Add to Cart? =====================
+const s0t = T(S0, 'c', 230, 64, 'What happens on <span class="pur">Add to Cart?</span>');
+const bw0 = browserWin(S0, 90, 360, 900, 1040);
+bw0.body.innerHTML = productPage('👜', 'Tote Bag', '₹1,499', '#F1D9C7').replace('width:400px;height:400px', 'width:400px;height:400px') + `<div class="ab" style="position:absolute;left:470px;top:290px;width:400px;height:110px;border-radius:28px;background:${PUR};color:#fff;font-size:36px;font-weight:800;display:flex;align-items:center;justify-content:center">Add to Cart</div>
+  <div style="position:absolute;left:30px;top:470px;width:840px;font-size:28px;line-height:1.5;color:${MUT}">Hand-stitched canvas tote. Fits a 15" laptop. Free delivery.</div>`;
+const ab0 = bw0.body.querySelector('.ab');
+const q0 = E(S0, { left: '780px', top: '1160px', width: '150px', height: '150px', borderRadius: '75px', background: AMB, fontSize: '100px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }, '?');
+
+// ===================== S1: series title =====================
+const s1a = T(S1, 'c', 560, 70, 'Welcome to', { color: MUT });
+const s1b = T(S1, 'c', 660, 130, 'Behind Every', {});
+const s1c = T(S1, 'c', 810, 150, '<span class="pur">Click</span>', {});
+const cur1 = E(S1, { left: '700px', top: '840px', width: '90px', height: '90px', zIndex: 5 }, `<svg width="90" height="90" viewBox="0 0 40 40"><path d="M4 3 L4 31 L11.5 24 L16.5 35 L21.5 33 L16.5 22.5 L27 22.5 Z" fill="${INK}" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`);
+const rip1 = [0, 1, 2].map(k => E(S1, { width: '10px', height: '10px', borderRadius: '50%', boxShadow: `0 0 0 5px rgba(90,23,230,${0.6 - k * 0.15})`, zIndex: 4 }));
+const ep1 = E(S1, { left: '340px', top: '1020px', width: '400px', height: '100px', borderRadius: '50px', background: INK, color: '#fff', fontSize: '40px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '0.06em', zIndex: 4 }, 'EPISODE 2');
+const by1 = E(S1, { left: '0px', width: '1080px', top: '1170px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '18px', fontSize: '40px', fontWeight: 700, color: MUT, zIndex: 4 }, `by <span style="display:inline-block;width:70px;height:70px">${logoImg(70)}</span> <b style="color:${INK}">HeliosLabs</b>`);
+const code1 = Array.from({ length: 10 }, (_, k) => E(S1, { left: ((k * 211) % 900 + 40) + 'px', fontSize: '26px', color: 'rgba(90,23,230,0.25)', zIndex: 1 }, ['POST /cart', '200 OK', 'qty: 1', '{ }', '</>', 'cart_id', '0101', 'HTTPS', 'SKU-204', 'stock ✓'][k], 'a mono'));
+
+// ===================== S2: the lab — browser ⇄ backend =====================
+const bw = browserWin(S2, 60, 230, 960, 580);
+const PA = E(bw.body, { inset: '0' }, productPage('👜', 'Tote Bag', '₹1,499', '#F1D9C7').replace(/width:400px;height:400px/, 'width:380px;height:380px').replace('font-size:200px', 'font-size:180px') + `<div class="ab" style="position:absolute;left:470px;top:290px;width:440px;height:110px;border-radius:28px;background:${PUR};color:#fff;font-size:36px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px">Add to Cart</div>`);
+const abL = PA.querySelector('.ab');
+const PB = E(bw.body, { inset: '0', background: WHT }, productPage('👟', 'Sneakers', '₹2,999', '#DCEBDF').replace(/width:400px;height:400px/, 'width:380px;height:380px').replace('font-size:200px', 'font-size:180px') + `<div style="position:absolute;left:470px;top:290px;width:440px;height:110px;border-radius:28px;background:#EFE7FD;color:${PUR};font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Keep shopping — cart saved ✓</div>`);
+const nxt = E(bw.body, { left: '30px', top: '300px', padding: '14px 24px', borderRadius: '22px', background: INK, color: '#fff', fontSize: '26px', fontWeight: 800, zIndex: 3 }, 'Next: Sneakers →');
+const be = E(S2, { left: '90px', top: '1000px', width: '900px', height: '450px', background: '#1C1726', color: '#fff' }, `
+  <div style="position:absolute;left:30px;top:24px;display:flex;align-items:center;gap:14px;font-size:30px;font-weight:800">⚙️ BACKEND</div><div class="led" style="position:absolute;right:30px;top:32px;width:20px;height:20px;border-radius:10px;background:#7CE0A3"></div>
+  ${[['🔎', 'Identify product', 'SKU-204 · Tote Bag'], ['📋', 'Check details', 'price ✓  stock ✓  size M ✓'], ['🛒', 'Update cart', 'items: 0 → 1']].map(([e, a, b], k) => `<div class="stp" style="position:absolute;left:30px;top:${86 + k * 104}px;width:560px;height:90px;border-radius:16px;background:rgba(255,255,255,0.06)">
+     <div style="position:absolute;left:18px;top:20px;font-size:40px;line-height:1">${e}</div><div style="position:absolute;left:80px;top:14px;font-size:28px;font-weight:800">${a}</div><div class="mono sd" style="position:absolute;left:80px;top:52px;font-size:20px;color:rgba(255,255,255,0.6)">${b}</div>
+     <div class="ok" style="position:absolute;right:16px;top:22px;width:46px;height:46px;border-radius:23px;background:#7CE0A3;color:${INK};font-size:28px;font-weight:900;display:flex;align-items:center;justify-content:center">✓</div></div>`).join('')}
+  <div class="db" style="position:absolute;left:620px;top:86px;width:250px;height:300px;border-radius:20px;background:rgba(255,255,255,0.06)">
+    <svg style="position:absolute;left:55px;top:30px" width="140" height="150" viewBox="0 0 140 150"><ellipse cx="70" cy="22" rx="62" ry="18" fill="#B9A2FF"/><path d="M8 22 V128 A62 18 0 0 0 132 128 V22" fill="#7C4DFF"/><ellipse cx="70" cy="62" rx="62" ry="18" fill="none" stroke="#B9A2FF" stroke-width="4"/><ellipse cx="70" cy="98" rx="62" ry="18" fill="none" stroke="#B9A2FF" stroke-width="4"/></svg>
+    <div style="position:absolute;left:0;width:250px;top:196px;text-align:center;font-size:26px;font-weight:800">DATABASE</div><div class="dbs mono" style="position:absolute;left:0;width:250px;top:236px;text-align:center;font-size:20px;color:#7CE0A3"></div></div>`, 'card');
+const beSt = [...be.querySelectorAll('.stp')], beOk = [...be.querySelectorAll('.ok')], beDb = be.querySelector('.db'), beDbs = be.querySelector('.dbs'), beLed = be.querySelector('.led');
+const wire = E(S2, { left: '534px', top: '810px', width: '12px', height: '190px', borderRadius: '6px', background: 'repeating-linear-gradient(180deg, rgba(90,23,230,0.35) 0 14px, transparent 14px 26px)', zIndex: 0 });
+const PK = [[13.4, 15.3, 'down', '📦 POST /cart · Tote Bag', PUR], [20.0, 20.9, 'up', '✓ Cart updated · 1 item', GRN]];
+const pks = PK.map(([a, b, dir, s, c]) => E(S2, { height: '64px', padding: '0 24px', borderRadius: '32px', background: c, color: '#fff', fontSize: '26px', fontWeight: 800, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', boxShadow: `0 0 0 6px rgba(255,253,248,0.9), 0 10px 30px ${c}66`, zIndex: 6 }, s));
+const STEP = [[9.38, '① One click'], [11.4, '⛓️ A chain of actions'], [13.04, '② Request → backend'], [16.2, '③ Identify · check · update'], [20.92, '④ Cart saved'], [23.14, '⑤ Keep shopping'], [27.76, '⑥ Cart: 0 → 1']];
+const stepC = E(S2, { left: '60px', top: '868px', height: '74px', padding: '0 26px', borderRadius: '37px', background: WHT, boxShadow: `0 10px 30px rgba(28,23,38,0.12), 0 0 0 2px ${LIN}`, fontSize: '28px', fontWeight: 800, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', zIndex: 5 }, '');
+const chain = Array.from({ length: 5 }, (_, k) => E(S2, { left: (620 + k * 76) + 'px', top: '880px', width: '64px', height: '44px', borderRadius: '22px', boxShadow: `inset 0 0 0 8px ${AMB}`, zIndex: 5 }));
+const bigBadge = E(S2, { left: '790px', top: '330px', width: '200px', height: '200px', borderRadius: '100px', background: AMB, color: INK, fontSize: '120px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 8, boxShadow: '0 20px 60px rgba(232,163,61,0.5)' }, '');
+
+// ===================== S3: one click, multiple processes =====================
+const s3a = T(S3, 'c', 230, 74, 'One click.');
+const s3b = T(S3, 'c', 330, 74, '<span class="pur">Multiple processes.</span>');
+const click3 = E(S3, { left: '390px', top: '520px', width: '300px', height: '120px', borderRadius: '60px', background: PUR, color: '#fff', fontSize: '38px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4 }, '🛒 Add to Cart');
+const PROC = [['📤', 'Request'], ['🔎', 'Identify'], ['📋', 'Check'], ['🛒', 'Update'], ['💾', 'Save']];
+const procs = PROC.map(([e, s], k) => E(S3, { width: '190px', height: '190px', zIndex: 3 }, `<div style="position:absolute;left:0;width:190px;top:28px;text-align:center;font-size:70px">${e}</div><div style="position:absolute;left:0;width:190px;top:122px;text-align:center;font-size:26px;font-weight:800">${s}</div>`, 'card'));
+const lines3 = E(S3, { left: '0px', top: '0px', width: '1080px', height: '1920px', zIndex: 2 }, `<svg width="1080" height="1920">${PROC.map((_, k) => { const x = 105 + k * 217, y = k % 2 ? 1060 : 880; return `<path class="ln3" d="M540 640 C540 ${720}, ${x} ${720}, ${x} ${y - 95}" fill="none" stroke="${PUR}" stroke-width="5" stroke-dasharray="1" pathLength="1"/>`; }).join('')}</svg>`);
+const ln3 = [...lines3.querySelectorAll('.ln3')];
+const tech3 = E(S3, { left: '140px', top: '1260px', width: '800px', height: '110px', borderRadius: '55px', background: INK, color: '#fff', fontSize: '34px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', zIndex: 4 }, '⚙️ Technology, behind the scenes');
+
+// ===================== S4: follow =====================
+const s4a = T(S4, 'c', 300, 64, 'Follow for more episodes of');
+const s4b = T(S4, 'c', 390, 84, 'Behind Every <span class="pur">Click</span>');
+const prof = E(S4, { left: '140px', top: '560px', width: '800px', height: '700px' }, `<div style="position:absolute;left:300px;top:50px;width:200px;height:200px">${logoImg(200)}</div>
+  <div style="position:absolute;left:0;width:800px;top:280px;text-align:center;font-size:44px;font-weight:800">HeliosLabs</div><div style="position:absolute;left:0;width:800px;top:340px;text-align:center;font-size:26px;font-weight:600;color:${MUT}">Tech, explained simply</div>
+  <div class="fb" style="position:absolute;left:200px;top:410px;width:400px;height:96px;border-radius:26px;font-size:34px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px"></div>
+  ${[['EP 1', 'Sessions ✓'], ['EP 2', 'Add to Cart ✓'], ['EP 3', 'Coming soon']].map(([s, d], i) => `<div class="eps" style="position:absolute;left:${60 + i * 240}px;top:540px;width:200px;height:120px;border-radius:20px;background:${i < 2 ? PUR : '#F1EEE8'};color:${i < 2 ? '#fff' : MUT};font-size:28px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">${s}<span style="font-size:20px">${d}</span></div>`).join('')}`, 'card');
+const fb4 = prof.querySelector('.fb'), eps4 = [...prof.querySelectorAll('.eps')];
+
+// ===================== S5: more than meets the eye — x-ray =====================
+const s5a = T(S5, 'c', 230, 66, "There's <span class=\"pur\">more</span> to the internet");
+const s5b = T(S5, 'c', 320, 66, 'than what <span class="amb">meets the eye</span> 👁️');
+const xr = E(S5, { left: '140px', top: '470px', width: '800px', height: '900px' }, `<div style="position:absolute;inset:0;background:#1C1726"></div>
+  ${Array.from({ length: 13 }, (_, i) => { const L = ['POST /cart HTTP/1.1', '{ sku: "SKU-204", qty: 1 }', '→ SELECT * FROM products', '← price 1499 · stock 12', 'UPDATE carts SET items=1', '201 Created · 41 ms', 'Set-Cookie: cart_id=c7e1', 'TLS 1.3 · encrypted ✓', 'cache: MISS → HIT', 'event: add_to_cart']; return `<div class="mono xl" style="position:absolute;left:${-60 + (i % 3) * 40}px;top:${20 + i * 68}px;font-size:30px;white-space:nowrap;color:${['#7CE0A3', AMB, '#B9A2FF', '#7DD3FC'][i % 4]}">${L[i % 10]}   ${L[(i + 3) % 10]}</div>`; }).join('')}
+  <div class="sf" style="position:absolute;inset:0;background:${WHT}"><div style="position:absolute;left:0;top:0;width:800px;height:110px;background:${PUR};color:#fff;font-size:40px;font-weight:800;display:flex;align-items:center;padding-left:30px;box-sizing:border-box">myshop <span style="margin-left:auto;margin-right:30px">🛒 1</span></div>
+    ${['👜', '👟', '👗', '⌚'].map((e, i) => `<div style="position:absolute;left:${30 + (i % 2) * 380}px;top:${150 + Math.floor(i / 2) * 360}px;width:360px;height:330px;border-radius:24px;background:${['#F1D9C7', '#DCEBDF', '#E7DDF7', '#DDE4F1'][i]};display:flex;align-items:center;justify-content:center;font-size:140px">${e}</div>`).join('')}</div>`, 'card');
+const xrSf = xr.querySelector('.sf'), xrL = [...xr.querySelectorAll('.xl')];
+const lens = E(S5, { width: '360px', height: '360px', borderRadius: '50%', boxShadow: `0 0 0 14px ${INK}, 0 20px 50px rgba(28,23,38,0.3)`, zIndex: 5 });
+
+// ===================== S6: end =====================
+const endL = E(S6, { left: '370px', top: '420px', width: '340px', height: '340px' }, logoImg(340));
+const e1 = T(S6, 'c', 820, 110, 'HeliosLabs');
+const e2 = T(S6, 'c', 960, 46, 'Behind Every Click · <span class="pur">Episode 2</span>', { w: 700 });
+const e3 = T(S6, 'c', 1040, 38, 'Follow for Episode 3 →', { w: 600, color: MUT });
+
+const SUBS = [
+  [0.0, 4.6, 'Ever wondered what actually happens when you click Add to Cart on an online store?'],
+  [4.6, 9.2, 'Welcome to Behind Every Click, Episode 2 by HeliosLabs.'],
+  [9.2, 12.7, 'That one click triggers a chain of actions.'],
+  [12.7, 15.9, "Your browser sends a request to the website's backend."],
+  [15.9, 20.6, 'The backend identifies the product, checks its details and updates your cart.'],
+  [20.6, 25.8, 'The cart information gets saved, so you can continue shopping without starting all over again.'],
+  [25.8, 30.6, 'And just like that, your cart goes from zero items to one.'],
+  [30.6, 33.3, 'One click. Multiple processes.'],
+  [33.3, 36.1, "That's technology working behind the scenes."],
+  [36.1, 39.9, 'Follow HeliosLabs for more episodes of Behind Every Click.'],
+  [39.9, 45.3, "Because there's more to the internet than what meets the eye."],
+];
+const subBox = document.querySelector('#sub span');
+
+let measured = false;
+const hsh = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  let gl = 0; SC.slice(1).forEach(c => { const d = t - c; if (d > -0.2 && d < 0.18) gl = 1 - Math.abs(d) / 0.2; });
+  const fr = Math.floor(t * 30);
+  scenes.forEach((S, k) => { const s = SC[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9; const on = t >= s && t < next; S.style.display = on ? 'block' : 'none';
+    if (on && gl > 0) { S.style.transform = `translateX(${(hsh(fr, k) - 0.5) * 60 * gl}px)`; S.style.filter = `drop-shadow(${10 * gl}px 0 0 rgba(255,61,127,0.75)) drop-shadow(${-10 * gl}px 0 0 rgba(34,184,207,0.75))`; } else { S.style.transform = 'none'; S.style.filter = 'none'; } });
+  gbars.forEach((b, i) => { const on = gl > 0.05 && hsh(fr, i + 9) < 0.7 * gl + 0.2; b.style.visibility = on ? 'visible' : 'hidden'; if (!on) return;
+    b.style.top = (hsh(fr, i) * 1920) + 'px'; b.style.height = (8 + hsh(fr, i + 3) * 70) + 'px'; b.style.left = ((hsh(fr, i + 5) - 0.5) * 300) + 'px'; b.style.background = [PUR, PINK, CY, INK, 'rgba(255,253,248,0.9)'][Math.floor(hsh(fr, i + 7) * 5)]; b.style.opacity = 0.35 + 0.5 * gl; });
+  { const on = TON.some(([a, b]) => t >= a && t < b); let x = 540, y = 1300;
+    for (let j = 0; j < TP.length; j++) { const [ts, px, py] = TP[j], nx = TP[j + 1]; if (t >= ts) { if (nx && t < nx[0]) { const p = inout(clamp((t - ts) / (nx[0] - ts))); x = lerp(px, nx[1], p); y = lerp(py, nx[2], p); } else { x = px; y = py; } } }
+    tdot.style.left = x + 'px'; tdot.style.top = y + 'px'; tdot.style.visibility = on ? 'visible' : 'hidden';
+    let last = -9; TAPS.forEach(s => { if (t >= s) last = s; }); const pr = t - last; tdot.style.transform = `scale(${pr < 0.15 ? 0.8 : 1})`;
+    trip.style.visibility = on && pr < 0.45 ? 'visible' : 'hidden'; trip.style.left = x + 'px'; trip.style.top = y + 'px'; trip.style.transform = `scale(${1 + pr * 4})`; trip.style.opacity = 1 - pr / 0.45; }
+  document.getElementById('ep').style.opacity = clamp((t - 8.1) / 0.4);
+  // ---- S0
+  show(s0t, t, 1.64);
+  { const p = clamp(sp(t, 0.1)); bw0.style.transform = `translateY(${(1 - p) * 900}px)`; bw0.url.textContent = 'myshop.in/tote-bag'; bw0.bd.textContent = '0';
+    ab0.style.transform = `scale(${press(t, 3.18) * (t > 2.42 && t < 3.18 ? 1.04 : 1)})`; ab0.style.boxShadow = t > 2.42 ? `0 0 0 ${t < 3.18 ? 6 : 0}px rgba(90,23,230,0.3)` : 'none'; pop(q0, t, 3.6, 1e9, `rotate(${8 * Math.sin(t * 5)}deg)`); }
+  // ---- S1
+  show(s1a, t, 4.9); show(s1b, t, 5.6); show(s1c, t, 5.9);
+  { const c = clamp(sp(t, 6.0)); cur1.style.transform = `translate(${(1 - c) * 300}px, ${(1 - c) * 300}px) scale(${press(t, 6.42)})`; cur1.style.visibility = t > 6.0 ? 'visible' : 'hidden';
+    rip1.forEach((r, k) => { const u = t - (6.42 + k * 0.12), on = u > 0 && u < 0.9; const R = 10 + u * 300; r.style.visibility = on ? 'visible' : 'hidden'; r.style.left = (720 - R) + 'px'; r.style.top = (860 - R) + 'px'; r.style.width = (2 * R) + 'px'; r.style.height = (2 * R) + 'px'; r.style.opacity = 1 - u / 0.9; });
+    pop(ep1, t, 6.72); const b = clamp(sp(t, 8.12)); by1.style.opacity = b; by1.style.transform = `translateY(${(1 - b) * 30}px)`; code1.forEach((c, k) => { c.style.top = (1500 - ((t * (30 + k * 6) + k * 170) % 1400)) + 'px'; }); }
+  // ---- S2 lab
+  { const p = clamp(sp(t, 9.2)); bw.style.transform = `translateY(${(1 - p) * -900}px)`; const q = clamp(sp(t, 9.5)); be.style.transform = `translateY(${(1 - q) * 900}px)`;
+    const after = t > 23.14; bw.url.textContent = after ? 'myshop.in/sneakers' : 'myshop.in/tote-bag';
+    abL.style.transform = `scale(${press(t, 10.18)})`; abL.innerHTML = t > 20.9 ? `${check(40, GRN)} Added` : t > 10.2 ? 'Adding…' : 'Add to Cart'; abL.style.background = t > 20.9 ? INK : PUR;
+    const n = t > 28.82 ? 1 : 0; bw.bd.textContent = n; bw.cart.style.transform = `scale(${1 + 0.3 * Math.sin(Math.PI * clamp((t - 28.82) / 0.4))})`;
+    const pg = inout(clamp((t - 23.2) / 0.45)); PA.style.transform = `translateX(${-pg * 960}px)`; PB.style.transform = `translateX(${(1 - pg) * 960}px)`; PB.style.visibility = t > 23.15 ? 'visible' : 'hidden';
+    nxt.style.visibility = t > 22.0 && t < 23.4 ? 'visible' : 'hidden'; nxt.style.transform = `scale(${clamp(sp(t, 22.0)) * press(t, 23.14)})`;
+    const bb = clamp(sp(t, 27.96)) * (1 - clamp((t - 30.2) / 0.3)); bigBadge.textContent = t < 28.82 ? '0' : '1'; bigBadge.style.transform = `scale(${bb * (1 + 0.25 * Math.sin(Math.PI * clamp((t - 28.82) / 0.4)))})`; bigBadge.style.visibility = bb > 0.01 ? 'visible' : 'hidden'; bigBadge.style.background = t < 28.82 ? '#EDE4D4' : AMB;
+    [16.5, 18.22, 19.48].forEach((ts, k) => { const on = t > ts; beSt[k].style.background = on ? 'rgba(124,224,163,0.14)' : 'rgba(255,255,255,0.06)'; beSt[k].style.boxShadow = t > ts && t < ts + 0.8 ? `inset 0 0 0 3px #7CE0A3` : 'none'; beOk[k].style.transform = `scale(${clamp(sp(t, ts + 0.15))})`; });
+    const sv = t > 21.56; beDb.style.boxShadow = sv && t < 22.6 ? `inset 0 0 0 4px #7CE0A3, 0 0 40px rgba(124,224,163,0.4)` : 'none'; beDbs.textContent = sv ? 'cart saved ✓' : 'idle'; beLed.style.opacity = 0.5 + 0.5 * Math.sin(t * (t > 15 && t < 22 ? 30 : 4));
+    pks.forEach((k, i) => { const [a, b, dir] = PK[i], u = clamp((t - a) / (b - a)), on = t > a - 0.1 && t < b + 0.25; k.style.visibility = on ? 'visible' : 'hidden';
+      const y = dir === 'down' ? lerp(760, 990, inout(u)) : lerp(990, 760, inout(u)); k.style.left = (540 - k.offsetWidth / 2) + 'px'; k.style.top = (y - 32) + 'px'; k.style.transform = `scale(${clamp(sp(t, a - 0.1)) * (1 - clamp((t - b) / 0.25))})`; });
+    wire.style.backgroundPosition = `0 ${(t * 120) % 26}px`;
+    let st = ''; STEP.forEach(([ts, s]) => { if (t >= ts) st = s; }); stepC.textContent = st; stepC.style.visibility = st ? 'visible' : 'hidden';
+    const lastStep = Math.max(...STEP.map(([ts]) => t >= ts ? ts : -9)); stepC.style.transform = `scale(${1 + 0.08 * Math.sin(Math.PI * clamp((t - lastStep) / 0.3))})`;
+    chain.forEach((c, k) => { const v = t > 11.4 + k * 0.1 && t < 13.0; c.style.visibility = v ? 'visible' : 'hidden'; c.style.transform = `scale(${clamp(sp(t, 11.4 + k * 0.1))}) rotate(${k % 2 ? 0 : 0}deg)`; }); }
+  // ---- S3
+  show(s3a, t, 30.78); show(s3b, t, 31.8);
+  { pop(click3, t, 30.7, 1e9, `scale(${press(t, 31.1)})`);
+    procs.forEach((c, k) => { const ts = 31.8 + k * 0.1, p = clamp(sp(t, ts)), x = 105 + k * 217, y = k % 2 ? 1060 : 880; c.style.left = (lerp(540, x, p) - 95) + 'px'; c.style.top = (lerp(580, y, p) - 95) + 'px'; c.style.transform = `scale(${p})`; c.style.visibility = t > ts ? 'visible' : 'hidden'; });
+    ln3.forEach((l, k) => { l.style.strokeDashoffset = 1 - inout(clamp((t - 31.8 - k * 0.1) / 0.4)); }); pop(tech3, t, 33.88); }
+  // ---- S4
+  show(s4a, t, 36.5); show(s4b, t, 38.76);
+  { pop(prof, t, 36.15); const f = t > 36.4; fb4.innerHTML = f ? `${check(42, GRN)} Following` : '＋ Follow'; fb4.style.background = f ? '#E8F6EE' : PUR; fb4.style.color = f ? GRN : '#fff'; fb4.style.transform = `scale(${press(t, 36.32)})`; eps4.forEach((e, k) => pop(e, t, 37.96 + k * 0.15)); }
+  // ---- S5
+  show(s5a, t, 40.1); show(s5b, t, 41.9);
+  { pop(xr, t, 40.0); const lx = 540 + 250 * Math.sin((t - 40.6) * 1.4), ly = 920 + 220 * Math.cos((t - 40.6) * 1.1), r = 180 * clamp(sp(t, 41.44));
+    xrSf.style.webkitMaskImage = xrSf.style.maskImage = r > 1 ? `radial-gradient(circle ${r}px at ${lx - 140}px ${ly - 470}px, transparent 98%, #000 100%)` : 'none';
+    lens.style.left = (lx - 180) + 'px'; lens.style.top = (ly - 180) + 'px'; lens.style.transform = `scale(${r / 180})`; lens.style.visibility = r > 1 ? 'visible' : 'hidden'; xrL.forEach((l, k) => l.style.opacity = 0.6 + 0.4 * Math.sin(t * 4 + k)); }
+  // ---- S6
+  pop(endL, t, 43.45, 1e9, `rotate(${(1 - clamp(sp(t, 43.45))) * -12}deg)`); show(e1, t, 43.7); show(e2, t, 44.0); show(e3, t, 44.3);
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 45.3;
+window.seek(0);
+</script>
+</body>
+</html>
