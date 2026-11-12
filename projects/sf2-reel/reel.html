@@ -1,0 +1,317 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Storefront Reel 2</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; background-image: radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px); background-size: 44px 44px; }
+  .a { position: absolute; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); }
+  #hero { position: absolute; z-index: 10; box-shadow: 0 40px 100px rgba(28,23,38,0.16), 0 0 0 2px rgba(226,216,198,0.9); overflow: hidden; }
+  .scn { position: absolute; z-index: 11; overflow: hidden; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; white-space: nowrap; font-weight: 800; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 24px; box-shadow: 0 16px 40px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .touch { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 35px; background: rgba(28,23,38,0.30); box-shadow: 0 0 0 5px rgba(255,253,248,0.95), 0 8px 20px rgba(28,23,38,0.25); z-index: 60; }
+  .ripple { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 35px; box-shadow: 0 0 0 4px #5A17E6; z-index: 59; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 92px; height: 92px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1530px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1" style="width:640px;height:640px;background:#B9A2FF;opacity:0.35"></div>
+  <div class="blob" id="b2" style="width:560px;height:560px;background:#F6C982;opacity:0.35"></div>
+  <div id="hero"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+const LPUR = '#5F00FF', GRN = '#1F9D55', RED = '#E5484D';
+const logoImg = s => `<img src="data:image/png;base64,LOGO_BIG" style="width:${s}px;height:${s}px;display:block">`;
+const hero = document.getElementById('hero');
+// ---- shared element: one card morphs into each scene's main panel
+const FR = [ // [start, x, y, w, h, radius, colour]
+  [0.0, 170, 290, 740, 1020, 44, WHT], [4.5, 290, 520, 500, 500, 250, WHT], [8.4, 200, 300, 680, 1130, 64, WHT], [14.1, 90, 430, 900, 860, 44, WHT],
+  [19.6, 330, 470, 420, 420, 96, LPUR], [23.4, 110, 300, 860, 1100, 40, WHT], [27.3, 110, 300, 860, 1100, 40, WHT], [33.0, 240, 290, 600, 1130, 64, WHT],
+  [36.6, 90, 380, 900, 980, 44, WHT], [42.3, 90, 360, 900, 1020, 44, INK], [47.2, 70, 440, 450, 900, 44, WHT], [54.0, 330, 470, 420, 420, 96, LPUR],
+  [56.0, 120, 620, 840, 460, 230, INK], [59.2, 90, 520, 900, 760, 44, WHT], [63.2, 330, 430, 420, 420, 96, LPUR]];
+const MORPH = 0.55;
+const SCN = FR.map(([ts, x, y, w, h, r]) => { const s = E(document.getElementById('stage'), { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', borderRadius: r + 'px' }, '', 'scn'); return s; });
+const [Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10, Q11, Q12, Q13, Q14] = SCN;
+const stg = document.getElementById('stage');
+const titles = [];
+const TT = (y, size, html, tIn, tOut, o = {}) => { const m = T(stg, 'c', y, size, html, o); m.style.zIndex = 30; titles.push([m, tIn, tOut]); return m; };
+// touch indicator
+const tdot = E(stg, {}, '', 'touch'), trip = E(stg, {}, '', 'ripple');
+const TAPS = [[0.9, 540, 780], [33.76, 700, 1040], [35.18, 540, 1330], [31.76, 540, 1100], [42.9, 860, 640], [43.6, 860, 800], [44.3, 860, 960], [61.6, 0, 0]];
+const touchPath = [[0.6, 640, 900], [0.9, 540, 780], [1.4, 640, 1000], [31.2, 540, 1250], [31.76, 540, 1100], [32.3, 540, 900], [33.4, 760, 1200], [33.76, 700, 1040], [34.6, 600, 1250], [35.18, 540, 1330], [35.7, 640, 1450], [42.5, 860, 520], [42.9, 860, 640], [43.6, 860, 800], [44.3, 860, 960], [44.9, 960, 1100]];
+const TOUCH_ON = [[0.5, 1.5], [31.0, 32.6], [33.2, 35.8], [42.4, 45.0]];
+const TAPT = [0.9, 31.76, 33.76, 35.18, 42.9, 43.6, 44.3];
+
+// ===================== S0: instagram post, customers interested =====================
+Q0.innerHTML = `<div style="position:absolute;left:28px;top:24px;width:66px;height:66px;border-radius:33px;background:linear-gradient(135deg,#F6C982,#5A17E6);padding:4px;box-sizing:border-box"><div style="width:100%;height:100%;border-radius:50%;background:${WHT};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px">Y</div></div>
+  <div style="position:absolute;left:112px;top:30px;font-size:28px;font-weight:800">yourbrand</div><div style="position:absolute;left:112px;top:64px;font-size:20px;font-weight:600;color:${MUT}">New drop ✨</div>
+  <div class="img" style="position:absolute;left:0;top:110px;width:740px;height:660px;background:linear-gradient(135deg,#F1D9C7,#E7DDF7);display:flex;align-items:center;justify-content:center;font-size:300px">👜</div>
+  <div class="hb" style="position:absolute;left:270px;top:280px;font-size:200px;line-height:1">❤️</div>
+  <div class="ht" style="position:absolute;left:28px;top:790px;font-size:52px;line-height:1">♡</div><div style="position:absolute;left:100px;top:794px;font-size:44px;line-height:1">💬</div><div style="position:absolute;left:170px;top:796px;font-size:42px;line-height:1">➤</div>
+  <div class="lk" style="position:absolute;left:28px;top:866px;font-size:28px;font-weight:800;font-variant-numeric:tabular-nums"></div>
+  <div style="position:absolute;left:28px;top:910px;font-size:24px;font-weight:600;color:${MUT}">yourbrand · Tote Bag in 4 colours</div>`;
+const q0img = Q0.querySelector('.img'), q0hb = Q0.querySelector('.hb'), q0ht = Q0.querySelector('.ht'), q0lk = Q0.querySelector('.lk');
+const CMT = [['😍 Love it!', 2.68, 60, 820], ['Interested! 🙋', 3.0, 600, 760], ['Price? 👀', 3.3, 620, 1080], ['Need this 🔥', 3.6, 40, 1120]];
+const cmts = CMT.map(([s, ts, x, y]) => { const e = E(stg, { left: x + 'px', top: y + 'px', padding: '18px 26px', borderRadius: '30px', background: WHT, boxShadow: '0 14px 40px rgba(28,23,38,0.15)', fontSize: '30px', fontWeight: 800, zIndex: 31, whiteSpace: 'nowrap' }, s); e.ts = ts; return e; });
+TT(180, 70, 'Instagram par <span class="pur">products</span>', 0.25, 4.3);
+
+// ===================== S1: orders = problems =====================
+Q1.innerHTML = `<div style="position:absolute;left:0;top:120px;width:500px;text-align:center;font-size:170px;line-height:1">🛒</div><div class="qm" style="position:absolute;left:300px;top:90px;width:110px;height:110px;border-radius:55px;background:${AMB};font-size:70px;font-weight:900;display:flex;align-items:center;justify-content:center">?</div>
+  <div style="position:absolute;left:0;top:340px;width:500px;text-align:center;font-size:34px;font-weight:800">Orders?</div>`;
+const q1qm = Q1.querySelector('.qm');
+const WARN = Array.from({ length: 5 }, (_, k) => E(stg, { width: '96px', height: '96px', borderRadius: '48px', background: WHT, boxShadow: '0 12px 30px rgba(28,23,38,0.15)', fontSize: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 31 }, ['⚠️', '😓', '📩', '⏳', '❓'][k]));
+TT(230, 66, 'Orders lene mein', 4.66, 8.2); TT(320, 84, '<span class="amb">kitni problems?</span>', 6.54, 8.2);
+
+// ===================== S2: DM inbox overflowing =====================
+Q2.innerHTML = `<div style="position:absolute;left:0;top:0;width:680px;height:120px;border-bottom:2px solid ${LIN}"></div><div style="position:absolute;left:36px;top:36px;font-size:36px;font-weight:800">Messages</div>
+  <div class="ub" style="position:absolute;right:36px;top:34px;min-width:56px;height:56px;padding:0 14px;border-radius:28px;background:${RED};color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;box-sizing:border-box"></div>`;
+const q2ub = Q2.querySelector('.ub');
+const DMS = [['Riya', 'Price kya hai? 💰', 8.96], ['Aman', 'Product details bhejo 📋', 10.5], ['Sneha', 'Poori collection dikhao 🛍️', 12.36], ['Kabir', 'Size M available? 📏', 12.9], ['Neha', 'COD hai? 🚚', 13.3]];
+const dms = DMS.map(([n, m, ts], k) => { const e = E(Q2, { left: '24px', top: (140 + k * 160) + 'px', width: '632px', height: '140px', borderRadius: '24px', background: '#FBF6EE', boxShadow: `0 0 0 2px ${LIN}` }, `<div style="position:absolute;left:20px;top:28px;width:84px;height:84px;border-radius:42px;background:${['#E7DDF7', '#F6E6C8', '#DCEBDF', '#F3DCDC', '#DDE4F1'][k]};font-size:38px;font-weight:800;display:flex;align-items:center;justify-content:center">${n[0]}</div>
+  <div style="position:absolute;left:128px;top:30px;font-size:28px;font-weight:800">${n}</div><div style="position:absolute;left:128px;top:74px;font-size:26px;font-weight:600;color:#4A4060">${m}</div><div style="position:absolute;right:24px;top:56px;width:22px;height:22px;border-radius:11px;background:${LPUR}"></div>`); e.ts = ts; return e; });
+TT(180, 66, 'Price? Details? <span class="amb">Collection?</span>', 8.6, 14.0);
+
+// ===================== S3: time drain =====================
+Q3.innerHTML = `<div style="position:absolute;left:40px;top:40px;width:320px;height:320px;border-radius:160px;background:#FBF6EE;box-shadow:inset 0 0 0 14px ${INK}">
+   ${Array.from({ length: 12 }, (_, i) => `<div style="position:absolute;left:156px;top:24px;width:8px;height:24px;border-radius:4px;background:${INK};transform-origin:4px 136px;transform:rotate(${i * 30}deg)"></div>`).join('')}
+   <div class="hh" style="position:absolute;left:154px;top:80px;width:12px;height:84px;border-radius:6px;background:${INK};transform-origin:6px 80px"></div><div class="mh" style="position:absolute;left:156px;top:40px;width:8px;height:124px;border-radius:4px;background:${LPUR};transform-origin:4px 120px"></div>
+   <div style="position:absolute;left:146px;top:146px;width:28px;height:28px;border-radius:14px;background:${INK}"></div></div>
+  ${[['💬', 'Messages', 16.26], ['📒', 'Order details', 17.12]].map(([e, s, ts], k) => `<div class="tc" data-ts="${ts}" style="position:absolute;left:400px;top:${60 + k * 160}px;width:460px;height:130px;border-radius:24px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN};display:flex;align-items:center;gap:20px;padding-left:24px;box-sizing:border-box;font-size:34px;font-weight:800"><span style="font-size:56px">${e}</span>${s}<span class="cn" style="margin-left:auto;margin-right:24px;color:${RED};font-variant-numeric:tabular-nums"></span></div>`).join('')}
+  <div style="position:absolute;left:40px;top:430px;font-size:28px;font-weight:800;color:${MUT};letter-spacing:0.06em">AAPKA DIN</div>
+  <div style="position:absolute;left:40px;top:480px;width:820px;height:70px;border-radius:35px;background:#EDE4D4;overflow:hidden"><div class="tb" style="height:70px;border-radius:35px;background:linear-gradient(90deg,${AMB},${RED})"></div></div>
+  <div class="tl" style="position:absolute;left:40px;top:580px;width:820px;display:flex;justify-content:space-between;font-size:26px;font-weight:700;color:${MUT}"><span>9 AM</span><span>1 PM</span><span>5 PM</span><span>9 PM</span></div>
+  <div class="tx" style="position:absolute;left:40px;top:660px;width:820px;text-align:center;font-size:36px;font-weight:800;color:${RED}">⏳ Time sirf messages mein chala gaya</div>`;
+const q3hh = Q3.querySelector('.hh'), q3mh = Q3.querySelector('.mh'), q3tc = [...Q3.querySelectorAll('.tc')], q3tb = Q3.querySelector('.tb'), q3tx = Q3.querySelector('.tx');
+TT(200, 70, 'Aapka <span class="amb">kaafi time</span>…', 14.4, 19.5);
+
+// ===================== S4: logo reveal (the card becomes the logo) =====================
+Q4.innerHTML = `<div class="lg" style="position:absolute;left:0;top:0">${logoImg(420)}</div>`;
+const q4lg = Q4.querySelector('.lg');
+TT(960, 84, 'HeliosLabs <span class="pur">Storefront</span>', 21.0, 23.3);
+TT(1080, 44, 'aapki help karta hai 💜', 22.2, 23.3, { color: MUT, w: 700 });
+const rings = [0, 1, 2].map(k => E(stg, { left: '540px', top: '680px', width: '10px', height: '10px', borderRadius: '50%', boxShadow: `0 0 0 4px rgba(95,0,255,${0.5 - k * 0.12})`, zIndex: 9 }));
+const spark = Array.from({ length: 14 }, (_, k) => E(stg, { width: '18px', height: '18px', borderRadius: '50%', background: [LPUR, AMB, '#B9A2FF'][k % 3], zIndex: 9 }));
+
+// ===================== S5/S6: dedicated online store in a browser =====================
+const browser = (Q) => { Q.innerHTML = `<div style="position:absolute;left:0;top:0;width:860px;height:76px;background:#F1EEE8;display:flex;align-items:center;gap:10px;padding-left:26px;box-sizing:border-box">${[RED, AMB, GRN].map(c => `<div style="width:18px;height:18px;border-radius:9px;background:${c}"></div>`).join('')}<div class="url" style="margin-left:20px;width:560px;height:44px;border-radius:22px;background:#fff;font-size:24px;font-weight:700;color:${MUT};display:flex;align-items:center;padding-left:22px">🔒 </div></div>
+  <div style="position:absolute;left:0;top:76px;width:860px;height:110px;background:${LPUR}"></div><div style="position:absolute;left:34px;top:104px;font-size:42px;font-weight:800;color:#fff">yourbrand</div><div style="position:absolute;right:34px;top:110px;font-size:40px">🛒</div>`; return Q.querySelector('.url'); };
+const url5 = browser(Q5), url6 = browser(Q6);
+const SK = Array.from({ length: 7 }, (_, k) => E(Q5, { left: (k === 0 ? 30 : 30 + ((k - 1) % 3) * 270) + 'px', top: (k === 0 ? 210 : 470 + Math.floor((k - 1) / 3) * 300) + 'px', width: (k === 0 ? 800 : 250) + 'px', height: (k === 0 ? 230 : 280) + 'px', borderRadius: '22px', background: '#EDE4D4', overflow: 'hidden' }, `<div class="sh" style="position:absolute;top:0;width:200px;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.7),transparent)"></div><div class="fill" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:${k === 0 ? 46 : 100}px;font-weight:800;background:${k === 0 ? 'linear-gradient(120deg,#F1D9C7,#E7DDF7)' : ['#E7DDF7', '#DCEBDF', '#F1D9C7', '#DDE4F1', '#F6E6C8', '#F3DCDC'][k - 1]}">${k === 0 ? 'Your Online Store ✨' : ['👗', '👟', '👜', '⌚', '🧣', '👒'][k - 1]}</div>`));
+TT(180, 64, 'Aapka <span class="pur">dedicated online store</span>', 24.94, 27.2);
+const PRODS = [['👗', 'Linen Dress', 2299, '#E7DDF7', 'Dresses'], ['👟', 'Sneakers', 2999, '#DCEBDF', 'Shoes'], ['👜', 'Tote Bag', 1499, '#F1D9C7', 'Bags'], ['⌚', 'Watch', 3499, '#DDE4F1', 'Accessories'], ['🧣', 'Silk Scarf', 899, '#F6E6C8', 'Accessories'], ['👒', 'Sun Hat', 799, '#F3DCDC', 'Accessories'], ['👕', 'Cotton Tee', 699, '#E5EBD9', 'Tops'], ['🕶️', 'Sunglasses', 1299, '#E3E0DA', 'Accessories'], ['🎒', 'Backpack', 1999, '#E9DFCF', 'Bags']];
+Q6.insertAdjacentHTML('beforeend', `<div class="tabs" style="position:absolute;left:30px;top:206px;display:flex;gap:14px">${['All', 'Dresses', 'Bags', 'Shoes', 'Accessories'].map((s, i) => `<div class="tab" style="padding:12px 22px;border-radius:24px;font-size:24px;font-weight:800;background:${i ? '#F1EEE8' : INK};color:${i ? INK : '#fff'}">${s}</div>`).join('')}</div>
+  <div class="gw" style="position:absolute;left:0;top:290px;width:860px;height:810px;overflow:hidden"><div class="gl" style="position:absolute;left:0;top:0;width:860px">
+  ${PRODS.map(([e, n, p, c], k) => `<div class="pc" style="position:absolute;left:${30 + (k % 3) * 270}px;top:${10 + Math.floor(k / 3) * 330}px;width:250px;height:310px;border-radius:22px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:12px;top:12px;width:226px;height:170px;border-radius:16px;background:${c};display:flex;align-items:center;justify-content:center;font-size:90px">${e}</div>
+     <div style="position:absolute;left:18px;top:196px;font-size:24px;font-weight:800">${n}</div>
+     <div class="pr" style="position:absolute;left:18px;top:236px;padding:6px 14px;border-radius:14px;background:#EFE7FD;color:${LPUR};font-size:24px;font-weight:800">₹${p.toLocaleString('en-IN')}</div></div>`).join('')}</div></div>
+  <div class="one" style="position:absolute;left:230px;top:960px;width:400px;height:90px;border-radius:45px;background:${INK};color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px">${check(48, LPUR)} Ek hi jagah</div>`);
+const q6tabs = [...Q6.querySelectorAll('.tab')], q6pc = [...Q6.querySelectorAll('.pc')], q6pr = [...Q6.querySelectorAll('.pr')], q6gl = Q6.querySelector('.gl'), q6one = Q6.querySelector('.one');
+TT(180, 62, 'Products · <span class="pur">Prices</span> · <span class="amb">Collections</span>', 28.6, 32.9);
+
+// ===================== S7: ordering =====================
+Q7.innerHTML = `<div style="position:absolute;left:0;top:0;width:600px;height:110px;background:${LPUR}"></div><div style="position:absolute;left:30px;top:36px;font-size:34px;font-weight:800;color:#fff">yourbrand</div><div class="cb" style="position:absolute;right:30px;top:30px;width:52px;height:52px;border-radius:26px;background:#fff;color:${LPUR};font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center"></div>
+  <div style="position:absolute;left:30px;top:140px;width:540px;height:420px;border-radius:26px;background:#F1D9C7;display:flex;align-items:center;justify-content:center;font-size:220px">👜</div>
+  <div style="position:absolute;left:30px;top:590px;font-size:40px;font-weight:800">Tote Bag</div><div style="position:absolute;left:30px;top:646px;font-size:34px;font-weight:800;color:${LPUR}">₹1,499</div>
+  <div style="position:absolute;left:30px;top:710px;display:flex;gap:14px">${['Tan', 'Black', 'Olive'].map((c, i) => `<div style="padding:10px 20px;border-radius:20px;font-size:22px;font-weight:800;background:${i ? '#F1EEE8' : INK};color:${i ? INK : '#fff'}">${c}</div>`).join('')}</div>
+  <div class="ac" style="position:absolute;left:30px;top:810px;width:540px;height:96px;border-radius:26px;background:${INK};color:#fff;font-size:32px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px"></div>
+  <div class="po" style="position:absolute;left:30px;top:930px;width:540px;height:110px;border-radius:30px;background:${LPUR};color:#fff;font-size:36px;font-weight:800;display:flex;align-items:center;justify-content:center">Place order →</div>
+  <div class="ok" style="position:absolute;left:0;top:0;width:600px;height:1130px;background:${LPUR};color:#fff"><div class="okc" style="position:absolute;left:200px;top:360px">${check(200, AMB)}</div><div style="position:absolute;left:0;width:600px;top:620px;text-align:center;font-size:48px;font-weight:800">Order placed!</div><div style="position:absolute;left:0;width:600px;top:690px;text-align:center;font-size:28px;font-weight:600;opacity:0.85">#2041 · Tote Bag</div></div>`;
+const q7cb = Q7.querySelector('.cb'), q7ac = Q7.querySelector('.ac'), q7po = Q7.querySelector('.po'), q7ok = Q7.querySelector('.ok'), q7okc = Q7.querySelector('.okc');
+TT(170, 62, 'Ordering system se <span class="pur">order</span>', 33.3, 36.5);
+
+// ===================== S8: no hosting / maintenance tension =====================
+Q8.innerHTML = `<div style="position:absolute;left:40px;top:40px;width:820px;height:150px;border-radius:26px;background:#E8F6EE;display:flex;align-items:center;gap:24px;padding-left:30px;box-sizing:border-box;font-size:38px;font-weight:800">🌐 Website ready ${check(56, GRN)}</div>
+  ${[['☁️', 'Hosting', 38.66], ['🛠️', 'Maintenance', 39.46]].map(([e, s, ts], k) => `<div class="wt" data-ts="${ts}" style="position:absolute;left:40px;top:${230 + k * 190}px;width:820px;height:160px;border-radius:26px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}">
+     <div style="position:absolute;left:30px;top:40px;font-size:70px;line-height:1">${e}</div><div style="position:absolute;left:140px;top:52px;font-size:40px;font-weight:800">${s}</div>
+     <div class="tag" style="position:absolute;right:30px;top:46px;padding:14px 22px;border-radius:22px;font-size:26px;font-weight:800"></div></div>`).join('')}
+  <div class="rl" style="position:absolute;left:40px;top:640px;width:820px;height:280px;border-radius:26px;background:${LPUR};color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px"><div style="font-size:90px;line-height:1">😌</div><div style="font-size:38px;font-weight:800">Alag tension ki zaroorat nahi</div></div>`;
+const q8wt = [...Q8.querySelectorAll('.wt')], q8rl = Q8.querySelector('.rl');
+TT(190, 66, 'Hosting? Maintenance?', 37.0, 42.2);
+
+// ===================== S9: we manage the technical side (dark dashboard) =====================
+Q9.innerHTML = `<div style="position:absolute;left:44px;top:40px;font-size:30px;font-weight:800;color:#fff">Store health</div><div style="position:absolute;right:44px;top:44px;font-size:24px;font-weight:800;color:#7CE0A3">● All systems normal</div>
+  <div style="position:absolute;left:44px;top:110px;font-size:120px;font-weight:900;color:#fff;letter-spacing:-0.04em" class="up"></div><div style="position:absolute;left:44px;top:250px;font-size:26px;font-weight:700;color:rgba(255,255,255,0.6)">Uptime</div>
+  ${[['🔒', 'Security & SSL'], ['🔄', 'Updates'], ['💾', 'Backups']].map(([e, s], k) => `<div style="position:absolute;left:44px;top:${320 + k * 160}px;width:812px;height:136px;border-radius:24px;background:rgba(255,255,255,0.07)"><div style="position:absolute;left:28px;top:34px;font-size:56px;line-height:1">${e}</div><div style="position:absolute;left:120px;top:46px;font-size:34px;font-weight:800;color:#fff">${s}</div>
+     <div class="tg" style="position:absolute;right:28px;top:38px;width:120px;height:60px;border-radius:30px"><div class="kn" style="position:absolute;top:6px;width:48px;height:48px;border-radius:24px;background:#fff"></div></div></div>`).join('')}
+  <div class="pl" style="position:absolute;left:220px;top:830px;width:460px;height:90px;border-radius:45px;background:rgba(246,201,130,0.2);box-shadow:inset 0 0 0 2px ${AMB};color:${AMB};font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">📦 Selected plan ke according</div>`;
+const q9up = Q9.querySelector('.up'), q9tg = [...Q9.querySelectorAll('.tg')], q9kn = [...Q9.querySelectorAll('.kn')], q9pl = Q9.querySelector('.pl');
+TT(170, 60, 'Technical side?', 42.6, 47.1); TT(250, 70, '<span class="pur">Hum manage karte hain</span>', 44.46, 47.1);
+
+// ===================== S10: win-win =====================
+Q10.innerHTML = `<div style="position:absolute;left:0;width:450px;top:60px;text-align:center;font-size:140px">🛍️</div><div style="position:absolute;left:0;width:450px;top:240px;text-align:center;font-size:30px;font-weight:700;color:${MUT}">Customers ke liye</div>
+  <div style="position:absolute;left:0;width:450px;top:290px;text-align:center;font-size:46px;font-weight:900;color:${LPUR}">Organised<br>shopping</div>
+  ${['Browse easily', 'Clear prices', 'Quick ordering'].map((s, i) => `<div class="w1" style="position:absolute;left:50px;top:${470 + i * 120}px;width:350px;height:96px;border-radius:48px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN};font-size:28px;font-weight:800;display:flex;align-items:center;gap:14px;padding-left:22px;box-sizing:border-box">${check(48, LPUR)}${s}</div>`).join('')}`;
+const q10w = [...Q10.querySelectorAll('.w1')];
+const right10 = E(stg, { left: '560px', top: '440px', width: '450px', height: '900px', borderRadius: '44px', background: INK, color: '#fff', zIndex: 12, boxShadow: '0 40px 100px rgba(28,23,38,0.2)' }, `<div style="position:absolute;left:0;width:450px;top:60px;text-align:center;font-size:140px">📈</div><div style="position:absolute;left:0;width:450px;top:240px;text-align:center;font-size:30px;font-weight:700;color:rgba(255,255,255,0.6)">Aapke liye</div>
+  <div style="position:absolute;left:0;width:450px;top:290px;text-align:center;font-size:46px;font-weight:900;color:${AMB}">Business<br>easier</div>
+  ${['Less DMs', 'More orders', 'More time'].map((s, i) => `<div class="w2" style="position:absolute;left:50px;top:${470 + i * 120}px;width:350px;height:96px;border-radius:48px;background:rgba(255,255,255,0.08);font-size:28px;font-weight:800;display:flex;align-items:center;gap:14px;padding-left:22px;box-sizing:border-box">${check(48, AMB)}${s}</div>`).join('')}`);
+const q10w2 = [...right10.querySelectorAll('.w2')];
+TT(200, 70, 'Matlab… <span class="pur">win-win</span>', 47.4, 53.9);
+
+// ===================== S11: name again / S12: price / S13: line / S14: end =====================
+Q11.innerHTML = `<div style="position:absolute;left:0;top:0">${logoImg(420)}</div>`;
+TT(960, 84, 'HeliosLabs <span class="pur">Storefront</span>', 54.4, 55.9);
+Q12.innerHTML = `<div style="position:absolute;left:0;width:840px;top:60px;text-align:center;font-size:34px;font-weight:700;color:rgba(255,255,255,0.7)">Plans starting at</div>
+  <div style="position:absolute;left:0;width:840px;top:110px;text-align:center;font-size:200px;font-weight:900;letter-spacing:-0.04em;color:#fff;font-variant-numeric:tabular-nums" class="pv"></div>
+  <div style="position:absolute;left:0;width:840px;top:340px;text-align:center;font-size:40px;font-weight:800;color:${AMB}" class="pm">per month</div>`;
+const q12pv = Q12.querySelector('.pv'), q12pm = Q12.querySelector('.pm');
+const coins = Array.from({ length: 10 }, (_, k) => E(stg, { width: '70px', height: '70px', borderRadius: '35px', background: AMB, boxShadow: 'inset 0 0 0 6px #D18F24', color: '#7A4D0F', fontSize: '38px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 31 }, '₹'));
+Q13.innerHTML = `<div class="l1" style="position:absolute;left:50px;top:70px;width:800px;height:270px;border-radius:30px;background:#FDF1DC;display:flex;align-items:center;gap:30px;padding-left:40px;box-sizing:border-box"><div style="font-size:110px;line-height:1">💼</div><div><div style="font-size:30px;font-weight:700;color:${MUT}">Aap</div><div style="font-size:46px;font-weight:900">apna business<br>sambhaliye</div></div></div>
+  <div class="l2" style="position:absolute;left:50px;top:400px;width:800px;height:270px;border-radius:30px;background:#EFE7FD;display:flex;align-items:center;gap:30px;padding-left:40px;box-sizing:border-box"><div>${logoImg(120)}</div><div><div style="font-size:30px;font-weight:700;color:${MUT}">Hum</div><div style="font-size:46px;font-weight:900;color:${LPUR}">online store<br>sambhalenge 💜</div></div></div>`;
+const q13l1 = Q13.querySelector('.l1'), q13l2 = Q13.querySelector('.l2');
+Q14.innerHTML = `<div style="position:absolute;left:0;top:0">${logoImg(420)}</div>`;
+TT(930, 90, 'HeliosLabs <span class="pur">Storefront</span>', 63.5, 99);
+TT(1050, 42, 'Plans from ₹999/month', 63.8, 99, { color: MUT, w: 700 });
+const hearts = Array.from({ length: 12 }, (_, k) => E(stg, { fontSize: (40 + (k % 3) * 14) + 'px', zIndex: 31 }, '💜'));
+
+// ===================== subtitles =====================
+const SUBS = [
+  [0.0, 4.4, 'Aap Instagram par products post kar rahe hain, customers bhi interested hain…'],
+  [4.4, 8.4, 'Lekin orders lene mein kitni problems face karni padti hain?'],
+  [8.4, 14.1, 'Kisi ko price chahiye, kisi ko product details, toh kisi ko poori collection dekhni hai.'],
+  [14.1, 19.6, 'Aur aapka kaafi time sirf messages aur order details manage karne mein chala jaata hai.'],
+  [19.6, 23.4, 'Yahin par HeliosLabs Storefront aapki help karta hai.'],
+  [23.4, 27.3, 'Hum aapke business ke liye ek dedicated online store banate hain,'],
+  [27.3, 33.0, 'jahan customers aapke products, prices aur collections ek hi jagah explore kar sakte hain'],
+  [33.0, 36.6, 'aur available ordering system ke through order place kar sakte hain.'],
+  [36.6, 42.3, 'Aapko website banwane ke baad hosting aur maintenance ki alag tension lene ki zaroorat nahi.'],
+  [42.3, 47.2, 'Ye technical responsibilities bhi hum manage karte hain, selected plan ke according.'],
+  [47.2, 54.0, 'Matlab, customers ke liye shopping experience organised aur aapke liye business manage karna easier.'],
+  [54.0, 56.0, 'HeliosLabs Storefront.'], [56.0, 59.2, 'Plans starting at ₹999 per month.'],
+  [59.2, 65.2, 'Aap apna business sambhaliye, online store hum sambhalenge. 💜'],
+];
+const subBox = document.querySelector('#sub span');
+
+// ===================== seek =====================
+let measured = false;
+const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const springE = p => { const s = springS(p * 0.9); return Math.min(1.08, s); };
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  const b1 = document.getElementById('b1'), b2 = document.getElementById('b2');
+  b1.style.left = (-120 + 200 * Math.sin(t * 0.25)) + 'px'; b1.style.top = (120 + 140 * Math.cos(t * 0.2)) + 'px';
+  b2.style.left = (560 + 160 * Math.cos(t * 0.22)) + 'px'; b2.style.top = (1100 + 160 * Math.sin(t * 0.27)) + 'px';
+
+  // ---- shared-element morph
+  let i = 0; while (i + 1 < FR.length && FR[i + 1][0] - MORPH <= t) i++;
+  const a = FR[i], b = FR[Math.min(i + 1, FR.length - 1)];
+  let g = a, mp = 0;
+  if (i + 1 < FR.length && t >= b[0] - MORPH) { mp = clamp((t - (b[0] - MORPH)) / MORPH); }
+  { const e = mp > 0 ? springE(mp) : 0, cur = mp > 0 ? a : (i + 1 < FR.length && t < b[0] - MORPH ? a : a);
+    const from = a, to = mp > 0 ? b : a; const L = (k) => lerp(from[k], to[k], e);
+    const ca = hexToRgb(from[6]), cb = hexToRgb(to[6]), cc = ca.map((v, j) => Math.round(lerp(v, cb[j], clamp(e))));
+    hero.style.left = L(1) + 'px'; hero.style.top = L(2) + 'px'; hero.style.width = L(3) + 'px'; hero.style.height = L(4) + 'px'; hero.style.borderRadius = L(5) + 'px'; hero.style.background = `rgb(${cc.join(',')})`;
+    const pin = clamp(sp(t, 0.05)); hero.style.transform = t < 0.6 ? `scale(${pin})` : 'none'; }
+  SCN.forEach((Q, k) => { const s = FR[k][0], next = k + 1 < FR.length ? FR[k + 1][0] : 1e9;
+    const op = clamp((t - s - 0.02) / 0.25) * (1 - clamp((t - (next - MORPH)) / 0.15)); Q.style.opacity = k === 0 ? Math.min(op + (t < 0.3 ? 0 : 0), 1) * clamp((t - 0.25) / 0.2) : op; Q.style.display = op > 0.001 ? 'block' : 'none';
+    Q.style.transform = `translateY(${(1 - clamp((t - s) / 0.35)) * 24}px)`; });
+  titles.forEach(([m, a1, a2]) => show(m, t, a1, a2));
+
+  // ---- touch
+  { let on = TOUCH_ON.some(([x, y]) => t >= x && t < y), x = 540, y = 1000;
+    for (let j = 0; j < touchPath.length; j++) { const [ts, px, py] = touchPath[j]; if (t >= ts) { const nx = touchPath[j + 1]; if (nx && t < nx[0]) { const p = inout(clamp((t - ts) / (nx[0] - ts))); x = lerp(px, nx[1], p); y = lerp(py, nx[2], p); } else { x = px; y = py; } } }
+    tdot.style.left = x + 'px'; tdot.style.top = y + 'px'; tdot.style.visibility = on ? 'visible' : 'hidden';
+    let last = -9; TAPT.forEach(ts => { if (t >= ts) last = ts; }); const pr = t - last; tdot.style.transform = `scale(${pr < 0.15 ? 0.8 : 1})`;
+    trip.style.visibility = on && pr < 0.45 ? 'visible' : 'hidden'; trip.style.left = x + 'px'; trip.style.top = y + 'px'; trip.style.transform = `scale(${1 + pr * 4})`; trip.style.opacity = 1 - pr / 0.45; }
+
+  // ---- S0
+  { const lk = t > 0.9; q0ht.textContent = lk ? '❤️' : '♡'; q0ht.style.transform = `scale(${lk ? 1 + 0.35 * Math.sin(Math.PI * clamp((t - 0.9) / 0.3)) : 1})`; q0lk.textContent = Math.round(lerp(1207, 1284, expo(t, 0.9, 3))).toLocaleString('en-IN') + ' likes';
+    const hb = t > 0.9 ? clamp(sp(t, 0.9)) * (1 - clamp((t - 1.6) / 0.3)) : 0; q0hb.style.transform = `scale(${hb})`; q0hb.style.opacity = hb;
+    q0img.style.transform = `scale(${1 + 0.04 * clamp((t - 0.3) / 4)})`; }
+  cmts.forEach((c, k) => { const p = clamp(sp(t, c.ts)) * (1 - clamp((t - 4.2) / 0.25)); c.style.transform = `scale(${p}) translateY(${-10 * Math.sin(t * 2 + k)}px)`; c.style.opacity = p; c.style.visibility = p > 0.01 ? 'visible' : 'hidden'; });
+  // ---- S1
+  pop(q1qm, t, 5.0, 1e9, `rotate(${10 * Math.sin(t * 5)}deg)`);
+  WARN.forEach((w, k) => { const p = clamp(sp(t, 6.54 + k * 0.1)) * (1 - clamp((t - 7.85) / 0.3)), ang = t * 0.9 + k * 1.2566; w.style.left = (540 + Math.cos(ang) * 380 - 48) + 'px'; w.style.top = (770 + Math.sin(ang) * 380 - 48) + 'px'; w.style.transform = `scale(${p})`; w.style.visibility = p > 0.01 ? 'visible' : 'hidden'; });
+  // ---- S2
+  dms.forEach((d, k) => { const p = clamp(sp(t, d.ts)); d.style.transform = `translateX(${(1 - p) * 700}px)`; d.style.boxShadow = `0 0 0 ${t > d.ts && t < d.ts + 0.6 ? 4 : 2}px ${t > d.ts && t < d.ts + 0.6 ? LPUR : LIN}`; });
+  { const n = DMS.filter(d => t >= d[2]).length; q2ub.textContent = n ? (n * 6 + 3) : ''; q2ub.style.visibility = n ? 'visible' : 'hidden'; q2ub.style.transform = `scale(${1 + 0.2 * Math.sin(Math.PI * clamp((t - (DMS[Math.max(0, n - 1)] || [0, 0, 0])[2]) / 0.25))})`; }
+  // ---- S3
+  { const sp_ = t > 15.0 ? (t - 15.0) * 900 : 0; q3mh.style.transform = `rotate(${sp_}deg)`; q3hh.style.transform = `rotate(${sp_ / 12 + 90}deg)`;
+    q3tc.forEach((c, k) => { const ts = +c.dataset.ts, p = clamp(sp(t, ts)); c.style.transform = `translateX(${(1 - p) * 500}px)`; c.querySelector('.cn').textContent = t > ts ? Math.round(lerp(0, k ? 48 : 126, expo(t, ts, 2))) : ''; });
+    q3tb.style.width = (820 * inout(clamp((t - 16.0) / 2.9))) + 'px'; q3tx.style.opacity = clamp((t - 18.68) / 0.3); q3tx.style.transform = `scale(${1 + 0.06 * Math.sin(Math.PI * clamp((t - 18.68) / 0.4))})`; }
+  // ---- S4 logo reveal: the morphing card lands as the logo square, then the logo fades in over it
+  { const p = clamp((t - 20.3) / 0.3); q4lg.style.opacity = p; q4lg.style.transform = `scale(${0.9 + 0.1 * clamp(sp(t, 20.3))})`;
+    rings.forEach((r, k) => { const u = t - (20.48 + k * 0.18), on = u > 0 && u < 1.3; const R = 220 + u * 520; r.style.visibility = on ? 'visible' : 'hidden'; r.style.left = (540 - R) + 'px'; r.style.top = (680 - R) + 'px'; r.style.width = (2 * R) + 'px'; r.style.height = (2 * R) + 'px'; r.style.opacity = 1 - u / 1.3; });
+    spark.forEach((s, k) => { const u = t - 20.5, on = u > 0 && u < 1.2, ang = k / 14 * Math.PI * 2; const R = 260 + u * 420; s.style.visibility = on ? 'visible' : 'hidden'; s.style.left = (540 + Math.cos(ang) * R) + 'px'; s.style.top = (680 + Math.sin(ang) * R) + 'px'; s.style.opacity = 1 - u / 1.2; }); }
+  // ---- S5 store builds (skeleton shimmer → filled)
+  { const u = 'yourbrand.in'; url5.textContent = '🔒 ' + u.slice(0, Math.floor(clamp((t - 23.8) / 0.8) * u.length)); url6.textContent = '🔒 yourbrand.in';
+    SK.forEach((s, k) => { const sh = s.querySelector('.sh'), fi = s.querySelector('.fill'); sh.style.left = (-200 + ((t * 900 + k * 120) % 1200)) + 'px'; const f = clamp(sp(t, 25.64 + k * 0.12)); fi.style.opacity = f; fi.style.transform = `scale(${0.9 + 0.1 * f})`; }); }
+  // ---- S6 inside the store
+  { q6pc.forEach((c, k) => c.style.transform = `scale(${clamp(sp(t, 28.74 + (k % 6) * 0.06))})`);
+    q6pr.forEach((p, k) => p.style.transform = `scale(${t > 29.56 ? 1 + 0.25 * Math.sin(Math.PI * clamp((t - 29.56 - k * 0.04) / 0.3)) : 1})`);
+    const ti = t < 30.34 ? 0 : Math.min(4, 1 + Math.floor((t - 30.34) / 0.25)); q6tabs.forEach((tb, k) => { tb.style.background = k === ti ? INK : '#F1EEE8'; tb.style.color = k === ti ? '#fff' : INK; });
+    const sc = 330 * inout(clamp((t - 31.76) / 0.7)); q6gl.style.transform = `translateY(${-sc}px)`; pop(q6one, t, 31.4); }
+  // ---- S7 ordering
+  { const added = t > 33.76; q7ac.innerHTML = added ? `${check(42, LPUR)} Added to cart` : '🛒 Add to cart'; q7ac.style.transform = `scale(${press(t, 33.76)})`;
+    q7cb.textContent = added ? '1' : '0'; q7cb.style.transform = `scale(${1 + 0.3 * Math.sin(Math.PI * clamp((t - 33.9) / 0.3))})`;
+    q7po.style.transform = `scale(${press(t, 35.18)})`; const ok = clamp(sp(t, 35.4)); q7ok.style.clipPath = `circle(${ok * 1300}px at 300px 985px)`; q7ok.style.visibility = t < 35.4 ? 'hidden' : 'visible'; q7okc.style.transform = `scale(${clamp(sp(t, 35.6))})`; }
+  // ---- S8 no tension
+  q8wt.forEach((w, k) => { const ts = +w.dataset.ts, p = clamp(sp(t, ts)), relief = t > 41.42, tag = w.querySelector('.tag');
+    w.style.transform = `translateX(${(1 - p) * 900}px) rotate(${!relief && t > 40.68 ? 1.5 * Math.sin(t * 20) : 0}deg)`;
+    tag.textContent = relief ? '✓ Hum karenge' : t > 40.68 ? '😰 Tension' : '⚠️ Alag kharcha'; tag.style.background = relief ? '#E8F6EE' : '#FDE8E4'; tag.style.color = relief ? GRN : RED; });
+  { const p = clamp(sp(t, 41.42)); q8rl.style.transform = `translateY(${(1 - p) * 400}px)`; q8rl.style.opacity = p; }
+  // ---- S9 dashboard: toggles switched on by taps
+  { q9up.textContent = (99 + 0.9 * expo(t, 42.76, 1.2)).toFixed(1) + '%';
+    q9tg.forEach((g, k) => { const on = t > [42.9, 43.6, 44.3][k] + 0.05; g.style.background = on ? '#7CE0A3' : 'rgba(255,255,255,0.2)'; q9kn[k].style.left = (on ? 66 : 6) + 'px'; });
+    pop(q9pl, t, 45.8); }
+  // ---- S10
+  q10w.forEach((w, k) => { const q = clamp(sp(t, 49.14 + k * 0.2)); w.style.transform = `translateX(${(1 - q) * -200}px)`; w.style.opacity = q; });
+  { const p = clamp(sp(t, 51.8)) * (1 - clamp((t - (54.0 - MORPH)) / 0.2)); right10.style.transform = `translateY(${(1 - clamp(sp(t, 51.8))) * 1100}px)`; right10.style.opacity = p; right10.style.visibility = p > 0.01 ? 'visible' : 'hidden';
+    q10w2.forEach((w, k) => { const q = clamp(sp(t, 52.4 + k * 0.2)); w.style.transform = `translateX(${(1 - q) * 200}px)`; w.style.opacity = q; }); }
+  // ---- S12 price
+  { const v = Math.round(999 * expo(t, 56.6, 1.2)); q12pv.textContent = t < 56.6 ? '₹0' : '₹' + v; q12pv.style.transform = `scale(${1 + 0.06 * Math.sin(Math.PI * clamp((t - 57.12) / 0.4))})`; q12pm.style.opacity = clamp((t - 57.6) / 0.3);
+    coins.forEach((c, k) => { const u = t - (57.12 + k * 0.05), on = u > 0 && u < 1.6; const ang = -Math.PI / 2 + (k - 4.5) * 0.28; c.style.visibility = on ? 'visible' : 'hidden';
+      c.style.left = (540 + Math.cos(ang) * 600 * u - 35) + 'px'; c.style.top = (850 + Math.sin(ang) * 700 * u + 900 * u * u - 35) + 'px'; c.style.transform = `rotate(${u * 400}deg)`; }); }
+  // ---- S13 final line
+  { const p1 = clamp(sp(t, 59.5)), p2 = clamp(sp(t, 61.14)); q13l1.style.transform = `translateX(${(1 - p1) * -900}px)`; q13l2.style.transform = `translateX(${(1 - p2) * 900}px)`;
+    hearts.forEach((h, k) => { const u = t - (62.2 + k * 0.07), on = u > 0 && u < 1.5; h.style.visibility = on ? 'visible' : 'hidden'; h.style.left = (100 + (k * 83) % 880) + 'px'; h.style.top = (1250 - u * 600 - (k % 4) * 40) + 'px'; h.style.opacity = 1 - u / 1.5; h.style.transform = `rotate(${Math.sin(u * 6 + k) * 15}deg)`; }); }
+
+  const sub = SUBS.find(([a1, b1]) => t >= a1 && t < b1);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 65.2;
+window.seek(0);
+</script>
+</body>
+</html>
