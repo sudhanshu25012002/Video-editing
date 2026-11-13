@@ -1,18 +1,15 @@
 <!doctype html>
 <html><head><meta charset="utf-8">
 <style>
-  @font-face { font-family: 'ISerif'; font-style: italic; src: url('../fonts/serif-i.woff2') format('woff2'); }
-  @font-face { font-family: 'PJ'; font-weight: 800; src: url('../fonts/pj-800.woff2') format('woff2'); }
-  @font-face { font-family: 'PJ'; font-weight: 700; src: url('../fonts/pj-700.woff2') format('woff2'); }
-  html, body { margin: 0; background: #0b0f0d; overflow: hidden; }
-  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #fff; }
+  html, body { margin: 0; background: #F3ECDF; overflow: hidden; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
   #stage { position: absolute; inset: 0; overflow: hidden; }
   .a { position: absolute; }
   .layer { position: absolute; inset: 0; }
   .scene { position: absolute; inset: 0; display: none; }
-  .it { position: absolute; left: 0; width: 1080px; text-align: center; font-family: 'ISerif', serif; font-style: italic; white-space: nowrap; }
-  .hd { position: absolute; left: 0; width: 1080px; text-align: center; font-family: 'PJ', 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.035em; white-space: nowrap; line-height: 1.05; }
-  .pj { font-family: 'PJ', 'Inter', sans-serif; }
+  .it { position: absolute; left: 0; width: 1080px; text-align: center; font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+  .hd { position: absolute; left: 0; width: 1080px; text-align: center; font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.035em; white-space: nowrap; line-height: 1.05; }
+  .pj { font-family: 'Inter', sans-serif; }
   .card { position: absolute; border-radius: 28px; }
   .notif { position: absolute; left: 40px; width: 1000px; height: 150px; border-radius: 34px; background: rgba(48, 52, 50, 0.72); backdrop-filter: blur(20px); display: flex; align-items: center; gap: 26px; padding: 0 30px; box-sizing: border-box; }
   .notif .ic { width: 74px; height: 74px; border-radius: 20px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #fff; font-weight: 800; }
@@ -25,12 +22,10 @@
   .chip { position: absolute; padding: 12px 26px; border-radius: 40px; font-size: 28px; font-weight: 700; white-space: nowrap; }
 </style></head>
 <body><div id="stage">
-  <div class="layer" id="bgDark" style="background: radial-gradient(ellipse at 50% 42%, #1d2b24 0%, #121a16 45%, #090c0b 100%)"></div>
-  <div class="layer" id="bgWarm" style="background: radial-gradient(ellipse at 50% 40%, #fbe9cc 0%, #f1d3a6 50%, #d9ae78 100%)"></div>
-  <div class="layer" id="bgPur" style="background: radial-gradient(circle at 50% 44%, rgba(94,2,251,0.55) 0%, rgba(94,2,251,0.12) 38%, rgba(0,0,0,0) 62%)"></div>
+  <div class="layer" id="bgDark" style="background:#F3ECDF;background-image:radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px);background-size:44px 44px"></div>
+  <div class="layer" id="bgWarm" hidden style="background: radial-gradient(ellipse at 50% 40%, #fbe9cc 0%, #f1d3a6 50%, #d9ae78 100%)"></div>
+  <div class="layer" id="bgPur" style="background: radial-gradient(circle at 50% 44%, rgba(90,23,230,0.22) 0%, rgba(90,23,230,0.06) 38%, rgba(0,0,0,0) 62%)"></div>
 </div>
-<div id="grain" style="position:absolute;inset:0;pointer-events:none;opacity:0.07;mix-blend-mode:overlay;z-index:900;background-image:url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>&quot;)"></div>
-<div style="position:absolute;inset:0;pointer-events:none;z-index:899;background:radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.38) 100%)"></div>
 <script>
 window.DURATION = 61.0;
 const stage = document.getElementById('stage');
@@ -42,15 +37,15 @@ const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 
 const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
 const ramp = (t, a, d) => inout(clamp((t - a) / d));
 function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
-const IT = (p, y, size, html, color = 'rgba(255,255,255,0.78)') => E(p, { top: y + 'px', fontSize: size + 'px', color }, html, 'it');
-const HD = (p, y, size, html, color = '#fff') => E(p, { top: y + 'px', fontSize: size + 'px', color }, html, 'hd');
+const IT = (p, y, size, html, color = '#8A8172') => E(p, { top: y + 'px', fontSize: size + 'px', color }, html, 'it');
+const HD = (p, y, size, html, color = '#1C1726') => E(p, { top: y + 'px', fontSize: size + 'px', color }, html, 'hd');
 // blur-rise text reveal, blur-out exit
 function tin(e, t, a, b = 1e9, dy = 34) { const p = expo(t, a, 0.7), q = clamp((t - b) / 0.3); const o = Math.min(clamp((t - a) / 0.35), 1 - q);
   e.style.opacity = o; e.style.transform = `translateY(${(1 - p) * dy - q * 20}px)`; e.style.filter = `blur(${(1 - clamp((t - a) / 0.45)) * 14 + q * 12}px)`; e.style.visibility = o < 0.003 ? 'hidden' : 'visible'; }
 function pop(e, t, a, b = 1e9, extra = '') { const p = clamp(sp(t, a), 0, 1.2) * (1 - clamp(sp(t, b))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
 function fadeUp(e, t, a, b = 1e9, dy = 60, extra = '') { const p = sp(t, a), q = clamp((t - b) / 0.3); e.style.opacity = clamp((t - a) / 0.25) * (1 - q); e.style.transform = `${extra} translateY(${(1 - p) * dy}px)`; e.style.visibility = (t < a || q >= 1) ? 'hidden' : 'visible'; }
 const LOGO = s => `<img src="data:image/png;base64,LOGO_BIG" style="width:${s}px;height:${s}px;display:block">`;
-const ORG = '#d4681c', GRN = '#34d36a', SPUR = '#5E02FB';
+const ORG = '#5A17E6', GRN = '#1f9d55', SPUR = '#5E02FB';
 
 // ---------- kurti illustration ----------
 let PID = 0;
@@ -84,60 +79,61 @@ function prodCard(parent, k, w, css = {}) { const P = PRODUCTS[k]; const ih = w 
 const scenes = [];
 function S(a, b) { const e = E(stage, {}, '', 'scene'); e.a = a; e.b = b; scenes.push(e); return e; }
 const TAPS = [];
-const touch = E(stage, { width: '74px', height: '74px', borderRadius: '37px', background: 'rgba(255,255,255,0.55)', border: '4px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.25)', zIndex: 800, marginLeft: '-41px', marginTop: '-41px' });
-const ripple = E(stage, { width: '74px', height: '74px', borderRadius: '50%', border: '5px solid #fff', zIndex: 799, marginLeft: '-42px', marginTop: '-42px' });
+const touch = E(stage, { width: '74px', height: '74px', borderRadius: '37px', background: 'rgba(28,23,38,0.30)', border: '5px solid rgba(255,253,248,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.25)', zIndex: 800, marginLeft: '-41px', marginTop: '-41px' });
+const ripple = E(stage, { width: '74px', height: '74px', borderRadius: '50%', border: '5px solid #5A17E6', zIndex: 799, marginLeft: '-42px', marginTop: '-42px' });
 
 // S0 lock screen with the DMs piling up
 const S0 = S(0, 5.2);
-E(S0, { inset: 0, background: 'radial-gradient(circle at 25% 70%, rgba(48,120,64,0.55), rgba(0,0,0,0) 45%), radial-gradient(circle at 80% 85%, rgba(150,110,30,0.5), rgba(0,0,0,0) 40%), radial-gradient(circle at 70% 20%, rgba(30,80,50,0.45), rgba(0,0,0,0) 40%)', filter: 'blur(30px)' });
-const lkDate = E(S0, { top: '150px', left: 0, width: '1080px', textAlign: 'center', fontSize: '38px', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }, 'Thursday, 13 November');
-const lkTime = E(S0, { top: '190px', left: 0, width: '1080px', textAlign: 'center', fontSize: '230px', fontFamily: 'Inter Display', fontWeight: 600, letterSpacing: '-0.03em', color: 'rgba(255,255,255,0.92)' }, '10:41');
-const lkBot = E(S0, { top: '1740px', left: 0, width: '1080px', textAlign: 'center', fontSize: '26px', color: 'rgba(255,255,255,0.6)' }, 'Swipe up to open');
-E(S0, { left: '120px', top: '1690px', width: '96px', height: '96px', borderRadius: '48px', background: 'rgba(60,60,60,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '42px' }, '🔦');
-E(S0, { left: '864px', top: '1690px', width: '96px', height: '96px', borderRadius: '48px', background: 'rgba(60,60,60,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '42px' }, '📷');
+const L0 = E(S0, { left: 0, top: 0, width: '1080px', height: '1920px', borderRadius: '110px', overflow: 'hidden', background: '#0d1410', transform: 'scale(0.72)', transformOrigin: '50% 50%', boxShadow: '0 0 0 26px #16110f, 0 60px 120px rgba(28,23,38,0.35)' });
+E(L0, { inset: 0, background: 'radial-gradient(circle at 25% 70%, rgba(48,120,64,0.55), rgba(0,0,0,0) 45%), radial-gradient(circle at 80% 85%, rgba(150,110,30,0.5), rgba(0,0,0,0) 40%), radial-gradient(circle at 70% 20%, rgba(30,80,50,0.45), rgba(0,0,0,0) 40%)', filter: 'blur(30px)' });
+const lkDate = E(L0, { top: '150px', left: 0, width: '1080px', textAlign: 'center', fontSize: '38px', fontWeight: 600, color: '#8A8172' }, 'Thursday, 13 November');
+const lkTime = E(L0, { top: '190px', left: 0, width: '1080px', textAlign: 'center', fontSize: '230px', fontFamily: 'Inter Display', fontWeight: 600, letterSpacing: '-0.03em', color: 'rgba(255,255,255,0.92)' }, '10:41');
+const lkBot = E(L0, { top: '1740px', left: 0, width: '1080px', textAlign: 'center', fontSize: '26px', color: 'rgba(255,255,255,0.6)' }, 'Swipe up to open');
+E(L0, { left: '120px', top: '1690px', width: '96px', height: '96px', borderRadius: '48px', background: 'rgba(60,60,60,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '42px' }, '🔦');
+E(L0, { left: '864px', top: '1690px', width: '96px', height: '96px', borderRadius: '48px', background: 'rgba(60,60,60,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '42px' }, '📷');
 const IGI = `<div class="ic" style="background:linear-gradient(45deg,#f9a825,#e91e63 55%,#7b1fa2)">◎</div>`, WAI = `<div class="ic" style="background:#25d366;border-radius:37px">✆</div>`;
 const N0 = [[0.5, 'ig', 'priya.styles', 'Hi! Is this kurti available in size M?'], [1.9, 'wa', 'Rahul', 'Can you share the price and available colours?'], [3.2, 'ig', 'neha_k', 'How can I place an order?'],
   [3.95, 'wa', 'Aman', 'Price?'], [4.2, 'ig', 'sana.closet', 'Size L hai?'], [4.45, 'wa', 'Pooja', 'COD available?'], [4.7, 'ig', 'riya_03', 'Kitne ka hai?']];
-const nEls = N0.map(([t, ap, who, msg]) => { const e = E(S0, {}, `${ap === 'ig' ? IGI : WAI}<div class="tx"><div class="ap">${ap === 'ig' ? 'INSTAGRAM' : 'WHATSAPP'}</div><div class="wh">${who}</div><div class="ms">${msg}</div></div><div class="nw">now</div>`, 'notif'); e.t = t; return e; });
+const nEls = N0.map(([t, ap, who, msg]) => { const e = E(L0, {}, `${ap === 'ig' ? IGI : WAI}<div class="tx"><div class="ap">${ap === 'ig' ? 'INSTAGRAM' : 'WHATSAPP'}</div><div class="wh">${who}</div><div class="ms">${msg}</div></div><div class="nw">now</div>`, 'notif'); e.t = t; return e; });
 
 // S1 same question — counter
 const S1 = S(5.0, 7.25);
 const s1list = E(S1, { left: '60px', top: '520px', width: '960px', filter: 'blur(7px)', opacity: 0.35 });
 ['#e57373', '#64b5f6', '#ffb74d', '#81c784', '#ba68c8', '#4db6ac', '#f06292', '#90a4ae'].forEach((c, k) => E(s1list, { position: 'relative', height: '120px', display: 'flex', alignItems: 'center', gap: '28px' }, `<div style="width:84px;height:84px;border-radius:42px;background:${c}"></div><div><div style="width:${220 + k * 23 % 120}px;height:24px;border-radius:12px;background:#9aa"></div><div style="margin-top:14px;width:${360 + k * 41 % 200}px;height:20px;border-radius:10px;background:#566"></div></div>`, 'x'));
 const s1a = IT(S1, 300, 64, 'har customer ka…'), s1b = HD(S1, 385, 104, 'same question.');
-const s1n = HD(S1, 760, 300, '×1', GRN); s1n.style.textShadow = '0 0 60px rgba(52,211,106,0.35)';
-const s1c = IT(S1, 1100, 72, 'baar. roz.', 'rgba(255,255,255,0.85)');
+const s1n = HD(S1, 760, 300, '×1', GRN); 
+const s1c = IT(S1, 1100, 72, 'baar. roz.', '#8A8172');
 
 // S2 time drains in replies
 const S2 = S(7.1, 11.35);
 const s2a = IT(S2, 230, 64, 'aur aapka time…'), s2b = HD(S2, 315, 96, 'sirf replies mein.');
-const clk = E(S2, { left: '80px', top: '620px', width: '240px', height: '240px', borderRadius: '50%', border: '6px solid rgba(255,255,255,0.85)', boxSizing: 'border-box' });
-const hH = E(clk, { left: '111px', top: '50px', width: '6px', height: '70px', borderRadius: '3px', background: '#fff', transformOrigin: '3px 70px' });
+const clk = E(S2, { left: '80px', top: '620px', width: '240px', height: '240px', borderRadius: '50%', border: '6px solid #1C1726', background: '#FFFDF8', boxSizing: 'border-box' });
+const hH = E(clk, { left: '111px', top: '50px', width: '6px', height: '70px', borderRadius: '3px', background: '#1C1726', transformOrigin: '3px 70px' });
 const mH = E(clk, { left: '112px', top: '20px', width: '4px', height: '100px', borderRadius: '2px', background: GRN, transformOrigin: '2px 100px' });
-E(clk, { left: '106px', top: '106px', width: '16px', height: '16px', borderRadius: '8px', background: '#fff' });
-const clkL = E(S2, { left: '80px', top: '890px', width: '240px', textAlign: 'center', fontSize: '50px', fontWeight: 800, fontFamily: 'PJ' }, '10 AM');
+E(clk, { left: '106px', top: '106px', width: '16px', height: '16px', borderRadius: '8px', background: '#1C1726' });
+const clkL = E(S2, { left: '80px', top: '890px', width: '240px', textAlign: 'center', fontSize: '50px', fontWeight: 800, fontFamily: 'Inter' }, '10 AM');
 const s2box = E(S2, { left: '0px', top: '560px', width: '1080px', height: '1200px', overflow: 'hidden' });
 const R2 = ['Haan, size M available hai', 'Price ₹1,299 hai', 'Colours: Red, Blue, Mustard', 'Order ke liye DM karein', 'Haan, COD available hai', 'Size L bhi hai 👍', 'Price ₹1,299 hai', 'Haan available hai'];
 const R2T = [7.6, 8.2, 8.75, 9.25, 9.7, 10.1, 10.45, 10.8];
-const r2 = R2.map((m, k) => E(s2box, { right: '60px', top: k * 118 + 'px', background: '#0b6b52', color: '#fff', transformOrigin: '100% 50%' }, `${m} <span style="font-size:20px;opacity:.7;margin-left:8px">✓✓</span>`, 'bub'));
+const r2 = R2.map((m, k) => E(s2box, { right: '60px', top: k * 118 + 'px', background: '#D9FDD3', color: '#1C1726', boxShadow: '0 10px 26px rgba(28,23,38,0.12)', transformOrigin: '100% 50%' }, `${m} <span style="font-size:20px;opacity:.7;margin-left:8px">✓✓</span>`, 'bub'));
 
 // S3 imagine
 const S3 = S(11.2, 13.0);
-const glow = E(S3, { left: '540px', top: '960px', width: '10px', height: '10px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,226,170,0.95), rgba(255,200,120,0.35) 45%, rgba(255,200,120,0) 70%)' });
+const glow = E(S3, { left: '540px', top: '960px', width: '10px', height: '10px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(90,23,230,0.22), rgba(90,23,230,0.08) 45%, rgba(90,23,230,0) 70%)' });
 const s3a = IT(S3, 760, 72, 'lekin…'), s3b = HD(S3, 850, 120, 'imagine kijiye.');
 
 // S4 store in the phone
 const S4 = S(12.85, 22.65);
-const s4a = IT(S4, 200, 62, 'agar aapke customers khud…', 'rgba(60,35,15,0.75)'), s4a2 = IT(S4, 200, 62, 'aapki website pe…', 'rgba(60,35,15,0.75)');
+const s4a = IT(S4, 200, 62, 'agar aapke customers khud…', '#8A8172'), s4a2 = IT(S4, 200, 62, 'aapki website pe…', '#8A8172');
 const s4w = [['collection explore.', ORG, 15.58], ['Price.', '#2a1c12', 17.88], ['Details.', '#2a1c12', 18.58], ['Ek jagah se order!', ORG, 20.18]].map(([w, c, t]) => { const e = HD(S4, 285, 88, w, c); e.t = t; return e; });
 const ph = E(S4, { left: '250px', top: '470px', width: '580px', height: '1200px', borderRadius: '78px', background: '#16110f', boxShadow: '0 40px 90px rgba(90,50,10,0.35), inset 0 0 0 3px #3a2f2a' });
 const scr = E(ph, { left: '18px', top: '18px', width: '544px', height: '1164px', borderRadius: '62px', background: '#fbf7f1', overflow: 'hidden' });
 E(scr, { left: '0', top: '0', width: '544px', height: '70px', zIndex: 5, display: 'flex', justifyContent: 'space-between', padding: '20px 44px 0', boxSizing: 'border-box', fontSize: '22px', fontWeight: 700, color: '#222' }, '<span>10:42</span><span>●●● ▮</span>');
 E(scr, { left: '200px', top: '16px', width: '144px', height: '40px', borderRadius: '20px', background: '#000', zIndex: 6 });
 const shop = E(scr, { left: 0, top: '70px', width: '544px', height: '1094px' });
-E(shop, { left: '30px', top: '14px', fontSize: '32px', fontWeight: 800, color: '#6b1d2a', fontFamily: 'PJ' }, 'Aapka Brand');
+E(shop, { left: '30px', top: '14px', fontSize: '32px', fontWeight: 800, color: '#6b1d2a', fontFamily: 'Inter' }, 'Aapka Brand');
 E(shop, { right: '30px', top: '16px', fontSize: '28px', color: '#333' }, '⌕ &nbsp;🛍');
-E(shop, { left: '30px', top: '78px', fontSize: '40px', fontWeight: 800, color: '#1d1611', fontFamily: 'PJ' }, 'Kurti Collection');
+E(shop, { left: '30px', top: '78px', fontSize: '40px', fontWeight: 800, color: '#1d1611', fontFamily: 'Inter' }, 'Kurti Collection');
 E(shop, { left: '30px', top: '130px', fontSize: '20px', color: '#8a7b6b' }, 'Festive · Cotton · Party wear');
 const chips4 = ['All', 'Kurtis', 'Sets', 'Festive'].map((c, k) => E(shop, { left: 30 + [0, 86, 200, 296][k] + 'px', top: '172px', padding: '8px 20px', borderRadius: '30px', fontSize: '22px', fontWeight: 700, background: k ? '#efe6da' : '#1d1611', color: k ? '#5a4b3c' : '#fff' }, c));
 const gwrap = E(shop, { left: 0, top: '236px', width: '544px', height: '858px', overflow: 'hidden' });
@@ -146,16 +142,16 @@ const gcards = PRODUCTS.map((p, k) => prodCard(grid, k, 232, { left: (k % 2 ? 28
 const detail = E(scr, { left: 0, top: '70px', width: '544px', height: '1094px', background: '#fbf7f1', zIndex: 3 });
 E(detail, { left: '24px', top: '6px', fontSize: '34px', color: '#333' }, '←');
 E(detail, { left: '30px', top: '60px', width: '484px', height: '500px', borderRadius: '26px', background: PRODUCTS[0].bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }, kurti(330, PRODUCTS[0].c, PRODUCTS[0].a, 'block'));
-E(detail, { left: '30px', top: '584px', fontSize: '36px', fontWeight: 800, color: '#1d1611', fontFamily: 'PJ' }, 'Mustard Anarkali Kurti');
+E(detail, { left: '30px', top: '584px', fontSize: '36px', fontWeight: 800, color: '#1d1611', fontFamily: 'Inter' }, 'Mustard Anarkali Kurti');
 E(detail, { left: '30px', top: '636px', fontSize: '40px', fontWeight: 800, color: ORG }, '₹1,299 <span style="font-size:22px;color:#2f9b57;font-weight:600;margin-left:10px">● In stock</span>');
 E(detail, { left: '30px', top: '700px', fontSize: '22px', color: '#7a6a5a' }, 'Pure cotton · Hand block print · Ankle length');
 E(detail, { left: '30px', top: '752px', fontSize: '24px', fontWeight: 700, color: '#333' }, 'Size');
 const sizes = ['S', 'M', 'L', 'XL'].map((s, k) => E(detail, { left: 30 + k * 96 + 'px', top: '792px', width: '80px', height: '64px', borderRadius: '16px', border: '2px solid #d8cbbb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: 700, color: '#333', boxSizing: 'border-box' }, s));
 E(detail, { left: '30px', top: '880px', fontSize: '24px', fontWeight: 700, color: '#333' }, 'Colour');
 const cols = ['#e3a72f', '#2b3f7d', '#7e1f2e'].map((c, k) => E(detail, { left: 30 + k * 70 + 'px', top: '920px', width: '52px', height: '52px', borderRadius: '26px', background: c, boxSizing: 'border-box' }));
-const obtn = E(detail, { left: '30px', top: '1000px', width: '484px', height: '78px', borderRadius: '39px', background: '#1d1611', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 800, fontFamily: 'PJ' }, 'Place order');
+const obtn = E(detail, { left: '30px', top: '1000px', width: '484px', height: '78px', borderRadius: '39px', background: '#1d1611', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 800, fontFamily: 'Inter' }, 'Place order');
 const toast = E(scr, { left: '52px', top: '470px', width: '440px', height: '230px', borderRadius: '32px', background: '#fff', zIndex: 8, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' },
-  `<div style="width:84px;height:84px;border-radius:42px;background:#2fb463;color:#fff;font-size:48px;display:flex;align-items:center;justify-content:center">✓</div><div style="font-family:PJ;font-weight:800;font-size:34px;color:#1d1611">Order placed!</div>`);
+  `<div style="width:84px;height:84px;border-radius:42px;background:#2fb463;color:#fff;font-size:48px;display:flex;align-items:center;justify-content:center">✓</div><div style="font-family:Inter;font-weight:800;font-size:34px;color:#1d1611">Order placed!</div>`);
 TAPS.push([18.3, 250 + 18 + 30 + 116, 470 + 18 + 70 + 236 + 140], [19.55, 250 + 18 + 30 + 96 + 40, 470 + 18 + 70 + 824], [19.95, 250 + 18 + 30 + 70 + 26, 470 + 18 + 70 + 946], [21.18, 540, 470 + 18 + 70 + 1039]);
 
 // S5 HeliosLabs Storefront reveal
@@ -163,25 +159,25 @@ const S5 = S(22.55, 26.7);
 const s5a = IT(S5, 420, 66, 'that’s exactly what…');
 const s5l = E(S5, { left: '370px', top: '600px', width: '340px', height: '340px' }, LOGO(340));
 const s5ring = E(S5, { left: '540px', top: '770px', width: '10px', height: '10px', borderRadius: '50%', border: '4px solid rgba(160,110,255,0.9)' });
-const s5b = HD(S5, 1010, 92, 'HeliosLabs Storefront'), s5c = IT(S5, 1130, 70, 'helps you do.', 'rgba(255,255,255,0.85)');
+const s5b = HD(S5, 1010, 92, 'HeliosLabs Storefront'), s5c = IT(S5, 1130, 70, 'helps you do.', '#8A8172');
 
 // S6 building your own online store
 const S6 = S(26.6, 30.85);
-const s6a = IT(S6, 200, 62, 'aapke clothing brand ke liye…', 'rgba(60,35,15,0.75)'), s6b = HD(S6, 285, 88, 'aapka apna <span style="color:' + ORG + '">online store.</span>', '#2a1c12');
+const s6a = IT(S6, 200, 62, 'aapke clothing brand ke liye…', '#8A8172'), s6b = HD(S6, 285, 88, 'aapka apna <span style="color:' + ORG + '">online store.</span>', '#2a1c12');
 const br = E(S6, { left: '90px', top: '520px', width: '900px', height: '1120px', borderRadius: '30px', background: '#fff', boxShadow: '0 40px 90px rgba(90,50,10,0.3)', overflow: 'hidden' });
 E(br, { left: 0, top: 0, width: '900px', height: '76px', background: '#efe8de' }, '<div style="position:absolute;left:28px;top:28px;display:flex;gap:12px"><i style="width:20px;height:20px;border-radius:10px;background:#ff5f57;display:block"></i><i style="width:20px;height:20px;border-radius:10px;background:#febc2e;display:block"></i><i style="width:20px;height:20px;border-radius:10px;background:#28c840;display:block"></i></div>');
 const url = E(br, { left: '160px', top: '16px', width: '580px', height: '44px', borderRadius: '22px', background: '#fff', fontSize: '24px', color: '#6a5a4a', display: 'flex', alignItems: 'center', paddingLeft: '22px', boxSizing: 'border-box' });
 const WF = [[30, 100, 840, 70], [30, 190, 840, 330], [30, 548, 400, 44], [30, 616, 266, 440], [317, 616, 266, 440], [604, 616, 266, 440]];
 const wf = WF.map(([x, y, w, h]) => E(br, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', borderRadius: '18px', border: '3px dashed #c9b49a', boxSizing: 'border-box' }));
-const f0 = E(br, { left: '30px', top: '100px', width: '840px', height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 26px', boxSizing: 'border-box', fontSize: '26px', color: '#3a2c20', fontWeight: 600 }, '<span style="font-family:PJ;font-weight:800;font-size:32px;color:#6b1d2a">Aapka Brand</span><span>Kurtis &nbsp; Sets &nbsp; Festive &nbsp; 🛍</span>');
+const f0 = E(br, { left: '30px', top: '100px', width: '840px', height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 26px', boxSizing: 'border-box', fontSize: '26px', color: '#3a2c20', fontWeight: 600 }, '<span style="font-family:Inter;font-weight:800;font-size:32px;color:#6b1d2a">Aapka Brand</span><span>Kurtis &nbsp; Sets &nbsp; Festive &nbsp; 🛍</span>');
 const f1 = E(br, { left: '30px', top: '190px', width: '840px', height: '330px', borderRadius: '18px', overflow: 'hidden', background: 'linear-gradient(110deg,#6b1d2a,#a8432f 60%,#e3a72f)' },
-  `<div style="position:absolute;left:44px;top:70px;font-family:ISerif;font-style:italic;font-size:40px;color:#fbe6c8">new</div><div style="position:absolute;left:44px;top:118px;font-family:PJ;font-weight:800;font-size:56px;color:#fff;line-height:1.05">Festive<br>Collection</div><div style="position:absolute;left:44px;top:250px;padding:10px 26px;border-radius:26px;background:#fff;color:#6b1d2a;font-weight:800;font-size:22px">Shop now →</div><div style="position:absolute;right:40px;top:30px">${kurti(220, '#e3a72f', '#8a2b1a', 'block')}</div>`);
-const f2 = E(br, { left: '30px', top: '548px', fontSize: '34px', fontFamily: 'PJ', fontWeight: 800, color: '#1d1611' }, 'Bestsellers');
+  `<div style="position:absolute;left:44px;top:70px;font-family:Inter;font-weight:700;font-size:40px;color:#fbe6c8">new</div><div style="position:absolute;left:44px;top:118px;font-family:Inter;font-weight:800;font-size:56px;color:#fff;line-height:1.05">Festive<br>Collection</div><div style="position:absolute;left:44px;top:250px;padding:10px 26px;border-radius:26px;background:#fff;color:#6b1d2a;font-weight:800;font-size:22px">Shop now →</div><div style="position:absolute;right:40px;top:30px">${kurti(220, '#e3a72f', '#8a2b1a', 'block')}</div>`);
+const f2 = E(br, { left: '30px', top: '548px', fontSize: '34px', fontFamily: 'Inter', fontWeight: 800, color: '#1d1611' }, 'Bestsellers');
 const f3 = [0, 1, 2].map(k => prodCard(br, [1, 2, 3][k], 266, { left: [30, 317, 604][k] + 'px', top: '616px', boxShadow: 'none', border: '1px solid #eee' }));
 
 // S7 products, collections, prices — organised
 const S7 = S(30.75, 36.5);
-const s7a = IT(S7, 200, 62, 'jahan aapke…', 'rgba(60,35,15,0.75)');
+const s7a = IT(S7, 200, 62, 'jahan aapke…', '#8A8172');
 const s7w = [['Products.', '#2a1c12', 31.92], ['Collections.', '#2a1c12', 32.72], ['Prices.', '#2a1c12', 33.58], ['Organised.', ORG, 34.18]].map(([w, c, t]) => { const e = HD(S7, 285, 100, w, c); e.t = t; return e; });
 const MESS = [[120, 560, -14], [640, 520, 11], [380, 900, -6], [700, 1050, 16], [90, 1180, 9], [480, 1350, -12]];
 const NEAT = [0, 1, 2, 3, 4, 5].map(k => [75 + (k % 3) * 320, 760 + Math.floor(k / 3) * 470, 0]);
@@ -189,32 +185,32 @@ const c7 = PRODUCTS.map((p, k) => prodCard(S7, k, 290, { left: 0, top: 0, transf
 const CH7 = ['New in', 'Festive', 'Cotton', 'Party wear'], CHM = [[600, 820, 12], [160, 1000, -10], [560, 1500, 8], [120, 1520, -6]];
 const ch7 = CH7.map((c, k) => E(S7, { left: 0, top: 0, background: k ? '#fff' : '#2a1c12', color: k ? '#5a4b3c' : '#fff', boxShadow: '0 6px 16px rgba(80,50,20,0.15)' }, c, 'chip'));
 const CHN = [[75, 640], [255, 640], [455, 640], [650, 640]];
-const live7 = E(S7, { left: '400px', top: '1720px', width: '280px', height: '64px', borderRadius: '32px', background: '#2fb463', color: '#fff', fontWeight: 800, fontSize: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'PJ' }, '● Available 24×7');
+const live7 = E(S7, { left: '400px', top: '1720px', width: '280px', height: '64px', borderRadius: '32px', background: '#2fb463', color: '#fff', fontWeight: 800, fontSize: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }, '● Available 24×7');
 
 // S8 we manage the tech
 const S8 = S(36.4, 43.45);
 const s8a = IT(S8, 200, 60, 'website, hosting, maintenance…'), s8b = HD(S8, 280, 80, 'hum manage karte hain.');
 const R8 = [['&lt;/&gt;', 'Website development', 36.7, '#7c4dff'], ['<svg width="70" height="50" viewBox="0 0 70 50"><path d="M18 46 Q2 46 3 32 Q4 20 17 19 Q20 4 36 4 Q52 4 55 20 Q68 21 67 34 Q66 46 52 46 Z" fill="#29b6f6"/></svg>', 'Hosting', 38.08, '#29b6f6'], ['🔧', 'Maintenance', 38.88, '#ffb74d']];
-const r8 = R8.map(([ic, l, t, c], k) => { const e = E(S8, { left: '90px', top: 520 + k * 230 + 'px', width: '900px', height: '190px', borderRadius: '32px', background: 'rgba(255,255,255,0.07)', border: '2px solid rgba(255,255,255,0.12)', boxSizing: 'border-box' },
+const r8 = R8.map(([ic, l, t, c], k) => { const e = E(S8, { left: '90px', top: 520 + k * 230 + 'px', width: '900px', height: '190px', borderRadius: '32px', background: '#FFFDF8', boxShadow: '0 24px 60px rgba(28,23,38,0.10), 0 0 0 2px #E2D8C6', boxSizing: 'border-box' },
   `<div style="position:absolute;left:34px;top:35px;width:120px;height:120px;border-radius:30px;background:${c}22;color:${c};font-size:52px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'DejaVu Sans Mono'">${ic}</div>
-   <div style="position:absolute;left:186px;top:42px;font-family:PJ;font-weight:800;font-size:46px">${l}</div>
-   <div style="position:absolute;left:186px;top:118px;width:560px;height:14px;border-radius:7px;background:rgba(255,255,255,0.12)"><div class="bar" style="height:14px;border-radius:7px;background:${c};width:0"></div></div>
-   <div class="ck" style="position:absolute;right:36px;top:55px;width:80px;height:80px;border-radius:40px;background:${GRN};color:#0b2a16;font-size:46px;font-weight:900;display:flex;align-items:center;justify-content:center">✓</div>`); e.t = t; return e; });
+   <div style="position:absolute;left:186px;top:42px;font-family:Inter;font-weight:800;font-size:46px;color:#1C1726">${l}</div>
+   <div style="position:absolute;left:186px;top:118px;width:560px;height:14px;border-radius:7px;background:rgba(28,23,38,0.08)"><div class="bar" style="height:14px;border-radius:7px;background:${c};width:0"></div></div>
+   <div class="ck" style="position:absolute;right:36px;top:55px;width:80px;height:80px;border-radius:40px;background:${GRN};color:#fff;font-size:46px;font-weight:900;display:flex;align-items:center;justify-content:center">✓</div>`); e.t = t; return e; });
 const badge8 = E(S8, { left: '190px', top: '1250px', width: '700px', height: '130px', borderRadius: '65px', background: SPUR, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', boxShadow: '0 20px 60px rgba(94,2,251,0.45)' },
-  `<div style="width:90px;height:90px;border-radius:20px;overflow:hidden">${LOGO(90)}</div><div style="font-family:PJ;font-weight:800;font-size:42px">Managed by HeliosLabs</div>`);
+  `<div style="width:90px;height:90px;border-radius:20px;overflow:hidden">${LOGO(90)}</div><div style="font-family:Inter;font-weight:800;font-size:42px;color:#fff">Managed by HeliosLabs</div>`);
 const plan8 = IT(S8, 1430, 56, 'selected plan ke according', 'rgba(255,255,255,0.75)');
 
 // S9 split: before vs after
 const S9 = S(43.35, 50.45);
 const top9 = E(S9, { left: 0, top: 0, width: '1080px', height: '960px' });
 const s9a = IT(top9, 120, 56, 'har enquiry ka jawab…'), s9b = HD(top9, 195, 80, 'din bhar typing.');
-const clk9 = E(top9, { left: '90px', top: '420px', width: '200px', height: '200px', borderRadius: '50%', border: '6px solid rgba(255,255,255,0.85)', boxSizing: 'border-box' });
-const h9 = E(clk9, { left: '91px', top: '40px', width: '6px', height: '58px', borderRadius: '3px', background: '#fff', transformOrigin: '3px 58px' });
+const clk9 = E(top9, { left: '90px', top: '420px', width: '200px', height: '200px', borderRadius: '50%', border: '6px solid #1C1726', background: '#FFFDF8', boxSizing: 'border-box' });
+const h9 = E(clk9, { left: '91px', top: '40px', width: '6px', height: '58px', borderRadius: '3px', background: '#1C1726', transformOrigin: '3px 58px' });
 const m9 = E(clk9, { left: '92px', top: '16px', width: '4px', height: '82px', borderRadius: '2px', background: GRN, transformOrigin: '2px 82px' });
-const c9L = E(top9, { left: '90px', top: '640px', width: '200px', textAlign: 'center', fontSize: '44px', fontWeight: 800, fontFamily: 'PJ' }, '10 AM');
-const r9 = ['Size M available hai', 'Price ₹1,299', 'Haan, COD hai', 'Red, Blue, Mustard', 'DM pe order karein'].map((m, k) => E(top9, { right: '60px', top: 380 + k * 104 + 'px', background: '#0b6b52', color: '#fff', fontSize: '28px', padding: '14px 22px', transformOrigin: '100% 50%' }, m, 'bub'));
-const bot9 = E(S9, { left: 0, top: '960px', width: '1080px', height: '960px', background: 'linear-gradient(180deg,#e9f6ec,#cfeada)', boxShadow: '0 -20px 60px rgba(0,0,0,0.4)' });
-const s9c = IT(bot9, 70, 56, 'ab aap focus karein…', 'rgba(20,60,35,0.75)'), s9d = HD(bot9, 145, 84, 'business grow.', '#127a3a');
+const c9L = E(top9, { left: '90px', top: '640px', width: '200px', textAlign: 'center', fontSize: '44px', fontWeight: 800, fontFamily: 'Inter' }, '10 AM');
+const r9 = ['Size M available hai', 'Price ₹1,299', 'Haan, COD hai', 'Red, Blue, Mustard', 'DM pe order karein'].map((m, k) => E(top9, { right: '60px', top: 380 + k * 104 + 'px', background: '#D9FDD3', color: '#1C1726', boxShadow: '0 10px 26px rgba(28,23,38,0.12)', fontSize: '28px', padding: '14px 22px', transformOrigin: '100% 50%' }, m, 'bub'));
+const bot9 = E(S9, { left: 0, top: '960px', width: '1080px', height: '960px', background: 'linear-gradient(180deg,#e9f6ec,#cfeada)', boxShadow: '0 -20px 60px rgba(28,23,38,0.15)', borderRadius: '48px 48px 0 0' });
+const s9c = IT(bot9, 70, 56, 'ab aap focus karein…', '#5d7a66'), s9d = HD(bot9, 145, 84, 'business grow.', '#127a3a');
 const o9 = [['New order · Mustard Anarkali (M)', 'priya.styles · just now'], ['New order · Indigo Block Print × 2', 'Rahul · just now'], ['New order · Rose Chikankari (L)', 'neha_k · just now']].map(([a, b], k) => E(bot9, { left: '70px', top: 320 + k * 132 + 'px', width: '940px', height: '112px', borderRadius: '24px', background: '#fff', boxShadow: '0 8px 24px rgba(20,80,40,0.12)', display: 'flex', alignItems: 'center', gap: '22px', padding: '0 26px', boxSizing: 'border-box', color: '#16301f' },
   `<div style="width:64px;height:64px;border-radius:16px;overflow:hidden;flex:none">${LOGO(64)}</div><div style="flex:1"><div style="font-weight:800;font-size:30px">${a}</div><div style="font-size:22px;color:#5d7a66;margin-top:4px">${b}</div></div><div style="font-size:34px;color:#2fb463;font-weight:900">✓</div>`));
 const g9 = E(bot9, { left: '70px', top: '736px', width: '940px', height: '190px' }, `<svg width="940" height="190" viewBox="0 0 940 190"><path id="g9p" d="M10 175 C 160 165 240 150 360 120 S 600 70 700 50 S 860 18 930 10" fill="none" stroke="#2fb463" stroke-width="10" stroke-linecap="round"/><path id="g9a" d="M905 -2 L935 10 L912 34" fill="none" stroke="#2fb463" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
@@ -224,28 +220,28 @@ const S10 = S(50.35, 55.35);
 const s10l = E(S10, { left: '470px', top: '380px', width: '140px', height: '140px' }, LOGO(140));
 const s10n = HD(S10, 545, 60, 'HeliosLabs Storefront');
 const s10a = IT(S10, 760, 74, 'plans starting at');
-const s10p = E(S10, { left: 0, top: '860px', width: '1080px', height: '330px', display: 'flex', justifyContent: 'center', fontFamily: 'PJ', fontWeight: 800, fontSize: '300px', letterSpacing: '-0.04em', lineHeight: '330px', overflow: 'hidden' });
-const rupee = E(s10p, { position: 'relative', color: '#fff' }, '₹', 'x');
+const s10p = E(S10, { left: 0, top: '860px', width: '1080px', height: '330px', display: 'flex', justifyContent: 'center', fontFamily: 'Inter', fontWeight: 800, fontSize: '300px', letterSpacing: '-0.04em', lineHeight: '330px', overflow: 'hidden' });
+const rupee = E(s10p, { position: 'relative', color: '#1C1726' }, '₹', 'x');
 const dcols = [0, 1, 2].map(k => { const w = E(s10p, { position: 'relative', height: '330px', overflow: 'hidden', width: '0.62em' }, '', 'x'); const col = E(w, { left: 0, top: 0, width: '100%', textAlign: 'center' }); col.innerHTML = Array.from({ length: 20 }, (_, i) => `<div style="height:330px">${(i + 9 + k * 3) % 10}</div>`).join('') + '<div style="height:330px">9</div>'; return col; });
 const s10m = HD(S10, 1220, 96, '/month', GRN);
 
 // S11 DM STORE
 const S11 = S(55.25, 58.3);
-const s11a = IT(S11, 420, 84, 'DM karein…'), s11b = HD(S11, 520, 120, 'STORE', '#fff');
-const inp = E(S11, { left: '70px', top: '1260px', width: '940px', height: '120px', borderRadius: '60px', background: '#fff', display: 'flex', alignItems: 'center', padding: '0 20px 0 40px', boxSizing: 'border-box', gap: '20px' });
+const s11a = IT(S11, 420, 84, 'DM karein…'), s11b = HD(S11, 520, 120, 'STORE', '#5A17E6');
+const inp = E(S11, { left: '70px', top: '1260px', width: '940px', height: '120px', borderRadius: '60px', background: '#FFFDF8', boxShadow: '0 24px 60px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6', display: 'flex', alignItems: 'center', padding: '0 20px 0 40px', boxSizing: 'border-box', gap: '20px' });
 const inpT = E(inp, { position: 'relative', flex: 1, fontSize: '42px', fontWeight: 700, color: '#222' }, '', 'x');
 const send = E(inp, { position: 'relative', width: '86px', height: '86px', borderRadius: '43px', background: SPUR, color: '#fff', fontSize: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }, '➤', 'x');
 const sent = E(S11, { right: '70px', top: '1080px', background: SPUR, color: '#fff', fontWeight: 800, fontSize: '42px', padding: '22px 34px', transformOrigin: '100% 100%' }, 'STORE <span style="font-size:24px;opacity:.75">✓✓</span>', 'bub');
-const reply = E(S11, { left: '70px', top: '880px', background: '#262b28', color: '#fff', fontSize: '38px', padding: '22px 34px', transformOrigin: '0% 100%' }, 'Apna demo dekhiye 👀', 'bub');
+const reply = E(S11, { left: '70px', top: '880px', background: '#FFFDF8', color: '#1C1726', boxShadow: '0 12px 30px rgba(28,23,38,0.15)', fontSize: '38px', padding: '22px 34px', transformOrigin: '0% 100%' }, 'Apna demo dekhiye 👀', 'bub');
 TAPS.push([57.0, 70 + 940 - 20 - 43, 1260 + 60]);
 
 // S12 end card
 const S12 = S(58.2, 61.0);
 const e1 = E(S12, { left: '350px', top: '470px', width: '380px', height: '380px' }, LOGO(380));
 const e2 = HD(S12, 920, 84, 'HeliosLabs Storefront');
-const e3 = E(S12, { left: '240px', top: '1070px', width: '600px', height: '120px', borderRadius: '60px', background: '#25d366', color: '#06301a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'PJ', fontWeight: 800, fontSize: '46px', gap: '14px' }, '✆ DM karein STORE');
-const e4 = IT(S12, 1230, 72, 'apna demo dekhein.', 'rgba(255,255,255,0.85)');
-const e5 = E(S12, { left: 0, top: '1360px', width: '1080px', textAlign: 'center', fontSize: '34px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }, 'Plans starting at ₹999/month');
+const e3 = E(S12, { left: '240px', top: '1070px', width: '600px', height: '120px', borderRadius: '60px', background: '#25d366', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter', fontWeight: 800, fontSize: '46px', gap: '14px' }, '✆ DM karein STORE');
+const e4 = IT(S12, 1230, 72, 'apna demo dekhein.', '#8A8172');
+const e5 = E(S12, { left: 0, top: '1360px', width: '1080px', textAlign: 'center', fontSize: '34px', color: '#8A8172', fontWeight: 600 }, 'Plans starting at ₹999/month');
 
 // ---------- seek ----------
 window.seek = function (t) {
@@ -285,13 +281,13 @@ window.seek = function (t) {
   s4w.forEach((e, k) => tin(e, t, e.t, k < 3 ? s4w[k + 1].t - 0.05 : 1e9));
   fadeUp(ph, t, 13.0, 1e9, 220);
   { const sc = ramp(t, 15.6, 1.3) * 420 - ramp(t, 17.1, 0.6) * 420; grid.style.transform = `translateY(${-sc}px)`; }
-  gcards.forEach((c, k) => { fadeUp(c, t, 13.4 + k * 0.12, 1e9, 50); const pr = c.querySelector('.pr'); const g = clamp(sp(t, 17.88 + k * 0.05)) * (1 - ramp(t, 18.5, 0.3)); pr.style.background = `rgba(212,104,28,${g * 0.18})`; pr.style.transform = `scale(${1 + g * 0.15})`; });
+  gcards.forEach((c, k) => { fadeUp(c, t, 13.4 + k * 0.12, 1e9, 50); const pr = c.querySelector('.pr'); const g = clamp(sp(t, 17.88 + k * 0.05)) * (1 - ramp(t, 18.5, 0.3)); pr.style.background = `rgba(90,23,230,${g * 0.18})`; pr.style.transform = `scale(${1 + g * 0.15})`; });
   gcards[0].style.transform += ` scale(${t > 18.24 && t < 18.45 ? 0.96 : 1})`;
   { const p = ramp(t, 18.45, 0.45); detail.style.transform = `translateX(${(1 - p) * 560}px)`; detail.style.visibility = p > 0 ? 'visible' : 'hidden'; }
   sizes.forEach((s, k) => { const on = k === 1 && t > 19.55; s.style.background = on ? '#1d1611' : 'transparent'; s.style.color = on ? '#fff' : '#333'; s.style.borderColor = on ? '#1d1611' : '#d8cbbb'; s.style.transform = `scale(${on ? 1 + 0.12 * Math.sin(Math.PI * clamp((t - 19.55) / 0.25)) : 1})`; });
   cols.forEach((c, k) => { const on = k === 0 && t > 19.95; c.style.boxShadow = on ? '0 0 0 4px #fbf7f1, 0 0 0 7px #1d1611' : 'none'; });
   obtn.style.transform = `scale(${1 - 0.06 * Math.sin(Math.PI * clamp((t - 21.1) / 0.2))})`; obtn.style.background = t > 20.18 ? ORG : '#1d1611';
-  obtn.style.boxShadow = t > 20.18 ? `0 0 0 ${6 + 6 * Math.sin(t * 8)}px rgba(212,104,28,0.25)` : 'none';
+  obtn.style.boxShadow = t > 20.18 ? `0 0 0 ${6 + 6 * Math.sin(t * 8)}px rgba(90,23,230,0.25)` : 'none';
   pop(toast, t, 21.3);
   // S5
   tin(s5a, t, 22.72, 24.3); { const p = sp(t, 23.95); s5l.style.transform = `scale(${clamp(p, 0, 1.2)}) rotate(${(1 - clamp(p)) * -20}deg)`; s5l.style.visibility = t < 23.95 ? 'hidden' : 'visible'; s5l.style.filter = `drop-shadow(0 0 ${40 + 20 * Math.sin(t * 3)}px rgba(120,60,255,0.6))`; }
