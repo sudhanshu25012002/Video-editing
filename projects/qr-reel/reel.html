@@ -1,0 +1,311 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>QR Ordering Reel</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F3ECDF; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; }
+  .a { position: absolute; }
+  .scene { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; background-image: radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px); background-size: 44px 44px; }
+  .mask { position: absolute; overflow: hidden; padding-bottom: 0.1em; line-height: 1.12; }
+  .mask > span { display: inline-block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em; }
+  .pur { color: #5A17E6; } .amb { color: #E8A33D; } .red { color: #E5484D; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 28px; box-shadow: 0 24px 60px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .bub { position: absolute; padding: 14px 22px; border-radius: 22px 22px 22px 6px; background: #FFFDF8; box-shadow: 0 12px 30px rgba(28,23,38,0.15); font-size: 26px; font-weight: 800; white-space: nowrap; transform-origin: 0 100%; }
+  #laser { position: absolute; left: -40px; width: 1160px; height: 10px; border-radius: 5px; background: #8B5CF6; box-shadow: 0 0 30px 10px rgba(139,92,246,0.7), 0 0 4px 2px #fff inset; z-index: 400; }
+  .brk { position: absolute; width: 90px; height: 90px; z-index: 401; }
+  .touch { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 35px; background: rgba(28,23,38,0.30); box-shadow: 0 0 0 5px rgba(255,253,248,0.95), 0 8px 20px rgba(28,23,38,0.25); z-index: 420; }
+  .ripple { position: absolute; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 35px; box-shadow: 0 0 0 4px #5A17E6; z-index: 419; }
+  #logoTL { position: absolute; left: 44px; top: 56px; width: 92px; height: 92px; z-index: 500; }
+  #sub { position: absolute; left: 60px; right: 60px; top: 1530px; text-align: center; z-index: 500; }
+  #sub span { display: inline-block; background: #FFFDF8; color: #1C1726; font-size: 36px; font-weight: 600; line-height: 1.32; padding: 14px 26px; border-radius: 16px; box-shadow: 0 0 0 2px #E2D8C6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="laser"></div>
+  <img id="logoTL" src="data:image/png;base64,LOGO_B64">
+  <div id="sub"><span></span></div>
+</div>
+<script>
+const PUR = '#5A17E6', AMB = '#E8A33D', INK = '#1C1726', WHT = '#FFFDF8', BEI = '#F3ECDF', MUT = '#8A8172', LIN = '#E2D8C6', TILE = ['#E9DDCA', '#E2D2BA', '#EFE4D3'];
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.2, z = 0.8, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const press = (t, tc) => 1 - 0.08 * Math.sin(Math.PI * clamp((t - tc) / 0.2));
+const stage = document.getElementById('stage');
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const texts = [];
+function T(parent, x, y, size, html, o = {}) {
+  const m = E(parent, { top: y + 'px', fontSize: size + 'px', zIndex: o.z || 10 }, '', 'mask');
+  const s = document.createElement('span'); s.innerHTML = html; s.style.color = o.color || INK; if (o.w) s.style.fontWeight = o.w; m.appendChild(s);
+  m.inner = s; m.cx = x === 'c'; if (!m.cx) m.style.left = x + 'px'; texts.push(m); return m;
+}
+function show(m, t, tIn, tOut = 1e9) { const a = sp(t, tIn), b = sp(t, tOut); m.inner.style.transform = `translateY(${(1 - a) * 110 - b * 110}%)`; m.style.visibility = (t < tIn || b > 0.995) ? 'hidden' : 'visible'; }
+function pop(e, t, tIn, tOut = 1e9, extra = '') { const p = clamp(sp(t, tIn)) * (1 - clamp(sp(t, tOut))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+const check = (s, bg = PUR) => `<span style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${bg};display:inline-flex;align-items:center;justify-content:center;font-size:${s * 0.58}px;color:#fff;flex:none">✓</span>`;
+const person = (s, c) => `<svg width="${s}" height="${s * 1.5}" viewBox="0 0 100 150"><circle cx="50" cy="30" r="24" fill="${c}"/><path d="M14 150 V92 C14 66 86 66 86 92 V150 Z" fill="${c}"/></svg>`;
+const BRACE = 'M710,398 L965,398 L956,450 L930,451 Q860,456 846,525 L712,1290 L698,1375 Q700,1440 760,1447 L781,1448 L773,1498 L520,1498 Q458,1490 461,1420 L528,1040 Q532,960 496,936 Q545,925 565,840 L628,475 Q645,410 710,398 Z';
+const BARS = ['M808,833 L918,833 L890,993 L780,993 Z', 'M944,833 L1054,833 L1026,993 L916,993 Z', 'M1078,833 L1188,833 L1161,993 L1051,993 Z'];
+function logoSVG(size) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 1932 1932'); s.setAttribute('width', size); s.setAttribute('height', size);
+  s.innerHTML = `<rect class="bg" width="1932" height="1932" rx="300" fill="${PUR}" style="transform-box:fill-box;transform-origin:center"/><g class="br"><path d="${BRACE}" fill="${WHT}"/><path d="${BRACE}" fill="${WHT}" transform="rotate(180 967 948)"/></g>` + BARS.map(d => `<path class="bar" d="${d}" fill="${WHT}" style="transform-box:fill-box;transform-origin:center"/>`).join('');
+  s.style.position = 'absolute'; return s; }
+function animLogo(svg, t, t0) { svg.querySelector('.bg').style.transform = `scale(${clamp(sp(t, t0))})`; const p = clamp(sp(t, t0 + 0.2)); svg.querySelector('.br').style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`;
+  [...svg.querySelectorAll('.bar')].forEach((b, k) => b.style.transform = `scale(${clamp(sp(t, t0 + 0.1 + k * 0.08))})`); svg.style.visibility = t < t0 ? 'hidden' : 'visible'; }
+const GRN = '#1F9D55', RED = '#E5484D';
+const logoImg = s => `<img src="data:image/png;base64,LOGO_BIG" style="width:${s}px;height:${s}px;display:block">`;
+let qseed = 7; const qrnd = () => (qseed = (qseed * 16807) % 2147483647) / 2147483647;
+function qrSVG(s, fg = INK, seed = 7) { qseed = seed; const n = 21, c = s / n; let h = '';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const inF = (a, b) => x >= a && x < a + 7 && y >= b && y < b + 7; let on;
+    if (inF(0, 0) || inF(14, 0) || inF(0, 14)) { const X = x < 7 ? x : x - 14, Y = y < 7 ? y : y - 14; on = Math.max(Math.abs(X - 3), Math.abs(Y - 3)) !== 2; } else on = qrnd() < 0.45;
+    if (on) h += `<rect class="qm" x="${x * c}" y="${y * c}" width="${c + 0.3}" height="${c + 0.3}"/>`; }
+  return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" fill="${fg}">${h}</svg>`; }
+const SC = [0, 3.3, 7.2, 11.8, 15.5, 21.5, 30.0, 34.6, 38.8, 45.2, 51.4, 58.0, 60.5];
+const scenes = SC.map((s, k) => E(stage, { zIndex: 1 + k }, '', 'scene'));
+const [S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12] = scenes;
+const laser = document.getElementById('laser');
+const brks = [0, 1].map(k => E(stage, {}, `<svg width="90" height="90" viewBox="0 0 90 90"><path d="${k ? 'M10 10 H80 V80' : 'M80 10 H10 V80'}" fill="none" stroke="${PUR}" stroke-width="10" stroke-linecap="round"/></svg>`, 'brk'));
+const WIPE = 0.5;
+const tdot = E(stage, {}, '', 'touch'), trip = E(stage, {}, '', 'ripple');
+const TP = [[24.9, 760, 1300], [25.32, 540, 860], [26.0, 540, 860], [27.9, 820, 1000], [28.58, 820, 1060], [28.94, 540, 1290], [29.5, 700, 1400], [56.0, 860, 1250], [56.34, 860, 980]];
+const TAPS = [25.32, 28.58, 28.94, 56.34];
+const TON = [[24.8, 26.0], [27.8, 29.6], [55.9, 57.2]];
+
+// floor plan helper: tables as rounded squares with chairs
+const TBL = [[170, 520], [470, 520], [770, 520], [170, 840], [470, 840], [770, 840], [170, 1160], [470, 1160], [770, 1160]];
+const tableEl = (parent, x, y, n, extra = '') => E(parent, { left: (x - 90) + 'px', top: (y - 90) + 'px', width: '180px', height: '180px', zIndex: 3 }, `
+  ${[[-24, 60], [180, 60], [60, -24], [60, 180]].map(([cx, cy]) => `<div style="position:absolute;left:${cx}px;top:${cy}px;width:44px;height:60px;border-radius:14px;background:#D9C7A8;${cy < 0 || cy > 170 ? 'width:60px;height:44px' : ''}"></div>`).join('')}
+  <div class="tt" style="position:absolute;left:10px;top:10px;width:160px;height:160px;border-radius:30px;background:#FFFDF8;box-shadow:0 10px 30px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:900;color:${INK}">${n}</div>${extra}`);
+
+// ===================== S0: full capacity =====================
+const s0a = T(S0, 'c', 230, 74, 'Aapka restaurant…');
+const t0 = TBL.map(([x, y], k) => tableEl(S0, x, y, k + 1));
+const guests0 = TBL.map(([x, y], k) => E(S0, { left: (x - 30) + 'px', top: (y - 30) + 'px', width: '60px', height: '60px', borderRadius: '30px', background: [PUR, AMB, '#8B5CF6', INK][k % 4], zIndex: 4 }));
+const full0 = E(S0, { left: '290px', top: '1290px', width: '500px', height: '110px', borderRadius: '55px', background: RED, color: '#fff', fontSize: '44px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', zIndex: 6 }, '🔥 FULL CAPACITY');
+const bar0 = E(S0, { left: '140px', top: '1260px', width: '800px', height: '20px', borderRadius: '10px', background: '#EDE4D4', zIndex: 5 }, `<div class="f" style="height:20px;border-radius:10px;background:linear-gradient(90deg,${AMB},${RED})"></div>`);
+const bar0f = bar0.querySelector('.f');
+
+// ===================== S1: orders from every table, staff busy =====================
+const s1a = T(S1, 'c', 230, 70, 'Har table se <span class="amb">orders</span>…');
+const t1 = TBL.map(([x, y], k) => tableEl(S1, x, y, k + 1));
+const ORD = ['2 Paneer 🧀', 'Biryani 🍛', '3 Lassi 🥭', 'Naan ×4 🫓', 'Dosa 🥞', 'Thali 🍱', 'Chai ×2 ☕', 'Pizza 🍕', 'Fries 🍟'];
+const ob1 = TBL.map(([x, y], k) => { const e = E(S1, { left: (x - 20) + 'px', top: (y - 150) + 'px', zIndex: 8 }, ORD[k], 'bub'); return e; });
+const staff1 = [0, 1, 2].map(k => E(S1, { width: '74px', height: '74px', borderRadius: '37px', background: INK, color: '#fff', fontSize: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 7, boxShadow: '0 0 0 5px #FFFDF8' }, '🧑‍🍳'));
+const busy1 = E(S1, { left: '240px', top: '1300px', width: '600px', height: '100px', borderRadius: '50px', background: INK, color: '#fff', fontSize: '36px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', zIndex: 8 }, `Staff: <span style="color:${AMB}">BUSY</span> <span class="dt" style="color:${RED}">●●●</span>`);
+
+// ===================== S2: orders mixed, kitchen late =====================
+const s2a = T(S2, 'c', 220, 70, 'Orders <span class="red">mix</span>… kitchen <span class="amb">late</span>');
+const tk = [0, 1, 2].map(k => E(S2, { left: (120 + k * 290) + 'px', top: '420px', width: '260px', height: '330px', zIndex: 4 }, `<div style="height:56px;background:${[PUR, AMB, INK][k]};color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;padding-left:18px">ORDER</div>
+  <div class="tn" style="padding:16px 18px 6px;font-size:36px;font-weight:900"></div><div style="padding:4px 18px;font-size:24px;font-weight:700;color:#4A4060;line-height:1.5">${['2 Paneer<br>3 Lassi', 'Biryani<br>Naan ×4', 'Thali<br>Chai ×2'][k]}</div>`, 'card'));
+const tkTn = tk.map(e => e.querySelector('.tn'));
+const qmk = E(S2, { left: '470px', top: '360px', width: '140px', height: '140px', borderRadius: '70px', background: RED, color: '#fff', fontSize: '90px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 6 }, '?');
+const kit2 = E(S2, { left: '140px', top: '860px', width: '800px', height: '440px', zIndex: 4 }, `<div style="position:absolute;left:40px;top:36px;font-size:40px;font-weight:800">👨‍🍳 Kitchen</div>
+  <div style="position:absolute;left:40px;top:120px;width:300px;height:280px;border-radius:150px;background:#FBF6EE;box-shadow:inset 0 0 0 12px ${INK}"><div class="mh" style="position:absolute;left:146px;top:30px;width:8px;height:122px;border-radius:4px;background:${RED};transform-origin:4px 120px"></div><div style="position:absolute;left:136px;top:130px;width:28px;height:28px;border-radius:14px;background:${INK}"></div></div>
+  <div class="lt" style="position:absolute;left:390px;top:150px;width:370px;height:150px;border-radius:30px;background:#FDE8E4;color:${RED};font-size:56px;font-weight:900;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums"></div>
+  <div style="position:absolute;left:390px;top:320px;width:370px;text-align:center;font-size:28px;font-weight:700;color:${MUT}">Order pahunchne mein</div>`, 'card');
+const kitMh = kit2.querySelector('.mh'), kitLt = kit2.querySelector('.lt');
+
+// ===================== S3: result =====================
+const s3a = T(S3, 'c', 260, 84, '<span class="red">Result?</span>');
+const cu3 = E(S3, { left: '90px', top: '470px', width: '430px', height: '760px', zIndex: 4 }, `<div style="position:absolute;left:0;width:430px;top:60px;text-align:center;font-size:180px">😠</div><div style="position:absolute;left:0;width:430px;top:290px;text-align:center;font-size:40px;font-weight:800">Customer</div><div style="position:absolute;left:0;width:430px;top:350px;text-align:center;font-size:40px;font-weight:900;color:${RED}">Unhappy</div>
+  <div class="st" style="position:absolute;left:55px;top:450px;width:320px;text-align:center;font-size:56px;letter-spacing:4px"></div><div style="position:absolute;left:40px;top:560px;width:350px;padding:18px;border-radius:20px;background:#FBF6EE;font-size:24px;font-weight:600;color:#4A4060;box-sizing:border-box">"Order late aaya, galat dish!"</div>`, 'card');
+const st3 = cu3.querySelector('.st');
+const sf3 = E(S3, { left: '560px', top: '470px', width: '430px', height: '760px', zIndex: 4 }, `<div style="position:absolute;left:0;width:430px;top:60px;text-align:center;font-size:180px">😓</div><div style="position:absolute;left:0;width:430px;top:290px;text-align:center;font-size:40px;font-weight:800">Staff</div><div style="position:absolute;left:0;width:430px;top:350px;text-align:center;font-size:40px;font-weight:900;color:${AMB}">Pareshan</div>
+  <div style="position:absolute;left:60px;top:450px;width:310px;height:40px;border-radius:20px;background:#EDE4D4;overflow:hidden"><div class="sb" style="height:40px;background:linear-gradient(90deg,${AMB},${RED})"></div></div><div style="position:absolute;left:0;width:430px;top:500px;text-align:center;font-size:24px;font-weight:700;color:${MUT}">Stress level</div>`, 'card');
+const sb3 = sf3.querySelector('.sb');
+
+// ===================== S4: smart solution → HeliosLabs QR-based ordering =====================
+const s4a = T(S4, 'c', 230, 70, 'Lekin ek <span class="pur">smart solution</span>…');
+const lg4 = E(S4, { left: '390px', top: '400px', width: '300px', height: '300px', zIndex: 5 }, logoImg(300));
+const s4b = T(S4, 'c', 760, 92, 'HeliosLabs');
+const qr4 = E(S4, { left: '340px', top: '900px', width: '400px', height: '400px', zIndex: 4, padding: '30px', boxSizing: 'border-box' }, qrSVG(340, INK, 11), 'card');
+const qm4 = [...qr4.querySelectorAll('.qm')];
+const s4c = T(S4, 'c', 1340, 54, 'QR-based <span class="pur">ordering system</span>', { w: 800 });
+
+// ===================== S5: unique QR on every table → scan → menu → order =====================
+const s5a = T(S5, 'c', 200, 64, 'Har table par <span class="pur">unique QR</span>');
+const t5 = [[200, 470], [540, 470], [880, 470]].map(([x, y], k) => tableEl(S5, x, y, [3, 7, 9][k], `<div class="qs" style="position:absolute;left:52px;top:46px;width:76px;height:88px;border-radius:12px;background:#fff;box-shadow:0 0 0 3px ${INK};padding:8px;box-sizing:border-box">${qrSVG(60, INK, 20 + k)}</div>`));
+const ph5 = E(S5, { left: '290px', top: '640px', width: '500px', height: '860px', borderRadius: '64px', background: INK, boxShadow: '0 40px 90px rgba(28,23,38,0.3)', zIndex: 6 });
+const sc5 = E(ph5, { left: '18px', top: '18px', width: '464px', height: '824px', borderRadius: '48px', background: '#141019', overflow: 'hidden' });
+sc5.innerHTML = `<div class="cam" style="position:absolute;inset:0"><div style="position:absolute;left:112px;top:230px;width:240px;height:240px;background:#fff;border-radius:16px;padding:20px;box-sizing:border-box">${qrSVG(200, INK, 21)}</div>
+  ${[[92, 210, 'M10 60 V10 H60'], [312, 210, 'M10 10 H60 V60'], [92, 430, 'M10 10 V60 H60'], [312, 430, 'M60 10 V60 H10']].map(([x, y, d]) => `<svg style="position:absolute;left:${x}px;top:${y}px" width="70" height="70" viewBox="0 0 70 70"><path d="${d}" fill="none" stroke="${AMB}" stroke-width="8" stroke-linecap="round"/></svg>`).join('')}
+  <div class="sl" style="position:absolute;left:100px;width:264px;height:6px;border-radius:3px;background:${AMB};box-shadow:0 0 18px ${AMB}"></div>
+  <div class="ok" style="position:absolute;left:62px;top:540px;width:340px;height:80px;border-radius:40px;background:${PUR};color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px">${check(36, AMB)} Table 7 · Menu</div></div>
+  <div class="mn" style="position:absolute;inset:0;background:${WHT}"><div style="position:absolute;left:0;top:0;width:464px;height:130px;background:${PUR}"></div><div style="position:absolute;left:26px;top:44px;font-size:32px;font-weight:800;color:#fff">Spice Table</div><div style="position:absolute;right:24px;top:48px;padding:6px 14px;border-radius:14px;background:${AMB};font-size:20px;font-weight:800">Table 7</div>
+    ${[['🧀', 'Paneer Tikka', 280], ['🍛', 'Veg Biryani', 320], ['🥭', 'Mango Lassi', 120], ['🫓', 'Butter Naan', 60]].map(([e, n, p], k) => `<div style="position:absolute;left:18px;top:${150 + k * 130}px;width:428px;height:116px;border-radius:20px;background:#FBF6EE;box-shadow:0 0 0 2px ${LIN}"><div style="position:absolute;left:12px;top:12px;width:92px;height:92px;border-radius:16px;background:${TILE[k % 3]};font-size:54px;display:flex;align-items:center;justify-content:center">${e}</div>
+      <div style="position:absolute;left:120px;top:24px;font-size:24px;font-weight:800">${n}</div><div style="position:absolute;left:120px;top:62px;font-size:22px;font-weight:700;color:${MUT}">₹${p}</div><div class="ad" style="position:absolute;right:14px;top:34px;width:96px;height:48px;border-radius:24px;background:${PUR};color:#fff;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center">Add</div></div>`).join('')}
+    <div class="po" style="position:absolute;left:18px;top:700px;width:428px;height:96px;border-radius:26px;background:${INK};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Place order · ₹600</div>
+    <div class="dn" style="position:absolute;inset:0;background:${PUR};color:#fff"><div class="dc" style="position:absolute;left:152px;top:250px">${check(160, AMB)}</div><div style="position:absolute;left:0;width:464px;top:450px;text-align:center;font-size:40px;font-weight:800">Order placed!</div><div style="position:absolute;left:0;width:464px;top:510px;text-align:center;font-size:26px;font-weight:600;opacity:0.85">Table 7 · 2 items</div></div></div>`;
+const cam5 = sc5.querySelector('.cam'), sl5 = sc5.querySelector('.sl'), ok5 = sc5.querySelector('.ok'), mn5 = sc5.querySelector('.mn'), ad5 = [...sc5.querySelectorAll('.ad')], po5 = sc5.querySelector('.po'), dn5 = sc5.querySelector('.dn'), dc5 = sc5.querySelector('.dc');
+
+// ===================== S6: order reaches the restaurant system with table number =====================
+const s6a = T(S6, 'c', 220, 64, 'Seedha <span class="pur">restaurant system</span> par');
+const dash6 = E(S6, { left: '70px', top: '360px', width: '940px', height: '1060px', background: '#1C1726', color: '#fff' }, `<div style="position:absolute;left:36px;top:30px;font-size:32px;font-weight:800">📟 Live Orders</div><div style="position:absolute;right:36px;top:36px;font-size:24px;font-weight:800;color:#7CE0A3">● LIVE</div>
+  ${[['T3', 'Dosa · Chai ×2', 'Preparing', AMB], ['T9', 'Thali', 'Ready', '#7CE0A3']].map(([t, i, s, c], k) => `<div style="position:absolute;left:36px;top:${400 + k * 150}px;width:868px;height:130px;border-radius:22px;background:rgba(255,255,255,0.06)"><div style="position:absolute;left:24px;top:30px;width:90px;height:70px;border-radius:16px;background:rgba(255,255,255,0.1);font-size:30px;font-weight:900;display:flex;align-items:center;justify-content:center">${t}</div><div style="position:absolute;left:140px;top:44px;font-size:30px;font-weight:700;color:rgba(255,255,255,0.75)">${i}</div><div style="position:absolute;right:24px;top:40px;padding:8px 18px;border-radius:16px;background:rgba(255,255,255,0.1);color:${c};font-size:24px;font-weight:800">${s}</div></div>`).join('')}
+  <div class="nw" style="position:absolute;left:36px;top:110px;width:868px;height:260px;border-radius:26px;background:linear-gradient(135deg,#7C3AED,#5A17E6);box-shadow:0 0 40px rgba(124,58,237,0.5)">
+    <div class="tb" style="position:absolute;left:30px;top:30px;width:200px;height:200px;border-radius:30px;background:#fff;color:${PUR};display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:26px;font-weight:800;letter-spacing:0.08em">TABLE</div><div style="font-size:110px;font-weight:900;line-height:1">7</div></div>
+    <div style="position:absolute;left:270px;top:40px;font-size:24px;font-weight:800;padding:6px 14px;border-radius:14px;background:${AMB};color:${INK}">NEW ORDER</div>
+    <div style="position:absolute;left:270px;top:96px;font-size:36px;font-weight:800">🧀 Paneer Tikka ×1</div><div style="position:absolute;left:270px;top:150px;font-size:36px;font-weight:800">🍛 Veg Biryani ×1</div><div style="position:absolute;left:270px;top:204px;font-size:24px;font-weight:600;opacity:0.85">via QR · just now</div></div>
+  <div class="fly" style="position:absolute;left:330px;top:-200px;width:280px;height:110px;border-radius:24px;background:${PUR};box-shadow:0 0 0 6px #fff;color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center">📲 T7 order</div>`, 'card');
+const nw6 = dash6.querySelector('.nw'), tb6 = dash6.querySelector('.tb'), fly6 = dash6.querySelector('.fly');
+
+// ===================== S7: no writing hassle, no table confusion =====================
+const s7a = T(S7, 'c', 230, 74, '<span class="pur">Na</span>… <span class="pur">na</span>…');
+const NO = [['📝', 'Order likhne ka jhanjhat', 35.42], ['❓', 'Table number confusion', 37.6]];
+const nos = NO.map(([e, s, ts], k) => { const c = E(S7, { left: '90px', top: (440 + k * 420) + 'px', width: '900px', height: '360px', zIndex: 4 }, `<div style="position:absolute;left:40px;top:80px;width:200px;height:200px;border-radius:44px;background:#F1E9DC;font-size:120px;display:flex;align-items:center;justify-content:center">${e}</div>
+  <div class="tx" style="position:absolute;left:280px;top:120px;width:560px;font-size:44px;font-weight:800;line-height:1.2">${s}</div><div class="sk" style="position:absolute;left:270px;top:170px;height:10px;border-radius:5px;background:${RED}"></div>
+  <div class="nb" style="position:absolute;right:30px;top:24px;padding:12px 28px;border-radius:22px;background:${GRN};color:#fff;font-size:34px;font-weight:900">GONE ✓</div>`, 'card'); c.ts = ts; c.tx = c.querySelector('.tx'); c.sk = c.querySelector('.sk'); c.nb = c.querySelector('.nb'); return c; });
+
+// ===================== S8: staff focuses on service; management smoother =====================
+const s8a = T(S8, 'c', 200, 64, 'Staff ka focus: <span class="pur">service</span>');
+const svc = E(S8, { left: '90px', top: '320px', width: '900px', height: '380px', zIndex: 4 }, `<div style="position:absolute;left:40px;top:40px;font-size:30px;font-weight:800;color:${MUT}">STAFF TIME</div>
+  ${[['Order lena', 0.6, 0.1, '#D9C7A8'], ['Service 😊', 0.4, 0.9, PUR]].map(([n, a, b, c], k) => `<div style="position:absolute;left:40px;top:${110 + k * 120}px;font-size:30px;font-weight:800">${n}</div><div style="position:absolute;left:300px;top:${110 + k * 120}px;width:560px;height:56px;border-radius:28px;background:#EDE4D4;overflow:hidden"><div class="sv" data-a="${a}" data-b="${b}" style="height:56px;border-radius:28px;background:${c}"></div></div>`).join('')}`, 'card');
+const svb = [...svc.querySelectorAll('.sv')];
+const s8b = T(S8, 'c', 760, 64, 'Order management: <span class="pur">smoother</span>');
+const gr8 = E(S8, { left: '90px', top: '860px', width: '900px', height: '520px', zIndex: 4 }, `<svg style="position:absolute;left:40px;top:40px" width="820" height="440" viewBox="0 0 820 440"><path d="M0 400 H820" stroke="${LIN}" stroke-width="4"/>
+  <path class="ch" d="M0 300 L60 120 L120 340 L180 90 L240 320 L300 140 L360 300" fill="none" stroke="${RED}" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
+  <path class="sm" d="M360 300 C460 260, 540 200, 620 150 S760 80, 820 60" fill="none" stroke="${PUR}" stroke-width="12" stroke-linecap="round" pathLength="1" stroke-dasharray="1"/></svg>
+  <div class="lab" style="position:absolute;left:600px;top:60px;padding:10px 20px;border-radius:18px;background:#EFE7FD;color:${PUR};font-size:26px;font-weight:800">✨ Smooth</div>`, 'card');
+const ch8 = gr8.querySelector('.ch'), sm8 = gr8.querySelector('.sm'), lab8 = gr8.querySelector('.lab');
+
+// ===================== S9: not just software — real problems solved =====================
+const s9a = T(S9, 'c', 200, 56, 'HeliosLabs par hum');
+const s9z = T(S9, 'c', 275, 60, '<span class="red">sirf software</span> nahi banate…');
+const s9b = T(S9, 'c', 365, 66, '<span class="pur">real problems</span> solve karte hain');
+const lg9 = E(S9, { left: '415px', top: '480px', width: '250px', height: '250px', zIndex: 6 }, logoImg(250));
+const pz = [['⏱️', 'Delays'], ['🔀', 'Mix-ups'], ['😓', 'Stress'], ['📝', 'Paperwork']].map(([e, s], k) => E(S9, { width: '330px', height: '220px', zIndex: 5 }, `<div style="position:absolute;left:0;width:330px;top:30px;text-align:center;font-size:84px">${e}</div><div style="position:absolute;left:0;width:330px;top:140px;text-align:center;font-size:32px;font-weight:800">${s}</div><div class="ok" style="position:absolute;right:14px;top:14px">${check(46, GRN)}</div>`, 'card'));
+const pzOk = pz.map(p => p.querySelector('.ok'));
+
+// ===================== S10: CTA comment QR =====================
+const s10a = T(S10, 'c', 280, 62, 'Restaurant owner hain?');
+const s10b = T(S10, 'c', 370, 70, 'Aisa <span class="pur">system</span> chahiye?');
+const cbox = E(S10, { left: '90px', top: '880px', width: '900px', height: '170px', borderRadius: '85px', background: WHT, boxShadow: '0 20px 50px rgba(28,23,38,0.12), 0 0 0 3px #E2D8C6', zIndex: 5 },
+  `<div style="position:absolute;left:30px;top:35px;width:100px;height:100px;border-radius:50px;background:${TILE[1]}"></div>
+   <div class="cm" style="position:absolute;left:160px;top:42px;font-size:74px;font-weight:900;letter-spacing:0.08em;color:${PUR}"></div>
+   <div class="sd" style="position:absolute;right:30px;top:35px;width:160px;height:100px;border-radius:50px;background:${PUR};color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center">Post</div>`);
+const cm10 = cbox.querySelector('.cm'), sd10 = cbox.querySelector('.sd');
+const s10c = T(S10, 'c', 1110, 56, 'Comment karein <span class="pur">"QR"</span>', { w: 800 });
+const qr10 = E(S10, { left: '410px', top: '520px', width: '260px', height: '260px', padding: '20px', boxSizing: 'border-box', zIndex: 4 }, qrSVG(220, PUR, 31), 'card');
+
+// ===================== S11: live demo =====================
+const s11a = T(S11, 'c', 300, 70, 'Hum dikhayenge <span class="pur">live demo!</span>');
+const demo = E(S11, { left: '140px', top: '480px', width: '800px', height: '780px', background: '#1C1726' }, `<div style="position:absolute;left:30px;top:30px;padding:10px 20px;border-radius:18px;background:${RED};color:#fff;font-size:26px;font-weight:900">● LIVE</div>
+  <div style="position:absolute;left:250px;top:200px;width:300px;height:300px;border-radius:150px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center"><div class="pl" style="width:0;height:0;border-left:110px solid #fff;border-top:66px solid transparent;border-bottom:66px solid transparent;margin-left:30px"></div></div>
+  <div style="position:absolute;left:0;width:800px;top:560px;text-align:center;font-size:40px;font-weight:800;color:#fff">QR Ordering · Demo</div><div style="position:absolute;left:0;width:800px;top:630px;text-align:center;font-size:28px;font-weight:600;color:rgba(255,255,255,0.6)">by HeliosLabs</div>`, 'card');
+const pl11 = demo.querySelector('.pl');
+
+// ===================== S12: end =====================
+const endL = E(S12, { left: '370px', top: '420px', width: '340px', height: '340px' }, logoImg(340));
+const e1 = T(S12, 'c', 820, 110, 'HeliosLabs');
+const e2 = T(S12, 'c', 960, 46, 'QR ordering · Comment <span class="pur">"QR"</span>', { w: 700 });
+
+const SUBS = [
+  [0.0, 3.2, 'Socho, aapka restaurant full capacity par hai.'],
+  [3.2, 7.2, 'Har table se orders aa rahe hain, staff already busy hai,'],
+  [7.2, 11.8, 'aur kabhi kabhi orders mix ho jaate hain ya kitchen tak late pahunchte hain.'],
+  [11.8, 15.5, 'Result? Customer unhappy aur staff pareshan.'],
+  [15.5, 18.1, 'Lekin iska ek smart solution hai.'],
+  [18.1, 21.5, 'HeliosLabs ka QR-based ordering system.'],
+  [21.5, 24.5, 'Har table par ek unique QR code hota hai.'],
+  [24.5, 30.0, 'Customer bas scan karta hai, menu dekhta hai aur apne phone se order place kar deta hai.'],
+  [30.0, 34.6, 'Order directly restaurant ke system par pahunchta hai, table number ke saath.'],
+  [34.6, 38.8, 'Na order likhne ka jhanjhat, na table number ko lekar confusion.'],
+  [38.8, 45.2, 'Aapka staff service par focus kar sakta hai, aur restaurant ka order management ho sakta hai much smoother.'],
+  [45.2, 51.4, 'HeliosLabs par hum sirf software nahi banate, hum businesses ki real problems solve karte hain.'],
+  [51.4, 58.0, 'Agar aap bhi restaurant owner hain aur apne restaurant mein aisa system chahte hain, toh comment karein "QR".'],
+  [58.0, 62.5, 'Hum aapko iska live demo dikhayenge!'],
+];
+const subBox = document.querySelector('#sub span');
+
+let measured = false;
+window.seek = function (t) {
+  if (!measured) { texts.forEach(m => { if (m.cx) m.style.left = (540 - m.inner.getBoundingClientRect().width / 2) + 'px'; }); measured = true; }
+  // ---- QR-scan laser wipe: the next scene is revealed above a glowing scan line sweeping down
+  let lon = false;
+  scenes.forEach((S, k) => { const s = SC[k], next = k + 1 < SC.length ? SC[k + 1] : 1e9;
+    S.style.display = (t >= s - WIPE && t < next) ? 'block' : 'none';
+    if (k === 0) { S.style.clipPath = 'none'; return; }
+    const p = clamp((t - (s - WIPE)) / WIPE), y = inout(p) * 1960;
+    S.style.clipPath = p >= 1 ? 'none' : `inset(0 0 ${1920 - y}px 0)`;
+    if (p > 0 && p < 1) { lon = true; laser.style.top = (y - 5) + 'px'; brks[0].style.left = '20px'; brks[1].style.left = '970px'; brks.forEach(b => b.style.top = (y - 45) + 'px'); } });
+  laser.style.visibility = lon ? 'visible' : 'hidden'; brks.forEach(b => b.style.visibility = lon ? 'visible' : 'hidden');
+  // ---- touch
+  { const on = TON.some(([a, b]) => t >= a && t < b); let x = 540, y = 1300;
+    for (let j = 0; j < TP.length; j++) { const [ts, px, py] = TP[j], nx = TP[j + 1]; if (t >= ts) { if (nx && t < nx[0]) { const p = inout(clamp((t - ts) / (nx[0] - ts))); x = lerp(px, nx[1], p); y = lerp(py, nx[2], p); } else { x = px; y = py; } } }
+    tdot.style.left = x + 'px'; tdot.style.top = y + 'px'; tdot.style.visibility = on ? 'visible' : 'hidden';
+    let last = -9; TAPS.forEach(s => { if (t >= s) last = s; }); const pr = t - last; tdot.style.transform = `scale(${pr < 0.15 ? 0.8 : 1})`;
+    trip.style.visibility = on && pr < 0.45 ? 'visible' : 'hidden'; trip.style.left = x + 'px'; trip.style.top = y + 'px'; trip.style.transform = `scale(${1 + pr * 4})`; trip.style.opacity = 1 - pr / 0.45; }
+
+  // ---- S0
+  show(s0a, t, 0.76);
+  t0.forEach((e, k) => pop(e, t, 0.1 + k * 0.06));
+  guests0.forEach((g, k) => { const p = clamp(sp(t, 1.0 + k * 0.1)); const [x, y] = TBL[k]; g.style.transform = `translate(${(1 - p) * (k % 2 ? 400 : -400)}px, 0) scale(${p})`; g.style.visibility = t > 1.0 + k * 0.1 ? 'visible' : 'hidden'; });
+  bar0f.style.width = (100 * inout(clamp((t - 1.0) / 1.0))) + '%'; pop(full0, t, 1.98, 1e9, `rotate(${t > 1.98 && t < 2.5 ? 4 * Math.sin((t - 1.98) * 40) : 0}deg)`);
+  // ---- S1
+  show(s1a, t, 3.4);
+  t1.forEach(e => { e.style.transform = 'none'; });
+  ob1.forEach((b, k) => pop(b, t, 4.2 + k * 0.12, 1e9, `translateY(${-6 * Math.sin(t * 3 + k)}px)`));
+  staff1.forEach((s, k) => { const ph = t * 1.4 + k * 2.1; const x = 320 + 300 * Math.sin(ph), y = 680 + 320 * Math.sin(ph * 1.7 + k); s.style.left = (x - 37) + 'px'; s.style.top = (y - 37) + 'px'; s.style.visibility = t > 5.4 ? 'visible' : 'hidden'; });
+  pop(busy1, t, 5.54); busy1.querySelector('.dt').style.opacity = 0.4 + 0.6 * Math.abs(Math.sin(t * 6));
+  // ---- S2
+  show(s2a, t, 7.5);
+  tk.forEach((e, k) => { pop(e, t, 7.4 + k * 0.12); const mixed = t > 8.42; const tn = mixed ? ['T9?', 'T2?', 'T5?'][k] : ['T2', 'T5', 'T9'][k]; tkTn[k].textContent = tn; tkTn[k].style.color = mixed ? RED : INK;
+    const sw = t > 8.42 && t < 9.2 ? Math.sin((t - 8.42) / 0.78 * Math.PI) : 0; e.style.transform += ` translateX(${sw * [290, -290, 0][k]}px) rotate(${sw * [8, -8, 5][k]}deg)`; });
+  pop(qmk, t, 8.9, 1e9, `rotate(${8 * Math.sin(t * 5)}deg)`);
+  { pop(kit2, t, 9.6); kitMh.style.transform = `rotate(${Math.max(0, t - 9.84) * 500}deg)`; kitLt.textContent = t < 10.46 ? '' : '+' + Math.round(12 * expo(t, 10.46, 0.8)) + ' min'; kitLt.style.transform = `scale(${1 + 0.06 * Math.sin(Math.PI * clamp((t - 10.46) / 0.4))})`; }
+  // ---- S3
+  show(s3a, t, 11.84);
+  { const p = clamp(sp(t, 12.72)); cu3.style.transform = `translateX(${(1 - p) * -700}px)`; const n = t > 13.1 ? 2 : 0; st3.innerHTML = t > 13.1 ? '★★<span style="color:#D9C7A8">★★★</span>' : ''; st3.style.color = AMB;
+    const q = clamp(sp(t, 14.1)); sf3.style.transform = `translateX(${(1 - q) * 700}px) rotate(${t > 14.42 ? 1.5 * Math.sin(t * 20) * Math.exp(-(t - 14.42) * 2) : 0}deg)`; sb3.style.width = (100 * inout(clamp((t - 14.42) / 0.6)) * 0.92) + '%'; }
+  // ---- S4
+  show(s4a, t, 15.62, 18.2);
+  { const p = clamp(sp(t, 18.34)); lg4.style.transform = `scale(${p}) rotate(${(1 - p) * -20}deg)`; lg4.style.visibility = t > 18.34 ? 'visible' : 'hidden'; }
+  show(s4b, t, 18.5); pop(qr4, t, 19.2);
+  qm4.forEach((m, i) => { const d = (i * 0.618) % 1; m.style.opacity = clamp((t - 19.34 - d * 0.9) / 0.15); });
+  show(s4c, t, 19.98);
+  // ---- S5
+  show(s5a, t, 21.52);
+  t5.forEach((e, k) => { pop(e, t, 21.6 + k * 0.12); const q = e.querySelector('.qs'); q.style.transform = `scale(${clamp(sp(t, 22.66 + k * 0.15))})`; q.style.boxShadow = `0 0 0 3px ${INK}, 0 0 0 ${t > 23.08 && t < 24 ? 10 : 0}px rgba(90,23,230,0.35)`; });
+  { const p = clamp(sp(t, 24.68)); ph5.style.transform = `translateY(${(1 - p) * 1200}px)`;
+    const sl = t > 25.32 ? Math.sin((t - 25.32) * 6) : -1; sl5.style.top = (250 + 100 * (1 + sl)) + 'px'; sl5.style.visibility = t > 25.0 && t < 25.9 ? 'visible' : 'hidden'; pop(ok5, t, 25.9);
+    const m = clamp(sp(t, 26.4)); mn5.style.transform = `translateY(${(1 - m) * 824}px)`; mn5.style.visibility = t > 26.4 ? 'visible' : 'hidden';
+    ad5.forEach((a, k) => { const on = k === 0 ? t > 28.58 : k === 1 ? t > 28.25 : false; a.textContent = on ? '✓ 1' : 'Add'; a.style.background = on ? INK : PUR; a.style.transform = `scale(${press(t, k === 0 ? 28.58 : 28.25)})`; });
+    po5.style.transform = `scale(${press(t, 28.94)})`; const d = clamp(sp(t, 29.15)); dn5.style.clipPath = `circle(${d * 1100}px at 232px 748px)`; dn5.style.visibility = t > 29.15 ? 'visible' : 'hidden'; dc5.style.transform = `scale(${clamp(sp(t, 29.3))})`; }
+  // ---- S6
+  show(s6a, t, 30.14);
+  { const p = clamp(sp(t, 30.2)); dash6.style.transform = `translateY(${(1 - p) * 1200}px)`;
+    const f = inout(clamp((t - 31.6) / 0.9)); fly6.style.top = lerp(-200, 140, f) + 'px'; fly6.style.opacity = 1 - clamp((t - 32.5) / 0.2); fly6.style.visibility = t > 31.5 && t < 32.7 ? 'visible' : 'hidden';
+    const n = clamp(sp(t, 32.52)); nw6.style.transform = `scale(${n})`; nw6.style.visibility = t > 32.52 ? 'visible' : 'hidden'; tb6.style.transform = `scale(${1 + 0.15 * Math.sin(Math.PI * clamp((t - 33.64) / 0.4))})`; }
+  // ---- S7
+  show(s7a, t, 34.94);
+  nos.forEach(c => { pop(c, t, c.ts - 0.4); const p = inout(clamp((t - c.ts - 0.3) / 0.35)); c.sk.style.width = (p * 540) + 'px'; c.tx.style.color = p > 0.5 ? MUT : INK; const nb = clamp((t - c.ts - 0.55) / 0.15); c.nb.style.visibility = t > c.ts + 0.55 ? 'visible' : 'hidden'; c.nb.style.transform = `rotate(-6deg) scale(${lerp(2, 1, inout(nb))})`; });
+  // ---- S8
+  show(s8a, t, 39.02); pop(svc, t, 39.2);
+  svb.forEach(b => { const p = inout(clamp((t - 40.44) / 0.8)); b.style.width = (100 * lerp(+b.dataset.a, +b.dataset.b, p)) + '%'; });
+  show(s8b, t, 41.84); pop(gr8, t, 42.0); ch8.style.strokeDashoffset = 1 - inout(clamp((t - 42.2) / 0.7)); sm8.style.strokeDashoffset = 1 - inout(clamp((t - 43.6) / 0.9)); pop(lab8, t, 44.44);
+  // ---- S9
+  show(s9a, t, 45.5); show(s9z, t, 46.68); show(s9b, t, 48.52);
+  { pop(lg9, t, 45.4, 1e9, `scale(${1 + 0.05 * Math.sin(t * 3)})`);
+    pz.forEach((p, k) => { const ang = -Math.PI / 4 + k * Math.PI / 2, R = lerp(560, 330, inout(clamp((t - 49.46 - k * 0.1) / 0.6))); p.style.left = (540 + Math.cos(ang) * R * 1.05 - 165) + 'px'; p.style.top = (605 + 250 + Math.sin(ang) * R * 0.85 - 110) + 'px'; p.style.transform = `scale(${clamp(sp(t, 47.0 + k * 0.12))})`; pzOk[k].style.transform = `scale(${clamp(sp(t, 50.24 + k * 0.1))})`; }); }
+  // ---- S10
+  show(s10a, t, 51.66); show(s10b, t, 53.64); pop(qr10, t, 52.4, 1e9, `rotate(${3 * Math.sin(t * 2)}deg)`); pop(cbox, t, 55.0);
+  { const s = 'QR'; cm10.textContent = s.slice(0, Math.floor(clamp((t - 56.6) / 0.35) * s.length)); sd10.style.transform = `scale(${press(t, 57.1)})`; } show(s10c, t, 56.34);
+  // ---- S11
+  show(s11a, t, 58.26); pop(demo, t, 58.1); pl11.style.transform = `scale(${1 + 0.12 * Math.sin(Math.PI * clamp((t - 59.0) / 0.4))})`;
+  // ---- S12
+  pop(endL, t, 60.65, 1e9, `rotate(${(1 - clamp(sp(t, 60.65))) * -12}deg)`); show(e1, t, 60.9); show(e2, t, 61.2);
+
+  const sub = SUBS.find(([a, b]) => t >= a && t < b);
+  subBox.parentElement.style.visibility = sub ? 'visible' : 'hidden';
+  if (sub) { subBox.textContent = sub[2]; const p = clamp(sp(t, sub[0])); subBox.style.clipPath = `inset(0 ${(1 - p) * 50}% 0 ${(1 - p) * 50}%)`; }
+};
+window.DURATION = 62.5;
+window.seek(0);
+</script>
+</body>
+</html>
