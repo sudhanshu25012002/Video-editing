@@ -1,0 +1,105 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #ddd; }
+  body { font-family: 'Inter', sans-serif; color: #1C1726; }
+  .slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; background: #F3ECDF; background-image: radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px); background-size: 44px 44px; margin-bottom: 20px; }
+  .a { position: absolute; }
+  .top { position: absolute; left: 70px; top: 56px; right: 70px; height: 72px; display: flex; align-items: center; gap: 18px; }
+  .top img { width: 64px; height: 64px; }
+  .brand { font-weight: 800; font-size: 28px; letter-spacing: -0.02em; line-height: 1.1; }
+  .handle { font-weight: 600; font-size: 22px; color: #8A8172; }
+  .num { margin-left: auto; padding: 10px 22px; border-radius: 30px; background: #FFFDF8; box-shadow: 0 0 0 2px #E2D8C6; font-weight: 800; font-size: 22px; letter-spacing: 0.04em; }
+  .kick { position: absolute; left: 70px; top: 176px; padding: 10px 20px; border-radius: 24px; background: #5A17E6; color: #fff; font-weight: 800; font-size: 20px; letter-spacing: 0.1em; }
+  h1 { position: absolute; left: 70px; top: 228px; margin: 0; font-size: 74px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
+  .pur { color: #5A17E6; }
+  .sub { position: absolute; left: 70px; font-size: 28px; font-weight: 500; color: #8A8172; line-height: 1.35; }
+  .browser { position: absolute; border-radius: 22px; background: #FFFDF8; box-shadow: 0 30px 70px rgba(28,23,38,0.16), 0 0 0 2px #E2D8C6; overflow: hidden; }
+  .browser .bar { height: 46px; background: #EDE5D7; display: flex; align-items: center; gap: 9px; padding-left: 20px; }
+  .browser .bar i { width: 13px; height: 13px; border-radius: 7px; display: block; }
+  .browser .url { margin-left: 18px; height: 28px; border-radius: 14px; background: #FFFDF8; font-size: 15px; font-weight: 600; color: #8A8172; display: flex; align-items: center; padding: 0 16px; }
+  .browser img { display: block; width: 100%; }
+  .phone { position: absolute; border-radius: 52px; background: #16110f; padding: 13px; box-shadow: 0 34px 70px rgba(28,23,38,0.25), inset 0 0 0 2px #3a2f2a; }
+  .phone .scr { border-radius: 40px; overflow: hidden; position: relative; }
+  .phone .scr img { display: block; width: 100%; }
+  .phone .isl { position: absolute; left: 50%; top: 10px; width: 92px; height: 26px; margin-left: -46px; border-radius: 14px; background: #000; z-index: 2; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 20px; background: #FFFDF8; box-shadow: 0 14px 34px rgba(28,23,38,0.14), 0 0 0 2px #E2D8C6; font-weight: 800; font-size: 24px; white-space: nowrap; }
+  .dot { width: 34px; height: 34px; border-radius: 17px; background: #5A17E6; color: #fff; font-size: 18px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .pin { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 20px; background: #5A17E6; color: #fff; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 7px rgba(90,23,230,0.22); }
+  .foot { position: absolute; left: 70px; right: 70px; bottom: 50px; display: flex; align-items: center; justify-content: space-between; font-size: 22px; font-weight: 700; color: #8A8172; }
+  .foot b { color: #1C1726; }
+  .swipe { display: flex; align-items: center; gap: 10px; color: #5A17E6; font-weight: 800; }
+</style></head><body>
+
+<!-- 1. Full website design -->
+<section class="slide" id="s1">
+  <div class="top"><img src="data:image/png;base64,LOGO_BIG"><div><div class="brand">HeliosLabs Storefront</div><div class="handle">@helioslabs.store</div></div><div class="num">01 / 05</div></div>
+  <div class="kick">FULL WEBSITE DESIGN</div>
+  <h1>A complete store,<br><span class="pur">designed end to end.</span></h1>
+  <div class="browser" style="left:90px;top:430px;width:290px;height:862px"><div class="bar" style="height:34px;padding-left:14px;gap:6px"><i style="background:#ff5f57;width:10px;height:10px"></i><i style="background:#febc2e;width:10px;height:10px"></i><i style="background:#28c840;width:10px;height:10px"></i></div>
+    <div style="height:828px;overflow:hidden"><img src="shots/desk_strip.jpg" style="width:290px;height:auto"></div></div>
+  <div class="browser" style="left:440px;top:470px;width:570px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 shop.helioslabs.in</div></div><img src="shots/desk_top.png"></div>
+  <div class="phone" style="left:800px;top:770px;width:200px"><div class="scr"><div class="isl" style="width:60px;height:18px;margin-left:-30px;top:7px"></div><img src="shots/mob_top.png"></div></div>
+  <div class="chip" style="left:440px;top:860px"><span class="dot">1</span>Homepage</div>
+  <div class="chip" style="left:440px;top:950px"><span class="dot">2</span>Collections & categories</div>
+  <div class="chip" style="left:440px;top:1040px"><span class="dot">3</span>Product pages & cart</div>
+  <div class="chip" style="left:440px;top:1130px"><span class="dot">4</span>Desktop + mobile</div>
+  <div class="foot"><span></span><span class="swipe">Swipe ➜</span></div>
+</section>
+
+<!-- 2. Homepage close-up -->
+<section class="slide" id="s2">
+  <div class="top"><img src="data:image/png;base64,LOGO_BIG"><div><div class="brand">HeliosLabs Storefront</div><div class="handle">@helioslabs.store</div></div><div class="num">02 / 05</div></div>
+  <div class="kick">HOMEPAGE CLOSE-UP</div>
+  <h1>First impressions<br><span class="pur">that sell.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 shop.helioslabs.in</div></div>
+    <div style="position:relative"><img src="shots/desk_top.png">
+      <div class="pin" style="left:480px;top:9px">1</div><div class="pin" style="left:60px;top:48px">2</div><div class="pin" style="left:62px;top:410px">3</div><div class="pin" style="left:880px;top:200px">4</div></div></div>
+  <div class="chip" style="left:60px;top:1100px"><span class="dot">1</span>Offer bar</div>
+  <div class="chip" style="left:290px;top:1100px"><span class="dot">2</span>Easy menu</div>
+  <div class="chip" style="left:526px;top:1100px"><span class="dot">3</span>Shop CTA</div>
+  <div class="chip" style="left:755px;top:1100px"><span class="dot">4</span>Hero visual</div>
+  <div class="sub" style="top:1196px">Your brand story, products and offers — front and centre.</div>
+  <div class="foot" style="bottom:40px"><span></span><span class="swipe">Swipe ➜</span></div>
+</section>
+
+<!-- 3. Product listing + product page -->
+<section class="slide" id="s3">
+  <div class="top"><img src="data:image/png;base64,LOGO_BIG"><div><div class="brand">HeliosLabs Storefront</div><div class="handle">@helioslabs.store</div></div><div class="num">03 / 05</div></div>
+  <div class="kick">PRODUCT LISTING & PRODUCT PAGE</div>
+  <h1>Browse. Choose.<br><span class="pur">Add to bag.</span></h1>
+  <div class="browser" style="left:60px;top:430px;width:720px;transform:rotate(-2deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 shop.helioslabs.in/shop</div></div><img src="shots/shop_top.png"></div>
+  <div class="browser" style="left:300px;top:760px;width:720px;transform:rotate(1.5deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 shop.helioslabs.in/shop/the-florence-cashmere-long-coat</div></div><img src="shots/prod_top.png"></div>
+  <div class="chip" style="left:640px;top:470px"><span class="dot">✓</span>Categories & filters</div>
+  <div class="chip" style="left:44px;top:900px"><span class="dot">✓</span>Price, offers & stock</div>
+  <div class="chip" style="left:44px;top:990px"><span class="dot">✓</span>Sizes & colours</div>
+  <div class="chip" style="left:44px;top:1080px"><span class="dot">✓</span>One-tap Add to bag</div>
+  <div class="foot"><span></span><span class="swipe">Swipe ➜</span></div>
+</section>
+
+<!-- 4. Mobile version -->
+<section class="slide" id="s4">
+  <div class="top"><img src="data:image/png;base64,LOGO_BIG"><div><div class="brand">HeliosLabs Storefront</div><div class="handle">@helioslabs.store</div></div><div class="num">04 / 05</div></div>
+  <div class="kick">MOBILE VERSION</div>
+  <h1>Made for the phone<br><span class="pur">your customers use.</span></h1>
+  <div class="phone" style="left:60px;top:520px;width:290px;transform:rotate(-5deg)"><div class="scr"><div class="isl"></div><img src="shots/mob_top.png"></div></div>
+  <div class="phone" style="left:395px;top:470px;width:290px;z-index:2"><div class="scr"><div class="isl"></div><img src="shots/mob_grid.png"></div></div>
+  <div class="phone" style="left:730px;top:520px;width:290px;transform:rotate(5deg)"><div class="scr"><div class="isl"></div><img src="shots/mob_prod.png"></div></div>
+  <div class="chip" style="left:120px;top:1150px;z-index:3"><span class="dot">✓</span>Fast</div>
+  <div class="chip" style="left:400px;top:1150px;z-index:3"><span class="dot">✓</span>Easy browsing</div>
+  <div class="chip" style="left:740px;top:1150px;z-index:3"><span class="dot">✓</span>Smooth checkout</div>
+  <div class="foot" style="bottom:40px"><span></span><span class="swipe">Swipe ➜</span></div>
+</section>
+
+<!-- 5. CTA -->
+<section class="slide" id="s5">
+  <div class="top"><img src="data:image/png;base64,LOGO_BIG"><div><div class="brand">HeliosLabs Storefront</div><div class="handle">@helioslabs.store</div></div><div class="num">05 / 05</div></div>
+  <div class="a" style="left:0;top:150px;width:1080px;height:700px;background:radial-gradient(circle at 50% 50%, rgba(90,23,230,0.18), rgba(90,23,230,0) 60%)"></div>
+  <img class="a" src="data:image/png;base64,LOGO_BIG" style="left:410px;top:240px;width:260px;height:260px;filter:drop-shadow(0 30px 50px rgba(90,23,230,0.35))">
+  <div class="a" style="left:0;top:560px;width:1080px;text-align:center;font-size:80px;font-weight:800;letter-spacing:-0.04em;line-height:1.04">Imagine your brand<br>with <span class="pur">its own<br>online store.</span></div>
+  <div class="a" style="left:0;top:900px;width:1080px;text-align:center;font-size:30px;font-weight:600;color:#8A8172">We design, build, host & maintain it for you.</div>
+  <div class="a" style="left:300px;top:985px;width:480px;height:66px;border-radius:33px;background:#FFFDF8;box-shadow:0 0 0 2px #E2D8C6;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px">Plans from <span class="pur">&nbsp;₹999/month</span></div>
+  <div class="a" style="left:190px;top:1085px;width:700px;height:104px;border-radius:52px;background:#5A17E6;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:36px;box-shadow:0 20px 50px rgba(90,23,230,0.35)">DM “STORE” to @helioslabs.store</div>
+  <div class="a" style="left:0;top:1225px;width:1080px;text-align:center;font-size:24px;font-weight:700;color:#8A8172">See the live demo · <span style="color:#1C1726">shop.helioslabs.in</span></div>
+</section>
+</body></html>

@@ -1,0 +1,12 @@
+const { chromium } = require('playwright');
+(async () => { const b = await chromium.launch();
+  const d = await b.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  await d.goto('https://shop.helioslabs.in/', { waitUntil: 'networkidle', timeout: 60000 }); await d.waitForTimeout(2500);
+  await d.screenshot({ path: 'shots/desk_full.png', fullPage: true }); await d.screenshot({ path: 'shots/desk_top.png' });
+  const links = await d.$$eval('a', as => as.map(a => [a.href, a.innerText.trim().slice(0, 40)]).filter(x => x[0].includes('helioslabs')));
+  console.log(JSON.stringify(links.slice(0, 60)));
+  console.log((await d.innerText('body')).slice(0, 2500));
+  const m = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  await m.goto('https://shop.helioslabs.in/', { waitUntil: 'networkidle', timeout: 60000 }); await m.waitForTimeout(2500);
+  await m.screenshot({ path: 'shots/mob_top.png' }); await m.screenshot({ path: 'shots/mob_full.png', fullPage: true });
+  await b.close(); })();
