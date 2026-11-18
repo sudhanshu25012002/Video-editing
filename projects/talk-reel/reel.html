@@ -1,0 +1,144 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+  #vid { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 50% 30%; }
+  .a { position: absolute; }
+  #cap { position: absolute; left: 40px; width: 1000px; top: 1330px; text-align: center; z-index: 50; }
+  .w { display: inline-block; margin: 0 9px; font-weight: 900; font-size: 78px; letter-spacing: -0.03em; line-height: 1.12; color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,0.35), 0 0 30px rgba(0,0,0,0.55); -webkit-text-stroke: 2px rgba(0,0,0,0.25); }
+  .w.k { color: #1C1726; background: #FFD84D; padding: 0 16px; border-radius: 14px; text-shadow: none; -webkit-text-stroke: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+  .w.p { color: #fff; background: #5A17E6; padding: 0 16px; border-radius: 14px; text-shadow: none; -webkit-text-stroke: 0; box-shadow: 0 10px 30px rgba(90,23,230,0.5); }
+  .w.x { color: #ff4d5e; }
+  .step { position: absolute; left: 540px; top: 150px; z-index: 40; display: flex; align-items: center; gap: 22px; padding: 22px 34px 22px 22px; border-radius: 34px; background: rgba(255,253,248,0.96); box-shadow: 0 24px 60px rgba(0,0,0,0.35); transform-origin: 50% 50%; white-space: nowrap; }
+  .step .ic { width: 110px; height: 110px; border-radius: 28px; background: #5A17E6; display: flex; align-items: center; justify-content: center; flex: none; }
+  .step .n { font-size: 24px; font-weight: 800; letter-spacing: 0.12em; color: #8A8172; }
+  .step .t { font-size: 50px; font-weight: 900; letter-spacing: -0.03em; color: #1C1726; line-height: 1.05; }
+  #brand { position: absolute; left: 40px; top: 50px; z-index: 60; display: flex; align-items: center; gap: 14px; padding: 10px 22px 10px 10px; border-radius: 40px; background: rgba(28,23,38,0.55); backdrop-filter: blur(8px); color: #fff; font-weight: 800; font-size: 28px; }
+  #brand img { width: 56px; height: 56px; border-radius: 14px; }
+  #track { position: absolute; left: 60px; width: 960px; top: 1790px; height: 70px; z-index: 45; }
+</style></head>
+<body><div id="stage">
+  <img id="vid">
+  <div id="vign" class="a" style="inset:0;z-index:5;background:linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 18%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.55) 100%)"></div>
+  <div id="flash" class="a" style="inset:0;z-index:70;background:#fff;opacity:0"></div>
+</div>
+<div id="brand"><img src="data:image/png;base64,LOGO"><span>HeliosLabs</span></div>
+<script>
+window.DURATION = 35.0; const VEND = 32.5;
+const stage = document.getElementById('stage'), vid = document.getElementById('vid');
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.4, z = 0.62, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const ramp = (t, a, d) => inout(clamp((t - a) / d));
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const LG = s => `<img src="data:image/png;base64,LOGO" style="width:${s}px;height:${s}px;display:block">`;
+
+// ---------- captions: [start, end, words (*key*, ~purple~, !struck!)] ----------
+const CAP = [
+  [0.1, 1.3, 'Jab koi *client*'], [1.3, 2.6, 'project lekar aata hai'], [2.6, 4.05, 'hum seedha *coding* !nahi! karte'],
+  [4.05, 4.85, 'sabse pehle'], [4.85, 6.25, '*requirements* samajhte hain'], [6.25, 7.7, '*business* samajhte hain'],
+  [7.7, 9.6, 'possible *solution* dete hain'], [9.6, 10.9, '*scope* define karte hain'], [10.9, 12.55, 'phir *quotation* share karte hain'],
+  [12.6, 13.15, '*approval* ke baad'], [13.15, 13.7, '*planning*'], [13.7, 14.75, '*UI/UX* design'], [14.75, 16.5, 'aur *development* shuru'],
+  [16.5, 17.35, 'phir *testing*'], [17.35, 18.65, '*bugs* fix karte hain'], [18.65, 19.85, 'aur ensure karte hain'], [19.85, 21.7, 'everything works *absolutely* *fine*'],
+  [21.7, 22.4, 'finally'], [22.4, 23.9, 'project *deploy* hota hai'], [23.9, 25.8, 'client ko *handover*'],
+  [25.85, 28.05, 'from the *first* *discussion*'], [28.05, 29.4, 'to *final* *delivery*'], [29.4, 30.85, 'every step *matters*'], [30.85, 31.75, 'that’s how we work at'], [31.75, 32.5, '~HeliosLabs~']];
+const cap = E(stage, {}, '', 'x'); cap.id = 'cap';
+const capEls = CAP.map(([a, b, s]) => { const e = E(cap, { position: 'absolute', left: 0, top: 0, width: '1000px' }, '', 'x');
+  e.innerHTML = s.split(' ').map(w => { let c = ''; if (/^\*.*\*$/.test(w)) { c = 'k'; w = w.slice(1, -1); } else if (/^~.*~$/.test(w)) { c = 'p'; w = w.slice(1, -1); } else if (/^!.*!$/.test(w)) { c = 'x'; w = w.slice(1, -1); } return `<span class="w ${c}">${w}</span>`; }).join('');
+  e.a = a; e.b = b; e.ws = [...e.querySelectorAll('.w')]; return e; });
+
+// ---------- step cards (line-art icons) ----------
+const ICON = {
+  req: '<path d="M22 14h36l14 14v52H22z" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/><path d="M32 40h28M32 52h28M32 64h18" stroke="#fff" stroke-width="6" stroke-linecap="round"/>',
+  biz: '<rect x="14" y="30" width="64" height="44" rx="8" fill="none" stroke="#fff" stroke-width="6"/><path d="M34 30v-8h24v8M14 48h64" fill="none" stroke="#fff" stroke-width="6"/>',
+  sol: '<path d="M46 14a22 22 0 0 1 12 40v10H34V54a22 22 0 0 1 12-40z" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/><path d="M36 74h20" stroke="#fff" stroke-width="6" stroke-linecap="round"/>',
+  scope: '<circle cx="46" cy="46" r="28" fill="none" stroke="#fff" stroke-width="6"/><circle cx="46" cy="46" r="14" fill="none" stroke="#fff" stroke-width="6"/><circle cx="46" cy="46" r="4" fill="#fff"/>',
+  quote: '<path d="M22 14h48v64l-8-6-8 6-8-6-8 6-8-6-8 6z" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/><path d="M34 34h24M34 46h24" stroke="#fff" stroke-width="6" stroke-linecap="round"/>',
+  ok: '<circle cx="46" cy="46" r="30" fill="none" stroke="#fff" stroke-width="6"/><path d="M32 47l10 10 18-20" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>',
+  plan: '<rect x="16" y="20" width="60" height="56" rx="8" fill="none" stroke="#fff" stroke-width="6"/><path d="M16 36h60M32 14v12M60 14v12" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M30 52h10M52 52h10M30 64h10" stroke="#fff" stroke-width="6" stroke-linecap="round"/>',
+  ui: '<rect x="12" y="18" width="68" height="50" rx="8" fill="none" stroke="#fff" stroke-width="6"/><path d="M12 32h68" stroke="#fff" stroke-width="6"/><rect x="22" y="40" width="20" height="18" rx="3" fill="#fff"/><path d="M50 44h20M50 54h14M36 78h20" stroke="#fff" stroke-width="6" stroke-linecap="round"/>',
+  dev: '<path d="M34 28L16 46l18 18M58 28l18 18-18 18M52 20L40 72" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>',
+  test: '<path d="M36 14h20M40 14v22L20 72a6 6 0 0 0 5 8h42a6 6 0 0 0 5-8L52 36V14" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/><path d="M28 60h36" stroke="#fff" stroke-width="6"/>',
+  bug: '<ellipse cx="46" cy="52" rx="18" ry="22" fill="none" stroke="#fff" stroke-width="6"/><path d="M46 30v44M28 44H14M64 44h14M28 62H16M64 62h12M36 26l-6-8M56 26l6-8" stroke="#fff" stroke-width="6" stroke-linecap="round"/>',
+  deploy: '<path d="M46 12c14 10 18 26 14 42H32c-4-16 0-32 14-42z" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/><circle cx="46" cy="34" r="6" fill="#fff"/><path d="M32 54l-10 12h14M60 54l10 12H56M40 66l6 14 6-14" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>',
+  hand: '<path d="M12 56l16-12h18l10 8H40M12 72h44l24-18a6 6 0 0 0-8-8L56 56" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><rect x="40" y="16" width="24" height="22" rx="4" fill="none" stroke="#fff" stroke-width="6"/>',
+};
+const STEPS = [[4.9, 'req', 'Requirements'], [6.36, 'biz', 'Business'], [8.2, 'sol', 'Solution'], [9.76, 'scope', 'Scope'], [11.3, 'quote', 'Quotation'],
+  [12.6, 'ok', 'Approval'], [13.2, 'plan', 'Planning'], [13.85, 'ui', 'UI/UX Design'], [14.9, 'dev', 'Development'], [16.7, 'test', 'Testing'], [17.45, 'bug', 'Bug fixing'], [22.9, 'deploy', 'Deploy'], [24.1, 'hand', 'Handover']];
+const stepEls = STEPS.map(([t, ic, n], k) => { const e = E(stage, {}, `<div class="ic"><svg width="92" height="92" viewBox="0 0 92 92">${ICON[ic]}</svg></div><div><div class="n">STEP ${String(k + 1).padStart(2, '0')}</div><div class="t">${n}</div></div>`, 'step'); e.t = t; e.end = ic === 'bug' ? 20.2 : (k < STEPS.length - 1 ? STEPS[k + 1][0] : 25.8); return e; });
+// "no coding first" chip
+const noCode = E(stage, { left: '540px', top: '160px', zIndex: 41, padding: '20px 34px', borderRadius: '30px', background: '#1C1726', color: '#fff', fontWeight: 900, fontSize: '50px', whiteSpace: 'nowrap', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }, '<span style="font-family:DejaVu Sans Mono;color:#9d7bff">&lt;/&gt;</span> Coding first? <span style="color:#ff4d5e">✕</span>');
+// all-good badge for "absolutely fine"
+const fine = E(stage, { left: '540px', top: '160px', zIndex: 41, padding: '20px 34px', borderRadius: '30px', background: '#1f9d55', color: '#fff', fontWeight: 900, fontSize: '50px', whiteSpace: 'nowrap', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }, '✓ All tests passed');
+
+// process tracker (13 dots)
+const track = E(stage, {}, '', 'x'); track.id = 'track';
+const tline = E(track, { left: '20px', top: '33px', width: '920px', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.25)' });
+const tfill = E(track, { left: '20px', top: '33px', width: '0px', height: '6px', borderRadius: '3px', background: '#FFD84D' });
+const dots = STEPS.map((s, k) => E(track, { left: 20 + k * (920 / 12) - 13 + 'px', top: '23px', width: '26px', height: '26px', borderRadius: '13px', background: 'rgba(255,255,255,0.35)', boxShadow: '0 0 0 4px rgba(0,0,0,0.25)' }));
+const tlabel = E(track, { left: '20px', top: '-34px', fontSize: '24px', fontWeight: 800, color: '#fff', letterSpacing: '0.1em', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }, '');
+
+// journey for "first discussion → final delivery"
+const jour = E(stage, { left: '60px', top: '150px', width: '960px', height: '220px', zIndex: 42, borderRadius: '34px', background: 'rgba(255,253,248,0.96)', boxShadow: '0 24px 60px rgba(0,0,0,0.35)' });
+jour.innerHTML = `<div style="position:absolute;left:40px;top:28px;font-size:26px;font-weight:800;color:#8A8172;letter-spacing:.1em">FIRST DISCUSSION</div><div style="position:absolute;right:40px;top:28px;font-size:26px;font-weight:800;color:#5A17E6;letter-spacing:.1em">FINAL DELIVERY</div>
+  <div style="position:absolute;left:60px;top:120px;width:840px;height:10px;border-radius:5px;background:#E9E1D3"></div><div id="jfill" style="position:absolute;left:60px;top:120px;width:0;height:10px;border-radius:5px;background:linear-gradient(90deg,#8B5CF6,#5A17E6)"></div>
+  ${STEPS.map((s, k) => `<div class="jd" style="position:absolute;left:${60 + k * 70 - 14}px;top:111px;width:28px;height:28px;border-radius:14px;background:#E9E1D3"></div>`).join('')}
+  <div id="jrocket" style="position:absolute;left:46px;top:150px;font-size:22px;font-weight:800;color:#1C1726">Every step matters ✓</div>`;
+const jds = [...jour.querySelectorAll('.jd')];
+
+// end card
+const end = E(stage, { inset: 0, zIndex: 80, background: '#F3ECDF', backgroundImage: 'radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px)', backgroundSize: '44px 44px' });
+const eGlow = E(end, { left: '140px', top: '330px', width: '800px', height: '800px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(90,23,230,0.2), rgba(90,23,230,0) 65%)' });
+const eLogo = E(end, { left: '370px', top: '520px', width: '340px', height: '340px' }, LG(340));
+const eName = E(end, { left: 0, top: '930px', width: '1080px', textAlign: 'center', fontSize: '96px', fontWeight: 900, letterSpacing: '-0.04em', color: '#1C1726' }, 'HeliosLabs');
+const eSub = E(end, { left: 0, top: '1060px', width: '1080px', textAlign: 'center', fontSize: '40px', fontWeight: 600, color: '#8A8172' }, 'From first discussion to final delivery.');
+const eTags = E(end, { left: 0, top: '1160px', width: '1080px', display: 'flex', justifyContent: 'center', gap: '16px' },
+  ['Websites', 'Mobile Apps', 'Custom Software'].map((x, i) => `<div style="padding:16px 28px;border-radius:24px;background:${i === 2 ? '#5A17E6' : '#FFFDF8'};color:${i === 2 ? '#fff' : '#1C1726'};font-weight:800;font-size:30px;box-shadow:0 0 0 2px #E2D8C6">${x}</div>`).join(''));
+
+// punch-ins on key moments: [time, zoom]
+const PUNCH = [[2.74, 1.12], [4.9, 1.0], [7.96, 1.1], [9.6, 1.0], [12.6, 1.12], [14.9, 1.0], [19.98, 1.12], [21.7, 1.0], [22.9, 1.1], [25.85, 1.0], [28.3, 1.1], [29.55, 1.0], [31.8, 1.14]];
+const CUTS = [12.6, 25.85];
+function zoomAt(t) { let z = 1.0, prev = 1.0, pt = 0; for (const [tc, zz] of PUNCH) { if (t >= tc) { prev = z; z = zz; pt = tc; } } return lerp(prev, z, ramp(t, pt, 0.35)); }
+
+window.seek = async function (t) {
+  const fi = Math.min(1949, Math.floor(clamp(t, 0, VEND - 0.001) * 60));
+  const src = 'src/' + String(fi + 1).padStart(5, '0') + '.jpg';
+  if (vid.getAttribute('src') !== src) { vid.setAttribute('src', src); try { await vid.decode(); } catch (e) {} }
+  // camera: slow drift + punch-ins + cut kick
+  let kick = 0; CUTS.forEach(c => { const d = t - c; if (d >= 0 && d < 0.4) kick = (1 - d / 0.4) * 0.06; });
+  const z = zoomAt(t) + 0.02 * Math.sin(t * 0.5) + kick;
+  vid.style.transform = `scale(${z})`;
+  { let f = 0; CUTS.forEach(c => { const d = t - c; if (d > -0.05 && d < 0.25) f = Math.max(f, 1 - Math.abs(d) / 0.25); }); document.getElementById('flash').style.opacity = f * 0.55; }
+  // captions: word-by-word pop
+  capEls.forEach(e => { const on = t >= e.a - 0.02 && t < e.b; e.style.display = on ? 'block' : 'none'; if (!on) return;
+    const n = e.ws.length, dur = Math.min(0.7, (e.b - e.a) * 0.6); e.ws.forEach((w, i) => { const a = e.a + (n > 1 ? i * dur / (n - 1) * 0.8 : 0); const p = clamp(sp(t, a), 0, 1.15);
+      w.style.transform = `translateY(${(1 - clamp(p)) * 40}px) scale(${0.6 + 0.4 * p})`; w.style.opacity = clamp((t - a) / 0.08);
+      if (w.classList.contains('x')) w.style.textDecoration = t > a + 0.25 ? 'line-through 8px #ff4d5e' : 'none'; }); });
+  // step cards
+  stepEls.forEach(e => { const vis = t >= e.t && t < e.end + 0.3; e.style.display = vis ? 'flex' : 'none'; if (!vis) return;
+    const p = clamp(sp(t, e.t), 0, 1.15), q = ramp(t, e.end - 0.05, 0.3); const w = e.offsetWidth;
+    e.style.left = (540 - w / 2) + 'px'; e.style.opacity = 1 - q; e.style.transform = `translateY(${(1 - clamp(p)) * -160 - q * 60}px) scale(${lerp(0.7, 1, p)}) rotate(${(1 - clamp(p)) * -6}deg)`;
+    e.querySelector('.ic').style.transform = `rotate(${(1 - clamp(sp(t, e.t + 0.1))) * 90}deg)`; });
+  { const vis = t >= 2.74 && t < 4.75; noCode.style.display = vis ? 'block' : 'none'; if (vis) { const p = clamp(sp(t, 2.74), 0, 1.15), q = ramp(t, 4.45, 0.3); noCode.style.left = (540 - noCode.offsetWidth / 2) + 'px'; noCode.style.opacity = 1 - q; noCode.style.transform = `scale(${p}) rotate(${t > 3.5 && t < 3.75 ? Math.sin(t * 90) * 3 : 0}deg)`; } }
+  { const vis = t >= 20.4 && t < 22.75; fine.style.display = vis ? 'block' : 'none'; if (vis) { const p = clamp(sp(t, 20.4), 0, 1.15), q = ramp(t, 22.45, 0.3); fine.style.left = (540 - fine.offsetWidth / 2) + 'px'; fine.style.opacity = 1 - q; fine.style.transform = `scale(${p})`; } }
+  // tracker
+  { const n = STEPS.filter(s => t >= s[0]).length; const vis = t >= 4.6 && t < 25.85; track.style.opacity = clamp((t - 4.6) / 0.3) * (1 - clamp((t - 25.6) / 0.25)); track.style.display = t < 4.6 || t >= 25.85 ? 'none' : 'block';
+    let fp = 0; STEPS.forEach((s, k) => { fp = Math.max(fp, k * ramp(t, s[0], 0.4)); }); tfill.style.width = fp * (920 / 12) + 'px';
+    dots.forEach((d, k) => { const on = t >= STEPS[k][0]; const p = on ? clamp(sp(t, STEPS[k][0]), 0, 1.3) : 0; d.style.background = on ? '#FFD84D' : 'rgba(255,255,255,0.35)'; d.style.transform = `scale(${on ? 0.8 + 0.4 * p : 0.8})`; });
+    tlabel.textContent = n ? `STEP ${n} / ${STEPS.length}` : ''; }
+  // journey
+  { const vis = t >= 26.0 && t < 30.95; jour.style.display = vis ? 'block' : 'none'; if (vis) { const p = clamp(sp(t, 26.0), 0, 1.1), q = ramp(t, 30.6, 0.3); jour.style.opacity = 1 - q; jour.style.transform = `translateY(${(1 - clamp(p)) * -120}px) scale(${lerp(0.85, 1, clamp(p))})`;
+    const f = ramp(t, 27.0, 1.8); jour.querySelector('#jfill').style.width = f * 840 + 'px'; jds.forEach((d, k) => { const on = f * 12 >= k - 0.01; d.style.background = on ? '#5A17E6' : '#E9E1D3'; d.style.transform = `scale(${on ? 1 + 0.25 * Math.max(0, 1 - Math.abs(f * 12 - k)) : 0.8})`; });
+    jour.querySelector('#jrocket').style.opacity = clamp((t - 29.55) / 0.3); } }
+  // brand
+  document.getElementById('brand').style.opacity = clamp((t - 0.2) / 0.4) * (1 - clamp((t - 32.3) / 0.2));
+  // end card
+  { const p = ramp(t, 32.4, 0.45); end.style.display = t < 32.4 ? 'none' : 'block'; end.style.clipPath = `circle(${p * 1500}px at 540px 960px)`;
+    const l = sp(t, 32.6); eLogo.style.transform = `scale(${clamp(l, 0, 1.2)}) rotate(${(1 - clamp(l)) * -20}deg)`; eLogo.style.filter = 'drop-shadow(0 30px 60px rgba(90,23,230,0.4))';
+    [eName, eSub, eTags].forEach((e, k) => { const a = 32.9 + k * 0.25; e.style.opacity = clamp((t - a) / 0.3); e.style.transform = `translateY(${(1 - clamp(sp(t, a))) * 40}px)`; }); }
+};
+</script></body></html>
