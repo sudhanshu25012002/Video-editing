@@ -1,0 +1,249 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --bg: #F3EBDD; --pur: #6C45C5; --ink: #24212A; --lav: #E7DFF6; --lav2: #F3EEFB; --grey: #8F8896; --line: #E3D8C6; --card: #FFFCF6; --red: #C8543F; --redbg: #F8E1DA; }
+  html, body { margin: 0; background: #ccc; }
+  body { font-family: 'Inter', sans-serif; color: var(--ink); }
+  .slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; margin-bottom: 20px;
+    background: radial-gradient(ellipse at 85% 0%, rgba(108,69,197,0.07), rgba(108,69,197,0) 45%), radial-gradient(ellipse at 0% 100%, rgba(255,255,255,0.55), rgba(255,255,255,0) 50%), var(--bg); }
+  .a { position: absolute; }
+  .eyebrow { position: absolute; left: 80px; top: 92px; display: flex; align-items: center; gap: 14px; font-size: 20px; font-weight: 700; letter-spacing: 0.16em; color: var(--pur); }
+  .eyebrow::before { content: ''; width: 36px; height: 3px; border-radius: 2px; background: var(--pur); }
+  h1 { position: absolute; left: 80px; right: 80px; margin: 0; font-weight: 800; letter-spacing: -0.045em; line-height: 1.0; }
+  .p { color: var(--pur); }
+  .lead { position: absolute; left: 80px; right: 80px; font-size: 30px; font-weight: 500; line-height: 1.4; color: #5d5764; letter-spacing: -0.01em; }
+  .foot { position: absolute; left: 80px; right: 80px; bottom: 56px; height: 44px; display: flex; align-items: center; gap: 14px; font-size: 20px; font-weight: 700; color: var(--ink); }
+  .foot img { width: 40px; height: 40px; }
+  .foot .sep { flex: 1; height: 2px; background: var(--line); margin: 0 10px; }
+  .foot .n { color: var(--grey); letter-spacing: 0.08em; font-weight: 700; }
+  .foot .sw { color: var(--pur); font-weight: 800; margin-left: 14px; }
+  /* windows */
+  .win { position: absolute; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 70px rgba(36,33,42,0.14), 0 0 0 1.5px rgba(36,33,42,0.07); }
+  .win .tb { height: 44px; background: #F5F2EC; border-bottom: 1px solid #E7E1D6; display: flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 15px; font-weight: 600; color: #6b6470; }
+  .win .tb i { width: 12px; height: 12px; border-radius: 6px; display: block; background: #DCD5C9; }
+  .win .tb span { margin-left: 10px; }
+  .sh { border-collapse: collapse; font-size: 14px; color: #3b3740; table-layout: fixed; }
+  .sh td { border: 1px solid #E6E3DE; height: 30px; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sh tr:first-child td, .sh td:first-child { background: #F4F2EE; color: #9a948c; text-align: center; font-size: 12px; font-weight: 600; padding: 0; }
+  .sh .hd td { font-weight: 700; color: #24212A; background: #FAF8F4; }
+  .sh .err { background: var(--redbg); color: var(--red); font-weight: 700; box-shadow: inset 0 0 0 2px var(--red); }
+  .sh .dup { background: #FDF0D5; box-shadow: inset 0 0 0 2px #D9A33A; }
+  .sh .miss { background: repeating-linear-gradient(45deg, #fff, #fff 5px, #F3EEE6 5px, #F3EEE6 10px); box-shadow: inset 0 0 0 2px #C9BFB1; }
+  .tag { position: absolute; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 14px; background: var(--card); font-size: 20px; font-weight: 700; white-space: nowrap; box-shadow: 0 16px 36px rgba(36,33,42,0.13), 0 0 0 1.5px rgba(36,33,42,0.06); }
+  .ic { width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; flex: none; }
+  .ic.r { background: var(--redbg); color: var(--red); } .ic.p { background: var(--lav); color: var(--pur); } .ic.y { background: #FBEBC9; color: #B07A12; }
+  /* dashboard */
+  .dash { position: absolute; background: #fff; border-radius: 22px; overflow: hidden; box-shadow: 0 40px 90px rgba(36,33,42,0.16), 0 0 0 1.5px rgba(36,33,42,0.06); display: flex; }
+  .side { width: 190px; background: #FBF9F6; border-right: 1px solid #EEE8DF; padding: 22px 16px; box-sizing: border-box; }
+  .side .lg { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; margin-bottom: 26px; }
+  .side .lg img { width: 30px; height: 30px; }
+  .nav { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #6d6672; margin-bottom: 4px; }
+  .nav b { width: 18px; height: 18px; border-radius: 5px; background: #E6E0D8; display: block; }
+  .nav.on { background: var(--lav2); color: var(--pur); } .nav.on b { background: var(--pur); }
+  .main { flex: 1; padding: 22px 24px; box-sizing: border-box; position: relative; }
+  .kpi { background: #FBF9F6; border: 1px solid #EEE8DF; border-radius: 14px; padding: 14px 16px; }
+  .kpi .l { font-size: 13px; font-weight: 600; color: #8f8896; }
+  .kpi .v { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; margin-top: 4px; }
+  .kpi .d { font-size: 12px; font-weight: 700; color: #2f9a5a; margin-top: 2px; }
+  .panel { background: #fff; border: 1px solid #EEE8DF; border-radius: 14px; padding: 14px 16px; box-sizing: border-box; }
+  .panel .t { font-size: 15px; font-weight: 800; display: flex; justify-content: space-between; }
+  .panel .t span { font-size: 12px; color: #8f8896; font-weight: 600; }
+  .row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #F2EDE6; color: #4a4550; }
+  .pill { padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  .pill.g { background: #E2F4E8; color: #2f9a5a; } .pill.p { background: var(--lav); color: var(--pur); } .pill.y { background: #FBEBC9; color: #9a6a0e; }
+  .feat { position: absolute; display: flex; gap: 20px; align-items: flex-start; }
+  .feat .fi { width: 64px; height: 64px; border-radius: 18px; background: var(--card); box-shadow: 0 0 0 1.5px var(--line); display: flex; align-items: center; justify-content: center; flex: none; }
+  .feat .ft { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+  .feat .fd { font-size: 20px; font-weight: 500; color: #7a7380; margin-top: 6px; }
+</style></head><body>
+
+<!-- 1 HOOK -->
+<section class="slide" id="s1">
+  <div class="eyebrow">FOR GROWING BUSINESSES</div>
+  <h1 style="top:150px;font-size:92px">Still managing<br>your business on<br><span class="p">spreadsheets?</span></h1>
+  <div class="lead" style="top:476px">Your business has grown.<br>Has your management system?</div>
+  <!-- laptop -->
+  <div class="a" style="left:60px;top:640px;width:740px;height:470px;border-radius:26px 26px 6px 6px;background:#1E1C22;padding:16px;box-sizing:border-box;box-shadow:0 40px 80px rgba(36,33,42,0.25)">
+    <div id="lapScreen" style="width:100%;height:100%;background:#fff;border-radius:10px;overflow:hidden;position:relative"></div></div>
+  <div class="a" style="left:10px;top:1108px;width:840px;height:26px;border-radius:0 0 22px 22px;background:linear-gradient(#D9D3CA,#B9B2A7);box-shadow:0 20px 40px rgba(36,33,42,0.2)"><div style="margin:0 auto;width:150px;height:10px;border-radius:0 0 10px 10px;background:#A69E92"></div></div>
+  <!-- dashboard phone -->
+  <div class="a" style="left:740px;top:600px;width:280px;height:560px;border-radius:44px;background:#1E1C22;padding:11px;box-sizing:border-box;box-shadow:0 40px 80px rgba(108,69,197,0.3);transform:rotate(4deg)">
+    <div style="width:100%;height:100%;border-radius:34px;overflow:hidden;background:#FBF9F6;position:relative;padding:40px 16px 0;box-sizing:border-box">
+      <div style="position:absolute;left:50%;top:10px;width:76px;height:20px;margin-left:-38px;border-radius:10px;background:#000"></div>
+      <div style="font-size:12px;font-weight:700;color:#8f8896">Good morning 👋</div>
+      <div style="font-size:19px;font-weight:800;letter-spacing:-0.02em;margin-top:2px">Business overview</div>
+      <div style="margin-top:12px;border-radius:14px;padding:12px 14px;background:linear-gradient(135deg,#6C45C5,#8B68DA);color:#fff">
+        <div style="font-size:11px;font-weight:600;opacity:.8">Revenue · this month</div><div style="font-size:25px;font-weight:800;letter-spacing:-0.03em">₹12.4L</div><div style="font-size:11px;font-weight:700">▲ 18% vs last month</div>
+        <svg width="220" height="44" viewBox="0 0 220 44" style="margin-top:6px"><path d="M0 36 C30 30 45 34 70 24 S115 22 140 14 S190 10 220 4" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><div class="kpi" style="flex:1;padding:9px 10px"><div class="l" style="font-size:10px">Orders</div><div class="v" style="font-size:18px">1,284</div></div><div class="kpi" style="flex:1;padding:9px 10px"><div class="l" style="font-size:10px">Customers</div><div class="v" style="font-size:18px">846</div></div></div>
+      <div class="panel" style="margin-top:10px;padding:10px 12px"><div class="t" style="font-size:12px">Recent orders</div>
+        <div class="row" style="font-size:11px"><span>#2041 · Mehta Traders</span><span class="pill g">Paid</span></div>
+        <div class="row" style="font-size:11px"><span>#2040 · Sharma & Co</span><span class="pill p">Shipped</span></div>
+        <div class="row" style="font-size:11px;border:0"><span>#2039 · Kapoor Retail</span><span class="pill y">Pending</span></div></div>
+    </div></div>
+  <div class="tag" style="left:96px;top:600px"><span class="ic r">✕</span>Manual</div>
+  <div class="tag" style="left:790px;top:1150px"><span class="ic p">✓</span>Smart system</div>
+  <div class="foot"><img src="data:image/png;base64,LOGO"><span>HeliosLabs</span><span class="sep"></span><span class="n">01 / 07</span><span class="sw">→</span></div>
+</section>
+
+<!-- 2 SCATTERED -->
+<section class="slide" id="s2">
+  <div class="eyebrow">THE DAILY STRUGGLE</div>
+  <h1 style="top:150px;font-size:96px">Everything is<br><span class="p">scattered.</span></h1>
+  <div class="a" id="s2list" style="left:80px;top:400px;width:920px;display:grid;grid-template-columns:1fr 1fr;gap:18px 40px"></div>
+  <div id="s2wins"></div>
+  <div class="foot"><img src="data:image/png;base64,LOGO"><span>HeliosLabs</span><span class="sep"></span><span class="n">02 / 07</span><span class="sw">→</span></div>
+</section>
+
+<!-- 3 HIDDEN COST -->
+<section class="slide" id="s3">
+  <div class="eyebrow">THE HIDDEN COST</div>
+  <h1 style="top:150px;font-size:90px">Small mistakes.<br><span class="p">Bigger problems.</span></h1>
+  <style>#s3win .sh td{height:40px;font-size:17px}</style><div class="win" id="s3win" style="left:80px;top:420px;width:920px"></div>
+  <div class="tag" style="left:80px;top:900px"><span class="ic r">!</span>Incorrect entries</div>
+  <div class="tag" style="left:385px;top:900px"><span class="ic y">⧉</span>Duplicate records</div>
+  <div class="tag" style="left:702px;top:900px"><span class="ic r">?</span>Missing info</div>
+  <div class="a" style="left:80px;top:1020px;width:920px;display:flex;gap:20px">
+    <div class="tag" style="position:relative;flex:1;padding:22px 24px;flex-direction:column;align-items:flex-start;gap:6px"><span style="font-size:15px;color:#8f8896;font-weight:700;letter-spacing:.08em">MONTHLY REPORT</span><span style="font-size:30px;font-weight:800;color:var(--red)">Delayed · 6 days</span></div>
+    <div class="tag" style="position:relative;flex:1;padding:22px 24px;flex-direction:column;align-items:flex-start;gap:6px"><span style="font-size:15px;color:#8f8896;font-weight:700;letter-spacing:.08em">TIME SPENT SEARCHING DATA</span><span style="font-size:30px;font-weight:800;color:var(--red)">~2 hrs every day</span></div>
+  </div>
+  <div class="foot"><img src="data:image/png;base64,LOGO"><span>HeliosLabs</span><span class="sep"></span><span class="n">03 / 07</span><span class="sw">→</span></div>
+</section>
+
+<!-- 4 REALISATION -->
+<section class="slide" id="s4">
+  <div class="a" id="s4bg" style="left:-40px;top:560px;width:1160px;opacity:0.35;filter:blur(3px) grayscale(1);transform:rotate(-6deg)"></div>
+  <div class="a" style="left:0;top:470px;width:1080px;height:880px;background:linear-gradient(180deg, rgba(243,235,221,1) 0%, rgba(243,235,221,0.55) 30%, rgba(243,235,221,0.55) 70%, rgba(243,235,221,1) 100%)"></div>
+  <div class="eyebrow">THE REALISATION</div>
+  <h1 style="top:150px;font-size:76px;line-height:1.04">Your time should be spent <span class="p">growing your business,</span> not managing spreadsheets.</h1>
+  <div class="a" style="left:80px;top:640px;width:560px;border-radius:28px;background:var(--card);box-shadow:0 40px 90px rgba(36,33,42,0.16),0 0 0 1.5px rgba(36,33,42,0.06);padding:34px 36px;box-sizing:border-box">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:16px;font-weight:700;letter-spacing:.12em;color:#8f8896">TODAY'S FOCUS</div><div class="pill p" style="font-size:14px;padding:6px 14px">Owner</div></div>
+    <div style="font-size:34px;font-weight:800;letter-spacing:-0.03em;margin-top:8px">What actually matters</div>
+    <div id="s4todo" style="margin-top:22px"></div></div>
+  <div class="a" style="left:680px;top:760px;width:320px;border-radius:24px;background:linear-gradient(140deg,#6C45C5,#8C6BD9);color:#fff;padding:28px 28px;box-sizing:border-box;box-shadow:0 30px 70px rgba(108,69,197,0.35)">
+    <div style="font-size:16px;font-weight:700;opacity:.8">Hours saved / week</div><div style="font-size:68px;font-weight:800;letter-spacing:-0.04em;line-height:1.1">10+</div>
+    <div style="font-size:16px;font-weight:600;opacity:.85">with automated records & reports</div></div>
+  <div class="lead" style="top:1140px;font-size:28px">Manual processes shouldn't slow down<br>a growing business.</div>
+  <div class="foot"><img src="data:image/png;base64,LOGO"><span>HeliosLabs</span><span class="sep"></span><span class="n">04 / 07</span><span class="sw">→</span></div>
+</section>
+
+<!-- 5 SOLUTION -->
+<section class="slide" id="s5">
+  <div class="eyebrow">THE SOLUTION</div>
+  <h1 style="top:150px;font-size:90px">What if everything<br>was in <span class="p">one place?</span></h1>
+  <div class="lead" style="top:362px">One custom-built business management system.</div>
+  <div class="dash" id="dash5" style="left:50px;top:470px;width:980px;height:700px"></div>
+  <div class="foot"><img src="data:image/png;base64,LOGO"><span>HeliosLabs</span><span class="sep"></span><span class="n">05 / 07</span><span class="sw">→</span></div>
+</section>
+
+<!-- 6 HOW WE HELP -->
+<section class="slide" id="s6">
+  <div class="eyebrow">HOW HELIOSLABS HELPS</div>
+  <h1 style="top:150px;font-size:84px">Built around how<br><span class="p">YOUR</span> business works.</h1>
+  <div class="lead" style="top:360px;font-size:27px">We build custom software tailored to your business operations.</div>
+  <div class="a" id="s6feat" style="left:80px;top:470px;width:470px"></div>
+  <div class="a" style="left:590px;top:470px;width:410px">
+    <div class="panel" style="padding:20px 22px;border-radius:20px;box-shadow:0 24px 60px rgba(36,33,42,0.12)">
+      <div class="t" style="font-size:17px">Automations <span>3 active</span></div>
+      <div id="s6auto"></div></div>
+    <div class="panel" style="margin-top:20px;padding:20px 22px;border-radius:20px;box-shadow:0 24px 60px rgba(36,33,42,0.12)">
+      <div class="t" style="font-size:17px">Live sales <span><i style="display:inline-block;width:8px;height:8px;border-radius:4px;background:#2f9a5a;margin-right:6px"></i>real-time</span></div>
+      <div style="font-size:34px;font-weight:800;letter-spacing:-0.03em;margin-top:8px">₹48,250 <span style="font-size:15px;color:#2f9a5a;font-weight:700">▲ 12% today</span></div>
+      <svg width="366" height="120" viewBox="0 0 366 120" style="margin-top:8px"><defs><linearGradient id="g6" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6C45C5" stop-opacity=".25"/><stop offset="1" stop-color="#6C45C5" stop-opacity="0"/></linearGradient></defs>
+        <path d="M0 96 C30 90 50 98 80 80 S130 70 160 74 S210 50 240 44 S300 30 366 14 L366 120 L0 120 Z" fill="url(#g6)"/><path d="M0 96 C30 90 50 98 80 80 S130 70 160 74 S210 50 240 44 S300 30 366 14" fill="none" stroke="#6C45C5" stroke-width="4" stroke-linecap="round"/><circle cx="366" cy="14" r="6" fill="#6C45C5"/></svg></div>
+    <div class="panel" style="margin-top:20px;padding:18px 22px;border-radius:20px;box-shadow:0 24px 60px rgba(36,33,42,0.12);display:flex;align-items:center;gap:14px">
+      <div class="ic p" style="width:44px;height:44px;border-radius:12px;font-size:22px">✉</div><div><div style="font-size:16px;font-weight:800">Daily report sent</div><div style="font-size:14px;color:#8f8896;font-weight:600">Every day · 9:00 AM · automatically</div></div></div>
+  </div>
+  <div class="foot"><img src="data:image/png;base64,LOGO"><span>HeliosLabs</span><span class="sep"></span><span class="n">06 / 07</span><span class="sw">→</span></div>
+</section>
+
+<!-- 7 CTA -->
+<section class="slide" id="s7">
+  <div class="a" style="left:140px;top:160px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle, rgba(108,69,197,0.16), rgba(108,69,197,0) 65%)"></div>
+  <img class="a" src="data:image/png;base64,LOGO" style="left:440px;top:190px;width:200px;height:200px;filter:drop-shadow(0 26px 40px rgba(108,69,197,0.35))">
+  <div class="a" style="left:0;top:470px;width:1080px;text-align:center;font-size:92px;font-weight:800;letter-spacing:-0.045em;line-height:1.02">Stop managing data.<br><span class="p">Start managing growth.</span></div>
+  <div class="a" style="left:0;top:700px;width:1080px;text-align:center;font-size:32px;font-weight:500;color:#5d5764">Let's build a smarter system for your business.</div>
+  <div class="a" style="left:170px;top:800px;width:740px;height:118px;border-radius:59px;background:#6C45C5;color:#fff;display:flex;align-items:center;justify-content:center;gap:16px;font-size:36px;font-weight:800;letter-spacing:-0.02em;box-shadow:0 26px 60px rgba(108,69,197,0.38)">DM us “SYSTEM” <span style="font-weight:500;opacity:.85;font-size:28px">to discuss your requirements</span></div>
+  <div class="a" style="left:0;top:1010px;width:1080px;display:flex;justify-content:center;gap:16px">
+    <div class="tag" style="position:relative">Websites</div><div class="tag" style="position:relative">Mobile Apps</div><div class="tag" style="position:relative;background:var(--lav);color:var(--pur)">Custom Software</div></div>
+  <div class="foot" style="justify-content:center"><img src="data:image/png;base64,LOGO"><span style="font-size:24px">HeliosLabs</span><span class="n" style="margin-left:18px">Websites | Mobile Apps | Custom Software</span></div>
+</section>
+
+<script>
+// ---- spreadsheet builder ----
+function sheet(cols, widths, rows, marks = {}) {
+  const L = 'ABCDEFGHIJ'; let h = '<table class="sh"><colgroup><col style="width:40px">' + widths.map(w => `<col style="width:${w}px">`).join('') + '</colgroup><tr><td></td>' + cols.map((c, i) => `<td>${L[i]}</td>`).join('') + '</tr>';
+  rows.forEach((r, ri) => { h += `<tr class="${ri === 0 ? 'hd' : ''}"><td>${ri + 1}</td>` + r.map((c, ci) => `<td class="${marks[ri + ',' + ci] || ''}">${c}</td>`).join('') + '</tr>'; });
+  return h + '</table>'; }
+function win(title, body, css) { return `<div class="win" style="${css}"><div class="tb"><i></i><i></i><i></i><span>${title}</span></div>${body}</div>`; }
+const tabs = (names, on = 0) => `<div style="display:flex;gap:2px;background:#F4F2EE;border-top:1px solid #E6E3DE;padding:0 10px;font-size:12px;font-weight:600;color:#8a847c">${names.map((n, i) => `<div style="padding:8px 14px;${i === on ? 'background:#fff;color:#24212A;box-shadow:inset 0 2px 0 #9a948c' : ''}">${n}</div>`).join('')}</div>`;
+const fbar = f => `<div style="display:flex;align-items:center;gap:10px;height:32px;border-bottom:1px solid #E6E3DE;padding:0 10px;font-size:13px;color:#6b6470"><b style="color:#9a948c;font-style:italic">fx</b>${f}</div>`;
+
+// slide 1 laptop sheet
+const R1 = [['Date', 'Customer', 'Item', 'Qty', 'Amount', 'Paid?', 'Notes'],
+  ['02/11', 'Mehta Traders', 'Steel rods', '40', '48,000', 'yes', 'call again'], ['02/11', 'mehta traders', 'Steel Rods', '40', '48000', '', 'dup??'], ['03/11', 'Sharma & Co', 'Cement', '120', '₹36,500', 'partial', ''],
+  ['04/11', 'Kapoor Retail', 'Tiles', '', '22,400', 'no', 'qty?'], ['05/11', 'R. Verma', 'Paint (20L)', '6', '18,900', 'yes', 'check'], ['05/11', 'Gupta Bros', 'Pipes', '75', '#REF!', '', ''],
+  ['06/11', 'Sharma & Co', 'Cement', '80', '24,300', 'yes', 'old rate'], ['07/11', 'Jain Hardware', 'Wires', '30', '9,750', '??', ''], ['07/11', '', 'Bolts', '500', '6,200', 'no', 'who?'],
+  ['08/11', 'Mehta Traders', 'Steel rods', '25', '30,000', 'yes', ''], ['09/11', 'Singh Infra', 'Sand', '12', '14,400', 'partial', 'see WA'], ['10/11', 'Kapoor Retail', 'Tiles', '60', '22,400', 'no', '']];
+document.getElementById('lapScreen').innerHTML = `<div style="height:30px;background:#F5F2EC;border-bottom:1px solid #E7E1D6;font-size:12px;font-weight:600;color:#6b6470;display:flex;align-items:center;padding:0 12px;gap:14px"><b style="color:#24212A">Business_Master_FINAL_v7.xlsx</b><span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Data</span></div>`
+  + fbar('=SUM(E2:E13)-E3+VLOOKUP(B5,Payments!A:F,4,FALSE)') + sheet(R1[0], [60, 132, 104, 46, 86, 64, 90], R1, { '2,1': 'dup', '2,4': 'dup', '6,4': 'err', '4,3': 'miss', '9,1': 'miss', '8,5': 'err' })
+  + `<div style="position:absolute;left:0;right:0;bottom:0">${tabs(['Sales', 'Sales (2)', 'Customers_old', 'Payments', 'Stock_NEW', 'Sheet7'], 1)}</div>`;
+
+// slide 2 bullets + windows
+const B2 = [['Sales records', 'in one sheet.'], ['Customer details', 'in another.'], ['Payments', 'tracked manually.'], ['Inventory', 'updated separately.']];
+document.getElementById('s2list').innerHTML = B2.map(([a, b], i) => `<div style="display:flex;gap:16px;align-items:flex-start"><div class="ic p" style="width:40px;height:40px;border-radius:12px;font-size:18px">${i + 1}</div><div style="font-size:30px;line-height:1.25;letter-spacing:-0.02em"><b>${a}</b><br><span style="color:#7a7380;font-weight:500">${b}</span></div></div>`).join('');
+const W2 = [
+  ['Sales_2026.xlsx', [['Date', 'Invoice', 'Amount'], ['02/11', 'INV-118', '48,000'], ['03/11', 'INV-119', '36,500'], ['04/11', 'INV-120', '22,400'], ['05/11', 'INV-121', '18,900'], ['06/11', '—', '24,300']], [70, 90, 90], 'zoom:1.3;left:38px;top:472px;transform:rotate(-4deg)'],
+  ['Customers_list_FINAL (2).xlsx', [['Name', 'Phone', 'City'], ['Mehta Traders', '98xxxx1102', 'Pune'], ['Sharma & Co', '', 'Nashik'], ['Kapoor Retail', '97xxxx4410', 'Pune'], ['R. Verma', '99xxxx0921', '?']], [140, 120, 80], 'zoom:1.3;left:392px;top:462px;transform:rotate(3deg)'],
+  ['Payments (manual).xlsx', [['Customer', 'Due', 'Status'], ['Sharma & Co', '12,000', 'partial'], ['Kapoor Retail', '22,400', 'pending'], ['Gupta Bros', '?', '?'], ['Jain Hardware', '9,750', 'called']], [140, 80, 90], 'zoom:1.3;left:80px;top:690px;transform:rotate(2deg)'],
+  ['Inventory_updated_OLD.xlsx', [['Item', 'In stock', 'Updated'], ['Steel rods', '210', '28/10'], ['Cement', '84', '01/11'], ['Tiles', '—', '?'], ['Paint 20L', '12', '15/10']], [120, 80, 90], 'zoom:1.3;left:420px;top:680px;transform:rotate(-3deg)']];
+document.getElementById('s2wins').innerHTML = W2.map(([t, r, w, css]) => win(t, sheet(r[0], w, r), css)).join('');
+
+// slide 3 sheet with errors
+const R3 = [['Order', 'Customer', 'Phone', 'Amount', 'GST', 'Total'],
+  ['#2031', 'Mehta Traders', '98xxxx1102', '48,000', '8,640', '56,640'], ['#2032', 'Sharma & Co', '', '36,500', '6,570', '43,070'], ['#2033', 'Kapoor Retail', '97xxxx4410', '22,400', '4,032', '2,6432'],
+  ['#2033', 'Kapoor Retail', '97xxxx4410', '22,400', '4,032', '26,432'], ['#2034', 'R. Verma', '99xxxx0921', '18,900', '3,402', '22,302'], ['#2035', 'Gupta Bros', '', '#VALUE!', '—', '#VALUE!'], ['#2036', 'Jain Hardware', '96xxxx3381', '9,750', '1,755', '11,505']];
+document.getElementById('s3win').innerHTML = `<div class="tb"><i></i><i></i><i></i><span>Orders_Nov_FINAL_v3.xlsx</span></div>` + fbar('=D4+E4') + sheet(R3[0], [90, 200, 160, 130, 110, 140], R3, { '3,5': 'err', '6,3': 'err', '6,5': 'err', '3,0': 'dup', '4,0': 'dup', '3,1': 'dup', '4,1': 'dup', '2,2': 'miss', '6,2': 'miss' });
+
+// slide 4 faded sheet + todo
+document.getElementById('s4bg').innerHTML = sheet(R1[0], [120, 220, 200, 90, 160, 120, 200], R1.concat(R1.slice(1, 8)));
+const TD = [['Meet 3 new clients', 1], ['Plan the new branch', 1], ['Review this month’s growth', 1], ['Fix broken spreadsheet formulas', 0]];
+document.getElementById('s4todo').innerHTML = TD.map(([t, ok]) => `<div style="display:flex;align-items:center;gap:16px;padding:14px 0;border-top:1px solid #EEE7DB;font-size:25px;font-weight:${ok ? 700 : 600};color:${ok ? '#24212A' : '#a59ea9'}">
+  <span class="ic ${ok ? 'p' : ''}" style="width:34px;height:34px;border-radius:10px;font-size:18px;${ok ? '' : 'background:#F0EBE3;color:#b9b2bc'}">${ok ? '✓' : '✕'}</span><span style="${ok ? '' : 'text-decoration:line-through'}">${t}</span></div>`).join('');
+
+// slide 5 dashboard
+const NAV = ['Dashboard', 'Customers', 'Orders', 'Inventory', 'Payments', 'Reports', 'Settings'];
+const bars = [38, 52, 46, 61, 58, 72, 66, 80, 76, 88, 84, 96];
+document.getElementById('dash5').innerHTML = `<div class="side"><div class="lg"><img src="data:image/png;base64,LOGO">YourBusiness</div>${NAV.map((n, i) => `<div class="nav ${i ? '' : 'on'}"><b></b>${n}</div>`).join('')}
+  <div style="position:absolute;bottom:22px;left:16px;width:158px;border-radius:12px;background:var(--lav2);padding:12px;box-sizing:border-box;font-size:12px;font-weight:700;color:var(--pur)">Synced · just now</div></div>
+  <div class="main">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:600;color:#8f8896">Tuesday, 18 November</div><div style="font-size:24px;font-weight:800;letter-spacing:-0.03em">Business overview</div></div>
+      <div style="display:flex;gap:10px"><div style="width:220px;height:38px;border-radius:10px;background:#FBF9F6;border:1px solid #EEE8DF;font-size:13px;color:#a59ea9;display:flex;align-items:center;padding-left:12px">⌕ Search orders, customers…</div><div style="height:38px;padding:0 16px;border-radius:10px;background:var(--pur);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center">+ New order</div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px">
+      <div class="kpi" style="background:linear-gradient(135deg,#6C45C5,#8B68DA);border:0;color:#fff"><div class="l" style="color:rgba(255,255,255,.8)">Revenue</div><div class="v">₹12.4L</div><div class="d" style="color:#fff">▲ 18.2%</div></div>
+      <div class="kpi"><div class="l">Orders</div><div class="v">1,284</div><div class="d">▲ 9.4%</div></div>
+      <div class="kpi"><div class="l">Customers</div><div class="v">846</div><div class="d">▲ 32 new</div></div>
+      <div class="kpi"><div class="l">Low stock</div><div class="v">7 items</div><div class="d" style="color:#b07a12">Reorder soon</div></div></div>
+    <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:12px;margin-top:12px">
+      <div class="panel" style="height:250px"><div class="t">Revenue overview <span>Last 12 months</span></div>
+        <div style="display:flex;align-items:flex-end;gap:9px;height:170px;margin-top:22px;padding-bottom:4px;border-bottom:1px solid #F2EDE6">${bars.map((b, i) => `<div style="flex:1;height:${b}%;border-radius:6px 6px 2px 2px;background:${i === 11 ? 'var(--pur)' : 'var(--lav)'}"></div>`).join('')}</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#a59ea9;margin-top:6px"><span>Dec</span><span>Mar</span><span>Jun</span><span>Sep</span><span>Nov</span></div></div>
+      <div class="panel" style="height:250px"><div class="t">Inventory <span>Stock level</span></div>
+        ${[['Steel rods', 82, 'var(--pur)'], ['Cement', 64, 'var(--pur)'], ['Tiles', 18, '#D9A33A'], ['Paint 20L', 46, 'var(--pur)'], ['Pipes', 71, 'var(--pur)']].map(([n, v, c]) => `<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#4a4550"><span>${n}</span><span>${v}%</span></div><div style="height:7px;border-radius:4px;background:#F2EDE6;margin-top:5px"><div style="width:${v}%;height:7px;border-radius:4px;background:${c}"></div></div></div>`).join('')}</div></div>
+    <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:12px;margin-top:12px">
+      <div class="panel" style="height:246px"><div class="t">Orders & transactions <span>View all</span></div>
+        ${[['#2041', 'Mehta Traders', '₹56,640', 'g', 'Paid'], ['#2040', 'Sharma & Co', '₹43,070', 'p', 'Shipped'], ['#2039', 'Kapoor Retail', '₹26,432', 'y', 'Pending'], ['#2038', 'R. Verma', '₹22,302', 'g', 'Paid'], ['#2037', 'Jain Hardware', '₹11,505', 'g', 'Paid']].map(([o, c, a, k, s]) => `<div class="row"><span style="width:60px;color:#8f8896;font-weight:600">${o}</span><span style="flex:1;font-weight:700;color:#24212A">${c}</span><span style="width:90px;font-weight:700">${a}</span><span class="pill ${k}" style="width:60px;text-align:center">${s}</span></div>`).join('')}</div>
+      <div class="panel" style="height:246px"><div class="t">Customers <span>Top this month</span></div>
+        ${[['MT', 'Mehta Traders', '₹1.8L', '#E7DFF6'], ['SC', 'Sharma & Co', '₹1.2L', '#FBEBC9'], ['KR', 'Kapoor Retail', '₹96K', '#DCEFE3'], ].map(([i, n, v, c]) => `<div class="row"><span style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:15px;background:${c};display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#4a4550">${i}</span><b style="color:#24212A">${n}</b></span><span style="font-weight:700">${v}</span></div>`).join('')}
+        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;border-radius:10px;background:var(--lav2);padding:9px 12px;font-size:12px;font-weight:700;color:var(--pur)"><span>📄 Business reports</span><span>Download →</span></div></div></div>
+  </div>`;
+
+// slide 6 features + automations
+const F6 = [['Centralised business data', 'Sales, customers, stock — one source of truth.', '<path d="M6 10h20M6 16h20M6 22h20" stroke="#6C45C5" stroke-width="3" stroke-linecap="round"/>'],
+  ['Automated everyday tasks', 'Invoices, reminders and reports run themselves.', '<path d="M16 4v6M16 22v6M4 16h6M22 16h6M8 8l4 4M20 20l4 4M8 24l4-4M20 12l4-4" stroke="#6C45C5" stroke-width="3" stroke-linecap="round"/>'],
+  ['Real-time business insights', 'Know your numbers any time, on any device.', '<path d="M5 25l7-8 6 5 9-12" fill="none" stroke="#6C45C5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'],
+  ['Easier management & tracking', 'Every order, payment and item — tracked.', '<path d="M7 16l6 6 12-13" fill="none" stroke="#6C45C5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>']];
+document.getElementById('s6feat').innerHTML = F6.map(([t, d, ic]) => `<div class="feat" style="position:relative;margin-bottom:38px"><div class="fi"><svg width="32" height="32" viewBox="0 0 32 32">${ic}</svg></div><div><div class="ft">${t}</div><div class="fd">${d}</div></div></div>`).join('');
+document.getElementById('s6auto').innerHTML = [['Send invoice after every order', 1], ['Payment reminder after 7 days', 1], ['Low-stock alert to owner', 1]].map(([t]) => `<div class="row" style="font-size:15px;padding:12px 0"><span style="font-weight:600;color:#24212A">${t}</span><span style="width:44px;height:26px;border-radius:13px;background:var(--pur);position:relative;display:inline-block"><i style="position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:10px;background:#fff"></i></span></div>`).join('');
+</script>
+</body></html>
