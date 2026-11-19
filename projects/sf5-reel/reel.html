@@ -1,0 +1,278 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #F3ECDF; overflow: hidden; }
+  body { width: 1080px; height: 1920px; font-family: 'Inter', sans-serif; color: #1C1726; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #F3ECDF; background-image: radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px); background-size: 44px 44px; }
+  .a { position: absolute; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .hd { position: absolute; left: 0; width: 1080px; text-align: center; font-weight: 900; letter-spacing: -0.045em; white-space: nowrap; line-height: 1.04; }
+  .sm { position: absolute; left: 0; width: 1080px; text-align: center; font-weight: 600; color: #8A8172; white-space: nowrap; }
+  .pur { color: #5A17E6; } .red { color: #E5354F; }
+  .card { position: absolute; background: #FFFDF8; border-radius: 30px; box-shadow: 0 30px 70px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6; }
+  .bub { position: absolute; padding: 18px 26px; border-radius: 26px; font-size: 32px; font-weight: 600; white-space: nowrap; background: #FFFDF8; box-shadow: 0 12px 30px rgba(28,23,38,0.14); }
+  .ck { width: 44px; height: 44px; border-radius: 22px; background: #5A17E6; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .band { position: absolute; top: -400px; height: 2720px; z-index: 800; transform-origin: 50% 50%; }
+  #logoTL { position: absolute; left: 50px; top: 60px; display: flex; align-items: center; gap: 16px; z-index: 600; font-weight: 800; font-size: 30px; letter-spacing: -0.02em; }
+  #logoTL img { width: 70px; height: 70px; }
+</style></head>
+<body><div id="stage"></div>
+<div id="alarm" style="position:absolute;inset:0;z-index:590;pointer-events:none;box-shadow:inset 0 0 220px 40px rgba(229,53,79,0.55);opacity:0"></div>
+<div id="logoTL"><img src="data:image/png;base64,LOGO_BIG"><span>HeliosLabs Storefront</span></div>
+<script>
+window.DURATION = 43.2;
+const stage = document.getElementById('stage');
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+function springS(dt) { if (dt <= 0) return 0; if (dt > 1.6) return 1; const w = 2 * Math.PI * 2.3, z = 0.66, wd = w * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w * dt) * (Math.cos(wd * dt) + (z * w / wd) * Math.sin(wd * dt)); }
+const sp = (t, t0) => springS(t - t0);
+const expo = (t, t0, d) => { const p = clamp((t - t0) / d); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };
+const inout = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const ramp = (t, a, d) => inout(clamp((t - a) / d));
+function E(parent, css, html, cls) { const e = document.createElement('div'); e.className = cls || 'a'; Object.assign(e.style, css || {}); if (html !== undefined) e.innerHTML = html; parent.appendChild(e); return e; }
+const HD = (p, y, size, html, color = '#1C1726') => E(p, { top: y + 'px', fontSize: size + 'px', color }, html, 'hd');
+const SM = (p, y, size, html) => E(p, { top: y + 'px', fontSize: size + 'px' }, html, 'sm');
+function words(e) { e.innerHTML = e.innerHTML.split(/(<[^>]+>|\s+)/).map(w => (w.startsWith('<') || /^\s*$/.test(w)) ? w : `<span class="w" style="display:inline-block">${w}</span>`).join(''); e.ws = [...e.querySelectorAll('.w')]; return e; }
+// slam-in words (big → settle) for drama
+function slam(e, t, a, b = 1e9, st = 0.07) { if (!e.ws) words(e); const q = clamp((t - b) / 0.25); e.style.visibility = t < a || q >= 1 ? 'hidden' : 'visible'; e.style.opacity = 1 - q;
+  e.ws.forEach((w, i) => { const s = a + i * st, p = clamp((t - s) / 0.16); w.style.transform = `scale(${lerp(2.2, 1, inout(p))})`; w.style.opacity = p; w.style.filter = `blur(${(1 - p) * 10}px)`; }); }
+function rise(e, t, a, b = 1e9, st = 0.06) { if (!e.ws) words(e); const q = clamp((t - b) / 0.3); e.style.visibility = t < a || q >= 1 ? 'hidden' : 'visible'; e.style.opacity = 1 - q;
+  e.ws.forEach((w, i) => { const p = clamp(sp(t, a + i * st), 0, 1.1); w.style.transform = `translateY(${(1 - p) * 60}px)`; w.style.opacity = clamp((t - a - i * st) / 0.18); }); }
+function tin(e, t, a, b = 1e9, dy = 30) { const p = expo(t, a, 0.6), q = clamp((t - b) / 0.3); const o = Math.min(clamp((t - a) / 0.3), 1 - q); e.style.opacity = o; e.style.transform = `translateY(${(1 - p) * dy}px)`; e.style.visibility = o < 0.003 ? 'hidden' : 'visible'; }
+function pop(e, t, a, b = 1e9, extra = '') { const p = clamp(sp(t, a), 0, 1.2) * (1 - clamp(sp(t, b))); e.style.transform = `${extra} scale(${p})`; e.style.visibility = p < 0.003 ? 'hidden' : 'visible'; }
+function fadeUp(e, t, a, b = 1e9, dy = 60, extra = '') { const p = sp(t, a), q = clamp((t - b) / 0.3); e.style.opacity = clamp((t - a) / 0.25) * (1 - q); e.style.transform = `${extra} translateY(${(1 - p) * dy}px)`; e.style.visibility = (t < a || q >= 1) ? 'hidden' : 'visible'; }
+const LG = s => `<img src="data:image/png;base64,LOGO_BIG" style="width:${s}px;height:${s}px;display:block">`;
+const ORG = '#5A17E6', PUR = '#5A17E6', INK = '#1C1726', MUT = '#8A8172', RED = '#E5354F', GRN = '#1f9d55';
+// ---------- kurti illustration ----------
+let PID = 0;
+function kurti(w, c, acc, pat) { const id = 'p' + (PID++); const h = w * 1.3;
+  const pats = { dots: `<pattern id="${id}" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="${c}"/><circle cx="5" cy="5" r="1.6" fill="${acc}" opacity=".7"/></pattern>`,
+    stripe: `<pattern id="${id}" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${c}"/><rect width="3" height="8" fill="${acc}" opacity=".35"/></pattern>`,
+    block: `<pattern id="${id}" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="${c}"/><path d="M8 2 L14 8 L8 14 L2 8 Z" fill="none" stroke="${acc}" stroke-width="1.4" opacity=".75"/><circle cx="8" cy="8" r="1.4" fill="${acc}"/></pattern>`,
+    plain: `<pattern id="${id}" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="${c}"/></pattern>`,
+    chikan: `<pattern id="${id}" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${c}"/><path d="M7 3 Q10 7 7 11 Q4 7 7 3Z" fill="${acc}" opacity=".55"/></pattern>` };
+  return `<svg width="${w}" height="${h}" viewBox="0 0 100 130"><defs>${pats[pat]}</defs>
+    <path d="M37 8 Q50 22 63 8 L79 14 L94 42 L81 48 L74 34 L75 60 Q80 92 90 124 L10 124 Q20 92 25 60 L26 34 L19 48 L6 42 L21 14 Z" fill="url(#${id})" stroke="rgba(0,0,0,.12)" stroke-width="1"/>
+    <path d="M37 8 Q50 22 63 8" fill="none" stroke="${acc}" stroke-width="2.4"/><path d="M50 15 L50 40" stroke="${acc}" stroke-width="1.6"/>
+    <path d="M10 124 Q50 118 90 124" fill="none" stroke="${acc}" stroke-width="3"/><path d="M75 60 Q50 66 25 60" fill="none" stroke="${acc}" stroke-width="1.6" opacity=".7"/></svg>`; }
+const PRODUCTS = [
+  { n: 'Mustard Anarkali', p: '₹1,299', c: '#e3a72f', a: '#8a2b1a', pat: 'block', bg: '#f7e7c4' },
+  { n: 'Indigo Block Print', p: '₹999', c: '#2b3f7d', a: '#e8e2d0', pat: 'dots', bg: '#dde3f2' },
+  { n: 'Rose Chikankari', p: '₹1,499', c: '#e8a1ad', a: '#fff5f5', pat: 'chikan', bg: '#f8e1e4' },
+  { n: 'Sage Cotton Set', p: '₹1,199', c: '#8fae8b', a: '#f4f1e4', pat: 'stripe', bg: '#e4eee0' },
+  { n: 'Maroon Festive', p: '₹1,799', c: '#7e1f2e', a: '#e7b851', pat: 'block', bg: '#f1dcd7' },
+  { n: 'Ivory Straight Kurti', p: '₹899', c: '#efe6d2', a: '#b88a4a', pat: 'chikan', bg: '#f3eee4' },
+];
+function prodCard(parent, k, w, css = {}) { const P = PRODUCTS[k]; const ih = w * 1.1;
+  const e = E(parent, Object.assign({ width: w + 'px', borderRadius: '18px', background: '#fff', overflow: 'hidden', boxShadow: '0 6px 18px rgba(80,50,20,0.12)' }, css));
+  e.innerHTML = `<div style="height:${ih}px;background:${P.bg};display:flex;align-items:center;justify-content:center">${kurti(w * 0.66, P.c, P.a, P.pat)}</div>
+    <div style="padding:${w * 0.05}px ${w * 0.07}px ${w * 0.07}px;font-family:Inter;color:#2a2018"><div style="font-size:${w * 0.085}px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${P.n}</div>
+    <div class="pr" style="display:inline-block;margin-top:${w * 0.02}px;font-size:${w * 0.1}px;font-weight:800;color:${ORG};border-radius:8px;padding:0 4px;margin-left:-4px">${P.p}</div>
+    <div style="font-size:${w * 0.065}px;color:#2f9b57;font-weight:600;margin-top:2px">● In stock</div></div>`;
+  return e; }
+
+
+
+
+// ---------- diagonal shutter transition ----------
+const CUTS = [5.6, 11.9, 16.8, 20.25, 27.65, 32.65, 36.3, 40.8];
+const BANDC = ['#5A17E6', '#7C4DFF', '#1C1726', '#5A17E6'];
+const bands = BANDC.map((c, k) => E(document.body, { left: '0', width: '420px', background: c }, '', 'band'));
+const scenes = [];
+function S(a, b) { const e = E(stage, {}, '', 'scene'); e.a = a; e.b = b; scenes.push(e); return e; }
+const TAPS = [];
+const touch = E(stage, { width: '70px', height: '70px', margin: '-35px 0 0 -35px', borderRadius: '35px', background: 'rgba(28,23,38,0.30)', boxShadow: '0 0 0 5px rgba(255,253,248,0.95), 0 8px 20px rgba(28,23,38,0.25)', zIndex: 650 });
+const ripple = E(stage, { width: '70px', height: '70px', margin: '-35px 0 0 -35px', borderRadius: '50%', border: '5px solid #5A17E6', zIndex: 649 });
+
+// S0 the customer looks at your product, pays someone else
+const S0 = S(0, 5.6);
+const s0a = HD(S0, 200, 82, 'Customer aapka product<br>dekh raha hai…');
+const s0b = HD(S0, 1500, 92, '…paise kisi <span class="red">aur</span> ko!');
+const yours = E(S0, { left: '60px', top: '520px', width: '400px', height: '560px' }, '', 'card');
+yours.innerHTML = `<div style="position:absolute;left:24px;top:22px;font-size:22px;font-weight:800;color:${PUR};letter-spacing:.08em">YOUR BRAND</div><div style="position:absolute;left:24px;top:64px;width:352px;height:330px;border-radius:20px;background:${PRODUCTS[0].bg};display:flex;align-items:center;justify-content:center">${kurti(220, PRODUCTS[0].c, PRODUCTS[0].a, 'block')}</div>
+  <div style="position:absolute;left:24px;top:414px;font-size:30px;font-weight:800">Mustard Anarkali</div><div style="position:absolute;left:24px;top:460px;font-size:26px;font-weight:700;color:${MUT}">Price? <span style="font-size:22px">DM 📩</span></div>`;
+const eye = E(yours, { right: '20px', top: '80px', padding: '10px 18px', borderRadius: '24px', background: INK, color: '#fff', fontSize: '24px', fontWeight: 800 }, '👀 viewing');
+const theirs = E(S0, { left: '620px', top: '520px', width: '400px', height: '560px' }, '', 'card');
+theirs.innerHTML = `<div style="position:absolute;left:24px;top:22px;font-size:22px;font-weight:800;color:${MUT};letter-spacing:.08em">OTHER BRAND</div><div style="position:absolute;left:24px;top:64px;width:352px;height:330px;border-radius:20px;background:#ece6dc;display:flex;align-items:center;justify-content:center">${kurti(220, '#c9a24a', '#5a3a1a', 'dots')}</div>
+  <div style="position:absolute;left:24px;top:414px;font-size:30px;font-weight:800">Similar Kurti</div><div style="position:absolute;left:24px;top:460px;font-size:30px;font-weight:800;color:${GRN}">₹1,349 · Buy now</div>`;
+const sold = E(S0, { left: '640px', top: '700px', width: '360px', height: '130px', border: `9px solid ${RED}`, borderRadius: '22px', color: RED, fontSize: '70px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, background: 'rgba(255,253,248,0.85)' }, 'SOLD');
+const cust = E(S0, { left: '440px', top: '1150px', width: '200px', height: '200px', borderRadius: '100px', background: '#E7DFF6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '110px', zIndex: 3 }, '🧑');
+const coins = Array.from({ length: 7 }, () => E(S0, { left: 0, top: 0, width: '76px', height: '76px', borderRadius: '38px', background: 'linear-gradient(145deg,#ffd76a,#e0a526)', boxShadow: '0 6px 14px rgba(150,100,0,0.35)', color: '#7a4a00', fontWeight: 900, fontSize: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4 }, '₹'));
+const gaze = E(S0, { left: '0', top: '0', width: '6px', height: '6px', zIndex: 2 });
+
+// S1 no reply → ordered from competitor
+const S1 = S(5.6, 11.9);
+const s1a = HD(S1, 200, 80, 'Reply <span class="red">nahi</span> mila…');
+const s1b = HD(S1, 300, 80, 'Price <span class="red">nahi</span> pata chala…');
+const chat = E(S1, { left: '110px', top: '430px', width: '860px', height: '900px' }, '', 'card');
+chat.innerHTML = `<div style="position:absolute;left:0;top:0;width:860px;height:120px;border-bottom:2px solid #EFE7DA;display:flex;align-items:center;gap:20px;padding:0 34px;box-sizing:border-box"><div style="width:72px;height:72px;border-radius:36px;background:#E7DFF6;font-size:44px;display:flex;align-items:center;justify-content:center">🧑</div><div><div style="font-size:30px;font-weight:800">customer_riya</div><div id="cst" style="font-size:22px;font-weight:600;color:${MUT}">Active now</div></div></div>`;
+const m1 = E(chat, { left: '34px', top: '160px', fontSize: '34px' }, 'Hi! Price kya hai? 🙂', 'bub');
+const m2 = E(chat, { left: '34px', top: '270px', fontSize: '34px' }, 'Size M available hai?', 'bub');
+const m3 = E(chat, { left: '34px', top: '380px', fontSize: '34px' }, 'Hello?? 😕', 'bub');
+const seen = E(chat, { right: '40px', top: '470px', fontSize: '24px', fontWeight: 700, color: MUT }, 'Seen · no reply');
+const clockC = E(chat, { left: '230px', top: '560px', width: '400px', height: '120px', borderRadius: '60px', background: '#F3ECDF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', fontSize: '40px', fontWeight: 800, color: RED }, '');
+const left = E(chat, { left: '160px', top: '720px', width: '540px', padding: '18px', borderRadius: '20px', background: '#FBE3E6', color: RED, fontSize: '28px', fontWeight: 800, textAlign: 'center' }, 'customer_riya left the chat');
+const notifO = E(S1, { left: '90px', top: '1420px', width: '900px', height: '170px', borderRadius: '34px', background: INK, color: '#fff', display: 'flex', alignItems: 'center', gap: '24px', padding: '0 30px', boxSizing: 'border-box', boxShadow: '0 30px 60px rgba(28,23,38,0.35)' },
+  `<div style="width:100px;height:100px;border-radius:24px;background:${GRN};font-size:56px;display:flex;align-items:center;justify-content:center">✓</div><div><div style="font-size:24px;font-weight:700;opacity:.7;letter-spacing:.08em">OTHERBRAND.COM</div><div style="font-size:38px;font-weight:800">Order confirmed · ₹1,349</div></div>`);
+const s1c = HD(S1, 1660, 72, 'competitor se <span class="red">order</span> kar diya!');
+
+// S2 the sale slips away (particle disintegration)
+const S2 = S(11.9, 16.8);
+const s2a = HD(S2, 220, 82, 'Aapko pata bhi<br><span class="red">nahi</span> chala…');
+const sale = E(S2, { left: '140px', top: '640px', width: '800px', height: '300px', zIndex: 2 }, '', 'card');
+sale.innerHTML = `<div style="position:absolute;left:34px;top:40px;width:120px;height:120px;border-radius:30px;background:#E3F5EA;font-size:64px;display:flex;align-items:center;justify-content:center">🛍</div><div style="position:absolute;left:186px;top:46px;font-size:26px;font-weight:700;color:${MUT};letter-spacing:.08em">NEW ORDER</div><div style="position:absolute;left:186px;top:84px;font-size:52px;font-weight:900">₹1,299 · Anarkali</div><div style="position:absolute;left:34px;top:206px;font-size:28px;font-weight:700;color:${GRN}">● Your next sale</div>`;
+const parts = Array.from({ length: 140 }, (_, i) => { const x = (i % 20) * 40, y = Math.floor(i / 20) * 43; return Object.assign(E(S2, { left: 140 + x + 'px', top: 640 + y + 'px', width: '40px', height: '43px', borderRadius: '6px', background: i % 3 ? '#FFFDF8' : '#E9DFCD', zIndex: 3 }), { x, y, r: (Math.sin(i * 12.9898) * 43758.5453) % 1 }); });
+const s2b = HD(S2, 1120, 92, 'ek <span class="red">sale</span> haath se');
+const s2c = HD(S2, 1230, 92, '<span class="red">nikal gayi.</span>');
+const lost = E(S2, { left: '330px', top: '1420px', width: '420px', height: '110px', borderRadius: '55px', background: RED, color: '#fff', fontSize: '44px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }, '− ₹1,299');
+const ekg = E(S2, { left: '90px', top: '1620px', width: '900px', height: '160px' }, `<svg width="900" height="160" viewBox="0 0 900 160"><path id="ekgp" d="M0 80 L200 80 L230 30 L260 130 L290 80 L420 80 L450 40 L480 120 L510 80 L900 80" fill="none" stroke="${RED}" stroke-width="6" stroke-linejoin="round"/></svg>`);
+
+// S3 stop depending only on DMs
+const S3 = S(16.8, 20.25);
+const s3a = HD(S3, 230, 84, '<span class="red">Sirf</span> Instagram DMs');
+const s3b = HD(S3, 335, 84, 'par dependent <span class="pur">mat rahiye!</span>');
+const inbox = E(S3, { left: '240px', top: '620px', width: '600px', height: '640px' }, '', 'card');
+inbox.innerHTML = `<div style="position:absolute;left:34px;top:30px;font-size:34px;font-weight:900">Messages</div><div style="position:absolute;right:34px;top:32px;padding:6px 16px;border-radius:20px;background:${RED};color:#fff;font-weight:800;font-size:24px">99+</div>` +
+  ['Price?', 'Size L?', 'COD hai?', 'Colours?', 'Kitne ka?'].map((m, k) => `<div style="position:absolute;left:34px;top:${110 + k * 100}px;display:flex;gap:18px;align-items:center"><div style="width:64px;height:64px;border-radius:32px;background:${['#f8e1e4', '#dde3f2', '#e4eee0', '#f7e7c4', '#E7DFF6'][k]}"></div><div><div style="font-size:24px;font-weight:800">customer_${k + 1}</div><div style="font-size:24px;color:${MUT}">${m}</div></div></div>`).join('');
+const chainL = E(S3, { left: '120px', top: '1330px', width: '420px', height: '70px', zIndex: 4 }, `<svg width="420" height="70" viewBox="0 0 420 70">${[0, 1, 2, 3].map(k => `<rect x="${10 + k * 100}" y="12" width="110" height="46" rx="23" fill="none" stroke="${INK}" stroke-width="12"/>`).join('')}</svg>`);
+const chainR = E(S3, { left: '540px', top: '1330px', width: '420px', height: '70px', zIndex: 4 }, `<svg width="420" height="70" viewBox="0 0 420 70">${[0, 1, 2, 3].map(k => `<rect x="${0 + k * 100}" y="12" width="110" height="46" rx="23" fill="none" stroke="${INK}" stroke-width="12"/>`).join('')}</svg>`);
+const snapFx = E(S3, { left: '540px', top: '1365px', width: '10px', height: '10px', marginLeft: '-5px', marginTop: '-5px', borderRadius: '50%', background: 'radial-gradient(circle, #fff, rgba(90,23,230,0.6) 40%, rgba(90,23,230,0) 70%)', zIndex: 5 });
+
+// S4 logo + your own store
+const S4 = S(20.25, 27.65);
+const s4g = E(S4, { left: '140px', top: '160px', width: '800px', height: '800px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(90,23,230,0.25), rgba(90,23,230,0) 65%)' });
+const rays = E(S4, { left: '40px', top: '60px', width: '1000px', height: '1000px', opacity: 0 }, `<svg width="1000" height="1000" viewBox="-500 -500 1000 1000">${Array.from({ length: 16 }, (_, k) => `<path d="M0 0 L${Math.cos(k * Math.PI / 8 - 0.06) * 600} ${Math.sin(k * Math.PI / 8 - 0.06) * 600} L${Math.cos(k * Math.PI / 8 + 0.06) * 600} ${Math.sin(k * Math.PI / 8 + 0.06) * 600} Z" fill="rgba(90,23,230,0.08)"/>`).join('')}</svg>`);
+const s4l = E(S4, { left: '390px', top: '400px', width: '300px', height: '300px', zIndex: 3 }, LG(300));
+const s4n = HD(S4, 760, 84, 'HeliosLabs Storefront');
+const s4s = HD(S4, 870, 64, 'ke saath apna <span class="pur">online store</span>');
+const ph = E(S4, { left: '300px', top: '640px', width: '480px', height: '1000px', borderRadius: '68px', background: '#16110f', boxShadow: '0 40px 90px rgba(28,23,38,0.3), inset 0 0 0 3px #3a2f2a', zIndex: 2 });
+const scr = E(ph, { left: '15px', top: '15px', width: '450px', height: '970px', borderRadius: '54px', background: '#fbf7f1', overflow: 'hidden' });
+E(scr, { left: '161px', top: '14px', width: '128px', height: '34px', borderRadius: '17px', background: '#000', zIndex: 9 });
+E(scr, { left: '24px', top: '66px', fontSize: '30px', fontWeight: 800, color: '#6b1d2a' }, 'yourbrand');
+E(scr, { right: '24px', top: '68px', fontSize: '26px' }, '⌕ 🛍');
+const shopG = E(scr, { left: 0, top: '120px', width: '450px', height: '850px', overflow: 'hidden' });
+const gIn = E(shopG, { left: 0, top: 0, width: '450px' });
+const gc = PRODUCTS.map((p, k) => prodCard(gIn, k, 199, { left: (k % 2 ? 233 : 18) + 'px', top: Math.floor(k / 2) * 345 + 'px' }));
+const bag = E(scr, { left: '18px', top: '860px', width: '414px', height: '84px', borderRadius: '42px', background: PUR, color: '#fff', fontSize: '30px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }, 'Place order · ₹1,299');
+const okT = E(scr, { left: '35px', top: '360px', width: '380px', height: '220px', borderRadius: '30px', background: '#fff', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', zIndex: 6 }, `<div style="width:84px;height:84px;border-radius:42px;background:#2fb463;color:#fff;font-size:48px;display:flex;align-items:center;justify-content:center">✓</div><div style="font-weight:800;font-size:32px">Order placed!</div>`);
+const ex4 = E(S4, { left: '40px', top: '900px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderRadius: '22px', background: '#FFFDF8', boxShadow: '0 16px 40px rgba(28,23,38,0.13), 0 0 0 2px #E2D8C6', fontWeight: 800, fontSize: '30px' }, '<span class="ck">✓</span>Explore products');
+const or4 = E(S4, { left: '700px', top: '1300px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderRadius: '22px', background: '#FFFDF8', boxShadow: '0 16px 40px rgba(28,23,38,0.13), 0 0 0 2px #E2D8C6', fontWeight: 800, fontSize: '30px' }, '<span class="ck">✓</span>Place orders');
+const conf = Array.from({ length: 28 }, (_, i) => E(S4, { left: '540px', top: '1200px', width: '16px', height: '26px', borderRadius: '4px', background: ['#5A17E6', '#FFD84D', '#E5354F', '#1f9d55', '#29b6f6'][i % 5], zIndex: 7 }));
+TAPS.push([26.76, 540, 640 + 15 + 902]);
+
+// S5 hosting & maintenance managed
+const S5 = S(27.65, 32.65);
+const s5a = HD(S5, 220, 84, 'Hosting & maintenance?');
+const s5b = HD(S5, 325, 84, '<span class="pur">Hum manage karte hain.</span>');
+const host = E(S5, { left: '80px', top: '520px', width: '440px', height: '620px' }, '', 'card');
+host.innerHTML = `<div style="position:absolute;left:34px;top:34px;font-size:40px;font-weight:900">Hosting</div><div style="position:absolute;left:34px;top:90px;font-size:24px;font-weight:700;color:${GRN}">● Online · 99.9% uptime</div>` +
+  [0, 1, 2].map(k => `<div style="position:absolute;left:34px;top:${160 + k * 130}px;width:372px;height:110px;border-radius:18px;background:#1C1726;display:flex;align-items:center;gap:14px;padding:0 22px;box-sizing:border-box">${[0, 1, 2].map(j => `<i class="led" style="width:16px;height:16px;border-radius:8px;background:#2fb463;display:block"></i>`).join('')}<div style="flex:1;height:10px;border-radius:5px;background:#3a3446;margin-left:12px"></div></div>`).join('');
+const maint = E(S5, { left: '560px', top: '520px', width: '440px', height: '620px' }, '', 'card');
+maint.innerHTML = `<div style="position:absolute;left:34px;top:34px;font-size:40px;font-weight:900">Maintenance</div><div style="position:absolute;left:34px;top:90px;font-size:24px;font-weight:700;color:${MUT}">updates · security · fixes</div>
+  <svg id="gear" width="220" height="220" viewBox="-110 -110 220 220" style="position:absolute;left:110px;top:160px"><g fill="#5A17E6">${Array.from({ length: 10 }, (_, k) => `<rect x="-16" y="-104" width="32" height="40" rx="6" transform="rotate(${k * 36})"/>`).join('')}<circle r="78"/></g><circle r="34" fill="#FFFDF8"/></svg>` +
+  ['Updates', 'Security', 'Bug fixes'].map((n, k) => `<div class="mt" style="position:absolute;left:34px;top:${410 + k * 64}px;display:flex;align-items:center;gap:14px;font-size:28px;font-weight:800"><span class="ck" style="width:38px;height:38px;font-size:22px">✓</span>${n}</div>`).join('');
+const badge5 = E(S5, { left: '190px', top: '1220px', width: '700px', height: '130px', borderRadius: '65px', background: PUR, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '22px', fontSize: '40px', fontWeight: 800, boxShadow: '0 20px 60px rgba(90,23,230,0.4)' }, `<div style="width:84px;height:84px;border-radius:20px;overflow:hidden">${LG(84)}</div>Managed by HeliosLabs`);
+const plan5 = E(S5, { left: 0, top: '1420px', width: '1080px', textAlign: 'center' }, `<span style="display:inline-block;padding:16px 34px;border-radius:40px;background:#EFE7DA;font-size:34px;font-weight:700;color:#5d5348">selected plan ke according</span>`);
+
+// S6 price slam
+const S6 = S(32.65, 36.3);
+const burst = E(S6, { left: '40px', top: '360px', width: '1000px', height: '1000px' }, `<svg width="1000" height="1000" viewBox="-500 -500 1000 1000">${Array.from({ length: 24 }, (_, k) => `<path d="M0 0 L${Math.cos(k * Math.PI / 12 - 0.05) * 700} ${Math.sin(k * Math.PI / 12 - 0.05) * 700} L${Math.cos(k * Math.PI / 12 + 0.05) * 700} ${Math.sin(k * Math.PI / 12 + 0.05) * 700} Z" fill="rgba(90,23,230,0.09)"/>`).join('')}</svg>`);
+const s6a = HD(S6, 470, 70, 'Plans starting at just', '#8A8172');
+const price = E(S6, { left: 0, top: '600px', width: '1080px', textAlign: 'center', fontSize: '330px', fontWeight: 900, letterSpacing: '-0.06em', color: PUR, lineHeight: 1 }, '₹999');
+const s6m = HD(S6, 960, 110, '/month');
+const shock = E(S6, { left: '540px', top: '770px', width: '10px', height: '10px', marginLeft: '-5px', marginTop: '-5px', borderRadius: '50%', border: '8px solid rgba(90,23,230,0.6)' });
+
+// S7 before the next sale is missed → comment STORE
+const S7 = S(36.3, 40.85);
+const s7a = HD(S7, 220, 78, 'Apni next sale <span class="red">miss</span>');
+const s7b = HD(S7, 320, 78, 'hone se pehle…');
+const cbox = E(S7, { left: '90px', top: '560px', width: '900px', height: '760px' }, '', 'card');
+cbox.innerHTML = `<div style="position:absolute;left:0;top:30px;width:900px;text-align:center;font-size:28px;font-weight:800">Comments</div>`;
+const cm1 = E(cbox, { left: '44px', top: '110px', width: '812px' }, `<div style="display:flex;gap:18px"><div style="width:72px;height:72px;border-radius:36px;background:#f8e1e4"></div><div><div style="font-size:24px;font-weight:800">priya.styles</div><div style="font-size:34px;font-weight:700">STORE</div></div></div>`);
+const cm2 = E(cbox, { left: '44px', top: '240px', width: '812px' }, `<div style="display:flex;gap:18px"><div style="width:72px;height:72px;border-radius:36px;background:#e4eee0"></div><div><div style="font-size:24px;font-weight:800">you</div><div style="font-size:34px;font-weight:800;color:${PUR}">STORE</div></div><div style="margin-left:auto;font-size:44px">❤️</div></div>`);
+const demo = E(cbox, { left: '134px', top: '380px', width: '722px' }, `<div style="display:flex;gap:16px;align-items:center"><div style="width:60px;height:60px;border-radius:14px;overflow:hidden">${LG(60)}</div><div><div style="font-size:22px;font-weight:800">helioslabs.store <span style="color:${PUR}">✓</span></div><div style="font-size:30px;font-weight:700">Explore your demo 👉 <span style="padding:6px 16px;border-radius:16px;background:${PUR};color:#fff;font-size:26px">Open demo</span></div></div></div>`);
+const inp = E(cbox, { left: '44px', top: '630px', width: '812px', height: '96px', borderRadius: '48px', background: '#F3ECDF', display: 'flex', alignItems: 'center', padding: '0 14px 0 34px', boxSizing: 'border-box' });
+const inpT = E(inp, { position: 'relative', flex: 1, fontSize: '34px', fontWeight: 700 }, '', 'x');
+const post = E(inp, { position: 'relative', padding: '16px 30px', borderRadius: '34px', background: PUR, color: '#fff', fontSize: '28px', fontWeight: 800 }, 'Post', 'x');
+const s7c = HD(S7, 1420, 104, 'Comment <span class="pur">“STORE”</span>');
+TAPS.push([39.3, 90 + 44 + 812 - 14 - 60, 560 + 630 + 48]);
+
+// S8 end
+const S8 = S(40.8, 43.2);
+E(S8, { left: '140px', top: '300px', width: '800px', height: '800px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(90,23,230,0.2), rgba(90,23,230,0) 65%)' });
+const e1 = E(S8, { left: '350px', top: '470px', width: '380px', height: '380px' }, LG(380));
+const e2 = HD(S8, 920, 84, 'HeliosLabs Storefront');
+const e3 = E(S8, { left: '210px', top: '1060px', width: '660px', height: '120px', borderRadius: '60px', background: PUR, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '46px', boxShadow: '0 20px 50px rgba(90,23,230,0.35)' }, '💬 Comment “STORE”');
+const e4 = SM(S8, 1230, 40, 'Plans starting at ₹999/month');
+
+window.seek = function (t) {
+  // scenes switch at cut midpoints; shutter bands cover the switch
+  scenes.forEach(s => { const on = t >= s.a && t < s.b; s.style.display = on ? 'block' : 'none'; });
+  let cov = null; CUTS.forEach(c => { if (t > c - 0.45 && t < c + 0.45) cov = c; });
+  bands.forEach((b, k) => { if (!cov) { b.style.display = 'none'; return; } b.style.display = 'block'; const p = (t - (cov - 0.45)) / 0.9; const d = k * 0.06;
+    const x = lerp(-900, 1500, inout(clamp((p - d) / (1 - 0.18)))); b.style.left = (x + k * 260 - 300) + 'px'; b.style.transform = 'skewX(-18deg)'; });
+  // camera shake on dramatic hits
+  let sh = 0; [[0.0, 1], [2.8, 0.8], [4.66, 1], [9.86, 0.8], [15.24, 1], [18.78, 1], [20.34, 0.9], [34.24, 1.2]].forEach(([h, a]) => { const d = t - h; if (d > 0 && d < 0.35) sh = Math.max(sh, a * (1 - d / 0.35)); });
+  stage.style.transform = `translate(${Math.sin(t * 97) * 10 * sh}px, ${Math.cos(t * 83) * 8 * sh}px)`;
+  { const a = t < 16.8 ? (0.35 + 0.25 * Math.max(0, Math.sin(t * 5.2))) * clamp(t / 0.3) * (1 - clamp((t - 16.3) / 0.5)) : 0; document.getElementById('alarm').style.opacity = a; }
+  document.getElementById('logoTL').style.opacity = clamp((t - 0.3) / 0.4) * (1 - clamp((t - 40.5) / 0.3));
+  let tp = null; TAPS.forEach(x => { if (t > x[0] - 0.45 && t < x[0] + 0.35) tp = x; });
+  if (tp) { const [tc, x, y] = tp; touch.style.display = 'block'; touch.style.left = x + 'px'; touch.style.top = y + 'px'; touch.style.opacity = clamp((t - (tc - 0.45)) / 0.2) * clamp((tc + 0.35 - t) / 0.15); touch.style.transform = `scale(${t > tc - 0.06 && t < tc + 0.1 ? 0.8 : 1})`;
+    const r = clamp((t - tc) / 0.45); ripple.style.display = r > 0 && r < 1 ? 'block' : 'none'; ripple.style.left = x + 'px'; ripple.style.top = y + 'px'; ripple.style.transform = `scale(${1 + r * 1.8})`; ripple.style.opacity = 1 - r; }
+  else { touch.style.display = 'none'; ripple.style.display = 'none'; }
+
+  // S0
+  slam(s0a, t, 0.05); fadeUp(yours, t, 0.2, 1e9, 120); fadeUp(theirs, t, 0.5, 1e9, 120); pop(cust, t, 0.7); pop(eye, t, 1.24);
+  yours.style.boxShadow = t > 1.24 && t < 2.8 ? `0 30px 70px rgba(28,23,38,0.12), 0 0 0 ${6 + 3 * Math.sin(t * 10)}px rgba(90,23,230,0.55)` : '0 30px 70px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6';
+  theirs.style.boxShadow = t > 2.8 ? `0 30px 70px rgba(28,23,38,0.12), 0 0 0 ${6 + 3 * Math.sin(t * 10)}px rgba(229,53,79,0.6)` : '0 30px 70px rgba(28,23,38,0.12), 0 0 0 2px #E2D8C6';
+  yours.style.filter = t > 2.8 ? `grayscale(${ramp(t, 2.8, 0.6)})` : 'none';
+  coins.forEach((c, k) => { const a = 3.08 + k * 0.22, p = clamp((t - a) / 0.7); c.style.display = p > 0 && p < 1 ? 'flex' : 'none'; const x = lerp(510, 790, p), y = lerp(1180, 820, p) - Math.sin(p * Math.PI) * 220; c.style.left = x + 'px'; c.style.top = y + 'px'; c.style.transform = `rotate(${p * 540}deg) scale(${1 - p * 0.3})`; });
+  pop(sold, t, 4.66, 1e9, 'rotate(-12deg)'); slam(s0b, t, 2.8);
+  // S1
+  slam(s1a, t, 5.78, 7.95); slam(s1b, t, 8.08); fadeUp(chat, t, 5.6, 1e9, 140);
+  fadeUp(m1, t, 5.9, 1e9, 30); fadeUp(m2, t, 6.5, 1e9, 30); fadeUp(m3, t, 7.2, 1e9, 30); tin(seen, t, 7.42);
+  { const v = t < 7.6 ? 0 : clamp((t - 7.6) / 2.0); pop(clockC, t, 7.6); const h = Math.floor(v * 6), m = Math.floor((v * 6 % 1) * 60); clockC.innerHTML = `⏱ ${h}h ${String(m).padStart(2, '0')}m · no reply`; }
+  pop(left, t, 9.86); chat.querySelector('#cst').textContent = t > 9.86 ? 'Offline' : 'Active now';
+  { const p = sp(t, 10.0); notifO.style.transform = `translateY(${(1 - clamp(p)) * 300}px)`; notifO.style.opacity = clamp((t - 10.0) / 0.2); } slam(s1c, t, 10.54);
+  // S2
+  slam(s2a, t, 12.1); fadeUp(sale, t, 12.2, 1e9, 80);
+  { const dis = t >= 15.24; sale.style.visibility = dis || t < 12.2 ? 'hidden' : 'visible';
+    parts.forEach(p => { if (!dis) { p.style.display = 'none'; return; } p.style.display = 'block'; const d = Math.max(0, t - 15.24 - (p.x / 800) * 0.5); const r = Math.abs(p.r);
+      p.style.transform = `translate(${d * (120 + r * 260)}px, ${-d * (80 + r * 160) + d * d * 120}px) rotate(${d * 300 * (r - 0.5)}deg) scale(${Math.max(0, 1 - d * 0.9)})`; p.style.opacity = clamp(1 - d * 0.9); }); }
+  slam(s2b, t, 14.0); slam(s2c, t, 15.24); pop(lost, t, 15.9);
+  { const p = ramp(t, 12.3, 3.5); const pe = ekg.querySelector('#ekgp'); pe.style.strokeDasharray = 1200; pe.style.strokeDashoffset = 1200 * (1 - p); ekg.style.opacity = 1 - ramp(t, 15.3, 0.6) * 0.6; }
+  // S3
+  slam(s3a, t, 16.88); slam(s3b, t, 18.68); fadeUp(inbox, t, 16.9, 1e9, 120);
+  { const sn = ramp(t, 18.78, 0.6); chainL.style.transform = `translate(${-sn * 160}px, ${sn * 80}px) rotate(${-sn * 20}deg)`; chainR.style.transform = `translate(${sn * 160}px, ${sn * 80}px) rotate(${sn * 20}deg)`; fadeUp(chainL, t, 17.3, 1e9, 40, `translate(${-sn * 160}px, ${sn * 80}px) rotate(${-sn * 20}deg)`); fadeUp(chainR, t, 17.3, 1e9, 40, `translate(${sn * 160}px, ${sn * 80}px) rotate(${sn * 20}deg)`);
+    const f = clamp((t - 18.78) / 0.5); snapFx.style.transform = `scale(${f * 60})`; snapFx.style.opacity = f > 0 ? 1 - f : 0; inbox.style.filter = `grayscale(${ramp(t, 18.8, 0.4) * 0.8})`; }
+  // S4
+  { const p = sp(t, 20.34); s4l.style.transform = `scale(${clamp(p, 0, 1.25)}) rotate(${(1 - clamp(p)) * -30}deg)`; s4l.style.visibility = t < 20.34 ? 'hidden' : 'visible'; s4l.style.filter = 'drop-shadow(0 26px 50px rgba(90,23,230,0.45))';
+    rays.style.opacity = clamp((t - 20.34) / 0.3) * (1 - ramp(t, 21.8, 0.5)); rays.style.transform = `rotate(${t * 12}deg)`; s4g.style.transform = `scale(${0.5 + clamp(p) * 0.5})`;
+    const up = ramp(t, 21.85, 0.6); [s4l, s4g].forEach(e => e.style.marginTop = (-up * 300) + 'px'); s4l.style.transform += ` scale(${1 - up * 0.55})`; }
+  slam(s4n, t, 20.4, 21.8); { const up = ramp(t, 21.85, 0.6); slam(s4s, t, 21.98); s4s.style.top = lerp(870, 330, up) + 'px'; }
+  { const p = sp(t, 21.98); ph.style.transform = `translateY(${(1 - clamp(p)) * 1200}px)`; ph.style.visibility = t < 21.98 ? 'hidden' : 'visible'; }
+  gc.forEach((c, k) => fadeUp(c, t, 22.4 + k * 0.1, 1e9, 40)); gIn.style.transform = `translateY(${-(ramp(t, 24.4, 1.3) * 600 - ramp(t, 25.8, 0.6) * 600)}px)`;
+  pop(ex4, t, 24.4, 1e9, 'rotate(-3deg)'); pop(or4, t, 26.38, 1e9, 'rotate(3deg)');
+  bag.style.transform = `scale(${1 - 0.06 * Math.sin(Math.PI * clamp((t - 26.7) / 0.2))})`; pop(okT, t, 26.9);
+  conf.forEach((c, i) => { const d = t - 26.95; if (d < 0 || d > 1.4) { c.style.display = 'none'; return; } c.style.display = 'block'; const ang = (i / 28) * Math.PI * 2, v = 520 + (i % 5) * 90; c.style.transform = `translate(${Math.cos(ang) * v * d}px, ${Math.sin(ang) * v * d + 700 * d * d}px) rotate(${d * 720 * (i % 2 ? 1 : -1)}deg)`; c.style.opacity = 1 - clamp((d - 1.0) / 0.4); });
+  // S5
+  slam(s5a, t, 27.9); slam(s5b, t, 29.3); fadeUp(host, t, 27.9, 1e9, 120); fadeUp(maint, t, 28.46, 1e9, 120);
+  host.querySelectorAll('.led').forEach((l, k) => l.style.opacity = 0.35 + 0.65 * (Math.sin(t * 9 + k * 1.7) > 0 ? 1 : 0));
+  maint.querySelector('#gear').style.transform = `rotate(${t * 60}deg)`; maint.querySelectorAll('.mt').forEach((m, k) => fadeUp(m, t, 28.9 + k * 0.3, 1e9, 20));
+  pop(badge5, t, 29.6); tin(plan5, t, 31.24);
+  // S6
+  tin(s6a, t, 32.86); burst.style.opacity = clamp((t - 34.2) / 0.2) * 0.9; burst.style.transform = `rotate(${t * 15}deg) scale(${0.6 + 0.4 * clamp(sp(t, 34.2))})`;
+  { const p = clamp((t - 34.2) / 0.18); price.style.visibility = t < 34.2 ? 'hidden' : 'visible'; price.style.transform = `scale(${t < 34.38 ? lerp(3, 1, inout(p)) : 1 + 0.06 * Math.max(0, 1 - (t - 34.38) / 0.3)})`; price.style.opacity = p; price.style.filter = `blur(${(1 - p) * 12}px)`; }
+  { const f = clamp((t - 34.36) / 0.7); shock.style.transform = `scale(${f * 80})`; shock.style.opacity = f > 0 ? 1 - f : 0; }
+  slam(s6m, t, 34.84);
+  // S7
+  slam(s7a, t, 36.34); slam(s7b, t, 37.76); fadeUp(cbox, t, 36.5, 1e9, 140); fadeUp(cm1, t, 36.9, 1e9, 30);
+  { const w = 'STORE', n = Math.floor(clamp((t - 38.6) / 0.6) * w.length); inpT.innerHTML = t < 39.3 ? (n ? w.slice(0, n) : `<span style="color:#b5ab9d;font-weight:500">Add a comment…</span>`) + (Math.floor(t * 3) % 2 ? '|' : '') : `<span style="color:#b5ab9d;font-weight:500">Add a comment…</span>`; }
+  { const p = sp(t, 39.35); cm2.style.transform = `translateY(${(1 - clamp(p)) * 380}px)`; cm2.style.opacity = clamp((t - 39.35) / 0.2); }
+  fadeUp(demo, t, 39.78, 1e9, 30); slam(s7c, t, 38.52);
+  // S8
+  { const p = sp(t, 40.9); e1.style.transform = `scale(${clamp(p, 0, 1.2)})`; e1.style.visibility = t < 40.9 ? 'hidden' : 'visible'; e1.style.filter = 'drop-shadow(0 30px 60px rgba(90,23,230,0.4))'; }
+  rise(e2, t, 41.15, 1e9, 0.1); pop(e3, t, 41.5); tin(e4, t, 41.8);
+};
+window.seek(0);
+</script></body></html>
