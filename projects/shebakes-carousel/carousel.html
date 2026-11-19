@@ -1,0 +1,126 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --bg: #F3ECDF; --pur: #5A17E6; --ink: #1C1726; --mut: #8A8172; --line: #E2D8C6; --card: #FFFDF8; --sb: #8B2E3C; --sbp: #E07A7A; }
+  html, body { margin: 0; background: #ccc; }
+  body { font-family: 'Inter', sans-serif; color: var(--ink); }
+  .slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; margin-bottom: 20px; background: var(--bg); background-image: radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px); background-size: 44px 44px; }
+  .a { position: absolute; }
+  .top { position: absolute; left: 70px; right: 70px; top: 56px; height: 64px; display: flex; align-items: center; gap: 16px; }
+  .top img { width: 60px; height: 60px; }
+  .brand { font-weight: 800; font-size: 28px; letter-spacing: -0.02em; }
+  .num { margin-left: auto; padding: 10px 22px; border-radius: 30px; background: var(--card); box-shadow: 0 0 0 2px var(--line); font-weight: 800; font-size: 22px; letter-spacing: 0.04em; }
+  .kick { position: absolute; left: 70px; top: 168px; padding: 10px 20px; border-radius: 24px; background: var(--pur); color: #fff; font-weight: 800; font-size: 20px; letter-spacing: 0.1em; }
+  h1 { position: absolute; left: 70px; right: 70px; top: 222px; margin: 0; font-size: 74px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.02; }
+  .p { color: var(--pur); } .sb { color: var(--sb); }
+  .sub { position: absolute; left: 70px; right: 70px; font-size: 28px; font-weight: 500; color: #6a6270; line-height: 1.4; }
+  .phone { position: absolute; border-radius: 54px; background: #16110f; padding: 13px; box-shadow: 0 34px 70px rgba(28,23,38,0.28), inset 0 0 0 2px #3a2f2a; }
+  .phone .scr { border-radius: 42px; overflow: hidden; position: relative; }
+  .phone .scr img { display: block; width: 100%; }
+  .phone .isl { position: absolute; left: 50%; top: 10px; width: 90px; height: 26px; margin-left: -45px; border-radius: 13px; background: #000; z-index: 2; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 20px; background: var(--card); box-shadow: 0 14px 34px rgba(28,23,38,0.14), 0 0 0 2px var(--line); font-weight: 800; font-size: 24px; white-space: nowrap; z-index: 5; }
+  .dot { width: 34px; height: 34px; border-radius: 17px; background: var(--pur); color: #fff; font-size: 18px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .foot { position: absolute; left: 70px; right: 70px; bottom: 44px; display: flex; align-items: center; justify-content: space-between; font-size: 22px; font-weight: 700; color: var(--mut); }
+  .foot b { color: var(--ink); }
+  .swipe { color: var(--pur); font-weight: 800; }
+  .live { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; border-radius: 24px; background: var(--card); box-shadow: 0 0 0 2px var(--line); color: var(--ink); font-weight: 800; }
+  .live i { width: 12px; height: 12px; border-radius: 6px; background: #1f9d55; display: block; }
+</style></head><body>
+
+<!-- 1 cover -->
+<section class="slide" id="s1">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">01 / 07</div></div>
+  <div class="kick">CLIENT SPOTLIGHT · SHEBAKES 🍪</div>
+  <h1>A bakery website,<br>built <span class="p">mobile-first.</span></h1>
+  <div class="sub" style="top:410px">Eggless NYC-style cookies, ordered Pan-India — designed for the phone first.</div>
+  <div class="phone" style="left:70px;top:540px;width:290px;transform:rotate(-6deg)"><div class="scr"><div class="isl"></div><img src="shots/menu_0.jpg"></div></div>
+  <div class="phone" style="left:720px;top:540px;width:290px;transform:rotate(6deg)"><div class="scr"><div class="isl"></div><img src="shots/product.jpg"></div></div>
+  <div class="phone" style="left:375px;top:480px;width:330px;z-index:3"><div class="scr"><div class="isl"></div><img src="shots/m_00.jpg"></div></div>
+  <div class="foot"><span class="live"><i></i>Live · shebakes.in</span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 2 home -->
+<section class="slide" id="s2">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">02 / 07</div></div>
+  <div class="kick">MOBILE HOMEPAGE</div>
+  <h1>Cravings start on<br><span class="p">the first scroll.</span></h1>
+  <div class="phone" style="left:90px;top:440px;width:330px;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/m_00.jpg"></div></div>
+  <div class="phone" style="left:470px;top:470px;width:330px;transform:rotate(3deg)"><div class="scr"><div class="isl"></div><img src="shots/m_01.jpg"></div></div>
+  <div class="chip" style="left:610px;top:420px"><span class="dot">✓</span>Big “Order now” CTA</div>
+  <div class="chip" style="right:30px;top:820px"><span class="dot">★</span>Ratings & reviews</div>
+  <div class="chip" style="right:30px;top:905px"><span class="dot">+</span>One-tap ADD</div>
+  <div class="chip" style="left:40px;top:1150px"><span class="dot">✓</span>Bestseller badges</div>
+  <div class="chip" style="right:30px;top:990px"><span class="dot">✆</span>WhatsApp button</div>
+  <div class="foot"><span class="live"><i></i>shebakes.in</span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 3 menu + product -->
+<section class="slide" id="s3">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">03 / 07</div></div>
+  <div class="kick">MENU & PRODUCT VIEW</div>
+  <h1>Find it. Love it.<br><span class="p">Add it.</span></h1>
+  <div class="phone" style="left:90px;top:440px;width:330px;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/menu_0.jpg"></div></div>
+  <div class="phone" style="left:470px;top:470px;width:330px;transform:rotate(3deg)"><div class="scr"><div class="isl"></div><img src="shots/product.jpg"></div></div>
+  <div class="chip" style="left:30px;top:1150px"><span class="dot">⌕</span>Search & sort</div>
+  <div class="chip" style="left:300px;top:1230px"><span class="dot">▤</span>Category filters</div>
+  <div class="chip" style="right:30px;top:560px"><span class="dot">✓</span>Quick product view</div>
+  <div class="chip" style="right:30px;top:900px"><span class="dot">🥚</span>Eggless badges</div>
+  <div class="chip" style="right:30px;top:985px"><span class="dot">✓</span>Ingredients · weight · shelf life</div>
+  <div class="foot" style="bottom:30px"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 4 bag & checkout -->
+<section class="slide" id="s4">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">04 / 07</div></div>
+  <div class="kick">BAG & 1-CLICK CHECKOUT</div>
+  <h1>From craving to checkout<br><span class="p">in seconds.</span></h1>
+  <div class="phone" style="left:90px;top:440px;width:330px;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/after_add.jpg"></div></div>
+  <div class="phone" style="left:470px;top:470px;width:330px;transform:rotate(3deg)"><div class="scr"><div class="isl"></div><img src="shots/cart.jpg"></div></div>
+  <div class="chip" style="left:30px;top:1150px"><span class="dot">+</span>Qty stepper & bag toast</div>
+  <div class="chip" style="right:30px;top:540px"><span class="dot">🚚</span>Free-shipping progress</div>
+  <div class="chip" style="right:30px;top:740px"><span class="dot">%</span>Coupons & auto offers</div>
+  <div class="chip" style="right:30px;top:940px"><span class="dot">📍</span>Live PIN delivery charge</div>
+  <div class="chip" style="left:470px;top:1230px"><span class="dot">⚡</span>1-Click checkout</div>
+  <div class="foot" style="bottom:30px"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 5 trust -->
+<section class="slide" id="s5">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">05 / 07</div></div>
+  <div class="kick">BRAND STORY & TRUST</div>
+  <h1>A brand people<br><span class="p">trust & follow.</span></h1>
+  <div class="phone" style="left:60px;top:500px;width:290px;transform:rotate(-5deg)"><div class="scr"><div class="isl"></div><img src="shots/m_04.jpg"></div></div>
+  <div class="phone" style="left:395px;top:450px;width:290px;z-index:2"><div class="scr"><div class="isl"></div><img src="shots/m_05.jpg"></div></div>
+  <div class="phone" style="left:730px;top:500px;width:290px;transform:rotate(5deg)"><div class="scr"><div class="isl"></div><img src="shots/m_06.jpg"></div></div>
+  <div class="chip" style="left:60px;top:1140px"><span class="dot">✓</span>Brand promise</div>
+  <div class="chip" style="left:380px;top:1140px"><span class="dot">★</span>Customer reviews</div>
+  <div class="chip" style="left:720px;top:1140px"><span class="dot">◎</span>Instagram feed</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 6 delivery & about -->
+<section class="slide" id="s6">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">06 / 07</div></div>
+  <div class="kick">PAN-INDIA DELIVERY</div>
+  <h1>Check your PIN.<br><span class="p">Get cookies anywhere.</span></h1>
+  <div class="phone" style="left:90px;top:440px;width:330px;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/locations_0.jpg"></div></div>
+  <div class="phone" style="left:470px;top:470px;width:330px;transform:rotate(3deg)"><div class="scr"><div class="isl"></div><img src="shots/about_0.jpg"></div></div>
+  <div class="chip" style="left:30px;top:1150px"><span class="dot">📍</span>Pincode serviceability</div>
+  <div class="chip" style="right:30px;top:560px"><span class="dot">🚚</span>Shipping estimates</div>
+  <div class="chip" style="right:30px;top:960px"><span class="dot">✓</span>About & story pages</div>
+  <div class="chip" style="left:470px;top:1230px"><span class="dot">✓</span>FAQ · Blog · Policies</div>
+  <div class="foot" style="bottom:30px"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 7 CTA -->
+<section class="slide" id="s7">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">07 / 07</div></div>
+  <div class="a" style="left:140px;top:120px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle, rgba(90,23,230,0.17), rgba(90,23,230,0) 65%)"></div>
+  <img class="a" src="data:image/png;base64,LOGO" style="left:430px;top:220px;width:220px;height:220px;filter:drop-shadow(0 26px 40px rgba(90,23,230,0.35))">
+  <div class="a" style="left:0;top:510px;width:1080px;text-align:center;font-size:76px;font-weight:800;letter-spacing:-0.045em;line-height:1.04">Your customers shop<br>on their phone.<br><span class="p">Your website should too.</span></div>
+  <div class="a" style="left:0;top:790px;width:1080px;text-align:center;font-size:30px;font-weight:500;color:#6a6270">Mobile-first websites & online stores by HeliosLabs.</div>
+  <div class="a" style="left:190px;top:870px;width:700px;height:118px;border-radius:59px;background:var(--pur);color:#fff;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;box-shadow:0 26px 60px rgba(90,23,230,0.38)">DM us “WEBSITE” 💬</div>
+  <div class="a" style="left:0;top:1060px;width:1080px;display:flex;justify-content:center;gap:16px"><div class="chip" style="position:relative">Websites</div><div class="chip" style="position:relative">Mobile Apps</div><div class="chip" style="position:relative;background:#E7DFF6;color:var(--pur)">Custom Software</div></div>
+  <div class="a" style="left:0;top:1190px;width:1080px;text-align:center;font-size:26px"><span class="live"><i></i>See it live · shebakes.in</span></div>
+</section>
+</body></html>
