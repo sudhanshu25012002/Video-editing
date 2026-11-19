@@ -1,0 +1,117 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --bg: #F3ECDF; --pur: #5A17E6; --ink: #1C1726; --mut: #8A8172; --line: #E2D8C6; --card: #FFFDF8; --cu: #B8743A; }
+  html, body { margin: 0; background: #ccc; }
+  body { font-family: 'Inter', sans-serif; color: var(--ink); }
+  .slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; margin-bottom: 20px; background: var(--bg); background-image: radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px); background-size: 44px 44px; }
+  .a { position: absolute; }
+  .top { position: absolute; left: 70px; right: 70px; top: 56px; height: 64px; display: flex; align-items: center; gap: 16px; }
+  .top img { width: 60px; height: 60px; }
+  .brand { font-weight: 800; font-size: 28px; letter-spacing: -0.02em; }
+  .num { margin-left: auto; padding: 10px 22px; border-radius: 30px; background: var(--card); box-shadow: 0 0 0 2px var(--line); font-weight: 800; font-size: 22px; letter-spacing: 0.04em; }
+  .kick { position: absolute; left: 70px; top: 168px; display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-radius: 24px; background: var(--pur); color: #fff; font-weight: 800; font-size: 20px; letter-spacing: 0.1em; }
+  h1 { position: absolute; left: 70px; right: 70px; top: 222px; margin: 0; font-size: 76px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.02; }
+  .p { color: var(--pur); } .cu { color: var(--cu); }
+  .sub { position: absolute; left: 70px; right: 70px; font-size: 28px; font-weight: 500; color: #6a6270; line-height: 1.4; }
+  .browser { position: absolute; border-radius: 22px; background: var(--card); box-shadow: 0 30px 70px rgba(28,23,38,0.16), 0 0 0 2px var(--line); overflow: hidden; }
+  .browser .bar { height: 44px; background: #EDE5D7; display: flex; align-items: center; gap: 9px; padding-left: 18px; }
+  .browser .bar i { width: 13px; height: 13px; border-radius: 7px; display: block; }
+  .browser .url { margin-left: 16px; height: 28px; border-radius: 14px; background: var(--card); font-size: 15px; font-weight: 600; color: var(--mut); display: flex; align-items: center; padding: 0 16px; }
+  .browser img { display: block; width: 100%; }
+  .phone { position: absolute; border-radius: 50px; background: #16110f; padding: 12px; box-shadow: 0 34px 70px rgba(28,23,38,0.25), inset 0 0 0 2px #3a2f2a; }
+  .phone .scr { border-radius: 39px; overflow: hidden; position: relative; }
+  .phone .scr img { display: block; width: 100%; }
+  .phone .isl { position: absolute; left: 50%; top: 9px; width: 84px; height: 24px; margin-left: -42px; border-radius: 12px; background: #000; z-index: 2; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 20px; background: var(--card); box-shadow: 0 14px 34px rgba(28,23,38,0.14), 0 0 0 2px var(--line); font-weight: 800; font-size: 24px; white-space: nowrap; }
+  .dot { width: 34px; height: 34px; border-radius: 17px; background: var(--pur); color: #fff; font-size: 18px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .pin { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 20px; background: var(--pur); color: #fff; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 7px rgba(90,23,230,0.22); }
+  .foot { position: absolute; left: 70px; right: 70px; bottom: 48px; display: flex; align-items: center; justify-content: space-between; font-size: 22px; font-weight: 700; color: var(--mut); }
+  .foot b { color: var(--ink); }
+  .swipe { color: var(--pur); font-weight: 800; }
+  .stat { position: absolute; padding: 22px 26px; border-radius: 22px; background: var(--card); box-shadow: 0 14px 34px rgba(28,23,38,0.12), 0 0 0 2px var(--line); }
+  .stat .v { font-size: 44px; font-weight: 900; letter-spacing: -0.03em; } .stat .l { font-size: 18px; font-weight: 700; color: var(--mut); letter-spacing: .06em; margin-top: 4px; }
+</style></head><body>
+
+<!-- 1 cover -->
+<section class="slide" id="s1">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">01 / 06</div></div>
+  <div class="kick">CLIENT SPOTLIGHT · R K METAL</div>
+  <h1>A website as solid<br>as <span class="cu">their metal.</span></h1>
+  <div class="sub" style="top:410px">Copper & non-ferrous metals manufacturer · Ludhiana, Punjab</div>
+  <div class="browser" style="left:70px;top:500px;width:300px;height:780px"><div class="bar" style="height:32px;padding-left:12px;gap:6px"><i style="background:#ff5f57;width:9px;height:9px"></i><i style="background:#febc2e;width:9px;height:9px"></i><i style="background:#28c840;width:9px;height:9px"></i></div><div style="height:748px;overflow:hidden"><img src="shots/desk_strip.jpg" style="width:300px;transform:scale(0.66);transform-origin:50% 0"></div></div>
+  <div class="browser" style="left:405px;top:520px;width:605px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 rkmetal.in</div></div><img src="shots/desk_top.jpg"></div>
+  <div class="phone" style="left:800px;top:820px;width:210px"><div class="scr"><div class="isl" style="width:62px;height:18px;margin-left:-31px;top:7px"></div><img src="shots/mob_top.jpg"></div></div>
+  <div class="chip" style="left:405px;top:940px"><span class="dot">✓</span>Homepage</div>
+  <div class="chip" style="left:405px;top:1025px"><span class="dot">✓</span>Products & specs</div>
+  <div class="chip" style="left:405px;top:1110px"><span class="dot">✓</span>Certificates & process</div>
+  <div class="chip" style="left:405px;top:1195px"><span class="dot">✓</span>Mobile-ready</div>
+  <div class="foot" style="bottom:28px"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 2 homepage -->
+<section class="slide" id="s2">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">02 / 06</div></div>
+  <div class="kick">HOMEPAGE</div>
+  <h1>Clear message.<br><span class="p">Instant trust.</span></h1>
+  <div class="browser" style="left:60px;top:430px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 rkmetal.in</div></div>
+    <div style="position:relative"><img src="shots/desk_top.jpg"><div class="pin" style="left:120px;top:200px">1</div><div class="pin" style="left:62px;top:478px">2</div><div class="pin" style="left:62px;top:585px">3</div><div class="pin" style="left:900px;top:160px">4</div></div></div>
+  <div class="chip" style="left:60px;top:1085px"><span class="dot">1</span>Bold headline</div>
+  <div class="chip" style="left:330px;top:1085px"><span class="dot">2</span>Get a Quote CTA</div>
+  <div class="chip" style="left:648px;top:1085px"><span class="dot">3</span>Trust stats</div>
+  <div class="chip" style="left:60px;top:1170px"><span class="dot">4</span>Real product photos</div>
+  <div class="chip" style="left:400px;top:1170px"><span class="dot">✓</span>ISO & CE badge up top</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 3 products -->
+<section class="slide" id="s3">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">03 / 06</div></div>
+  <div class="kick">PRODUCTS & SPECIFICATIONS</div>
+  <h1>Every product.<br><span class="p">Every spec.</span></h1>
+  <div class="browser" style="left:60px;top:430px;width:620px;transform:rotate(-2deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 rkmetal.in/#products</div></div><div style="height:640px;overflow:hidden"><img src="shots/c_home_prod.jpg"></div></div>
+  <div class="browser" style="left:330px;top:780px;width:690px;transform:rotate(1.5deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 rkmetal.in/products</div></div><img src="shots/c_prod_card.jpg"></div>
+  <div class="chip" style="left:720px;top:480px"><span class="dot">✓</span>6 product lines</div>
+  <div class="chip" style="left:720px;top:565px"><span class="dot">✓</span>Purity & composition</div>
+  <div class="chip" style="left:720px;top:650px"><span class="dot">✓</span>Enquire on every card</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 4 trust -->
+<section class="slide" id="s4">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">04 / 06</div></div>
+  <div class="kick">BUILT FOR B2B TRUST</div>
+  <h1>Certificates, process<br>& <span class="p">quality — on show.</span></h1>
+  <div class="browser" style="left:60px;top:430px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 rkmetal.in/about</div></div><img src="shots/c_about_cert.jpg"></div>
+  <div class="browser" style="left:60px;top:830px;width:600px;transform:rotate(-1.5deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 rkmetal.in/process</div></div><div style="height:300px;overflow:hidden"><img src="shots/process_top.jpg"></div></div>
+  <div class="browser" style="left:440px;top:930px;width:580px;transform:rotate(2deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 rkmetal.in/about</div></div><img src="shots/c_about_fac.jpg"></div>
+  <div class="chip" style="left:60px;top:1195px"><span class="dot">✓</span>Downloadable ISO & CE PDFs</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 5 mobile -->
+<section class="slide" id="s5">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">05 / 06</div></div>
+  <div class="kick">MOBILE VERSION</div>
+  <h1>Perfect on every<br><span class="p">buyer’s phone.</span></h1>
+  <div class="phone" style="left:60px;top:500px;width:290px;transform:rotate(-5deg)"><div class="scr"><div class="isl"></div><img src="shots/mob_top.jpg"></div></div>
+  <div class="phone" style="left:395px;top:450px;width:290px;z-index:2"><div class="scr"><div class="isl"></div><img src="shots/mob_1.jpg"></div></div>
+  <div class="phone" style="left:730px;top:500px;width:290px;transform:rotate(5deg)"><div class="scr"><div class="isl"></div><img src="shots/mob_3.jpg"></div></div>
+  <div class="chip" style="left:90px;top:1140px;z-index:3"><span class="dot">✓</span>One-tap quote</div>
+  <div class="chip" style="left:390px;top:1140px;z-index:3"><span class="dot">✓</span>WhatsApp button</div>
+  <div class="chip" style="left:715px;top:1140px;z-index:3"><span class="dot">✓</span>Fast & clean</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 6 CTA -->
+<section class="slide" id="s6">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">06 / 06</div></div>
+  <div class="a" style="left:140px;top:120px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle, rgba(90,23,230,0.17), rgba(90,23,230,0) 65%)"></div>
+  <img class="a" src="data:image/png;base64,LOGO" style="left:430px;top:230px;width:220px;height:220px;filter:drop-shadow(0 26px 40px rgba(90,23,230,0.35))">
+  <div class="a" style="left:0;top:520px;width:1080px;text-align:center;font-size:80px;font-weight:800;letter-spacing:-0.045em;line-height:1.04">Want a website like this<br>for <span class="p">your business?</span></div>
+  <div class="a" style="left:0;top:720px;width:1080px;text-align:center;font-size:30px;font-weight:500;color:#6a6270">From manufacturers to retail brands — we design & build it.</div>
+  <div class="a" style="left:170px;top:810px;width:740px;height:118px;border-radius:59px;background:var(--pur);color:#fff;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;box-shadow:0 26px 60px rgba(90,23,230,0.38)">DM us “WEBSITE” 💬</div>
+  <div class="a" style="left:0;top:1000px;width:1080px;display:flex;justify-content:center;gap:16px"><div class="chip" style="position:relative">Websites</div><div class="chip" style="position:relative">Mobile Apps</div><div class="chip" style="position:relative;background:#E7DFF6;color:var(--pur)">Custom Software</div></div>
+  <div class="a" style="left:0;top:1150px;width:1080px;text-align:center;font-size:24px;font-weight:700;color:var(--mut)">See it live · <span style="color:var(--ink)">rkmetal.in</span></div>
+</section>
+</body></html>
