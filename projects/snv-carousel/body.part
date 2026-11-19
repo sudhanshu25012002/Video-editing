@@ -1,0 +1,135 @@
+<style>
+  .mod { position: absolute; width: 290px; height: 180px; border-radius: 24px; background: var(--card); box-shadow: 0 14px 34px rgba(28,23,38,0.10), 0 0 0 2px var(--line); padding: 24px; box-sizing: border-box; }
+  .mod .i { width: 54px; height: 54px; border-radius: 16px; background: #E7DFF6; color: var(--pur); font-size: 28px; display: flex; align-items: center; justify-content: center; }
+  .mod .t { font-size: 25px; font-weight: 800; margin-top: 16px; letter-spacing: -0.02em; }
+  .mod .d { font-size: 17px; font-weight: 600; color: var(--mut); margin-top: 4px; line-height: 1.3; }
+  .feat { position: absolute; left: 70px; right: 70px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+  .feat div { display: flex; align-items: center; gap: 12px; font-size: 25px; font-weight: 700; }
+</style>
+<!-- 1 cover -->
+<section class="slide" id="s1">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">01 / 09</div></div>
+  <div class="kick">CLIENT SPOTLIGHT · SCHOOL FEE MANAGEMENT</div>
+  <h1>Fee management,<br><span class="p">made effortless.</span></h1>
+  <div class="sub" style="top:410px">Built for <b style="color:var(--ink)">Shree Narayan Vidyasthal</b>, Saharsa (ICSE)</div>
+  <div class="browser" style="left:60px;top:500px;width:960px;transform:rotate(-1.5deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 Fee Management System · by HeliosLabs</div></div><img src="src/dashboard.png"></div>
+  <div class="chip" style="left:70px;top:1030px"><span class="dot">₹</span>Collect fees in seconds</div>
+  <div class="chip" style="left:470px;top:1110px"><span class="dot">✓</span>Invoices, receipts & reports</div>
+  <div class="foot"><span>Custom software by <b>HeliosLabs</b></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 2 dashboard -->
+<section class="slide" id="s2">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">02 / 09</div></div>
+  <div class="kick">LIVE DASHBOARD</div>
+  <h1>The whole school’s fees<br><span class="p">at a glance.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">Dashboard</div></div><div style="position:relative"><img src="src/dashboard.png">
+    <div class="pin" style="left:270px;top:85px">1</div><div class="pin" style="left:470px;top:85px">2</div><div class="pin" style="left:665px;top:85px">3</div><div class="pin" style="left:860px;top:85px">4</div><div class="pin" style="left:690px;top:30px">5</div><div class="pin" style="left:190px;top:190px">6</div></div></div>
+  <div class="feat" style="top:1000px">
+    <div><span class="dot">1</span>Today’s inflow</div><div><span class="dot">2</span>Pending dues</div>
+    <div><span class="dot">3</span>Total students</div><div><span class="dot">4</span>Overdue alerts</div>
+    <div><span class="dot">5</span>Quick Collect & year switch</div><div><span class="dot">6</span>Add student · POS · Billing</div>
+  </div>
+  <div class="sub" style="top:1215px;font-size:24px">+ Recent payments and today’s collection split by payment mode.</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 3 students -->
+<section class="slide" id="s3">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">03 / 09</div></div>
+  <div class="kick">STUDENTS</div>
+  <h1>Every student,<br><span class="p">every balance.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">Students · Enrollment database</div></div><img src="src/students.png"></div>
+  <div class="feat" style="top:1000px">
+    <div><span class="dot">⌕</span>Search by name or roll</div><div><span class="dot">▤</span>Filter by class</div>
+    <div><span class="dot">⇪</span>Bulk import students</div><div><span class="dot">₹</span>Outstanding balance</div>
+    <div><span class="dot">✓</span>Active / dropped status</div><div><span class="dot">✎</span>View · Edit · Drop</div>
+  </div>
+  <div class="foot"><span>Student details blurred for privacy</span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 4 invoices -->
+<section class="slide" id="s4">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">04 / 09</div></div>
+  <div class="kick">INVOICES & BILLING</div>
+  <h1>Monthly invoices,<br><span class="p">generated for you.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">Invoices · Billing history</div></div><img src="src/invoices.png"></div>
+  <div class="feat" style="top:1000px">
+    <div><span class="dot">+</span>Generate invoices</div><div><span class="dot">#</span>Auto invoice numbers</div>
+    <div><span class="dot">✓</span>Paid / Unpaid tracking</div><div><span class="dot">₹</span>Total & balance per bill</div>
+    <div><span class="dot">⌕</span>Search & status filter</div><div><span class="dot">⎙</span>View & print instantly</div>
+  </div>
+  <div class="foot"><span>Student details blurred for privacy</span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 5 payments -->
+<section class="slide" id="s5">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">05 / 09</div></div>
+  <div class="kick">PAYMENTS & RECEIPTS</div>
+  <h1>Collect. Record.<br><span class="p">Print the receipt.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">Payments · Transaction history</div></div><img src="src/payments.png"></div>
+  <div class="feat" style="top:1000px">
+    <div><span class="dot">⚡</span>Quick Collect</div><div><span class="dot">₹</span>Cash & bank transfer</div>
+    <div><span class="dot">#</span>Auto receipt numbers</div><div><span class="dot">⎙</span>Printable receipts</div>
+    <div><span class="dot">⌕</span>Search by receipt / name</div><div><span class="dot">📅</span>Filter by date & mode</div>
+  </div>
+  <div class="foot"><span>Student details blurred for privacy</span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 6 reports -->
+<section class="slide" id="s6">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">06 / 09</div></div>
+  <div class="kick">REPORTS</div>
+  <h1>Answers in one click,<br><span class="p">not one week.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">Reports</div></div><img src="src/reports.png"></div>
+  <div class="feat" style="top:1000px">
+    <div><span class="dot">1</span>Daily collection by mode</div><div><span class="dot">2</span>Outstanding dues</div>
+    <div><span class="dot">3</span>Class-wise summary</div><div><span class="dot">4</span>Student ledger</div>
+    <div><span class="dot">5</span>Fee head-wise breakdown</div><div><span class="dot">6</span>12-month recovery trend</div>
+  </div>
+  <div class="sub" style="top:1215px;font-size:24px">+ Today’s recovery, monthly progress & total arrears on top.</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 7 recovery -->
+<section class="slide" id="s7">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">07 / 09</div></div>
+  <div class="kick">REAL-TIME RECOVERY MATRIX</div>
+  <h1>Which class is behind?<br><span class="p">See it instantly.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:960px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">Reports · Recovery matrix</div></div>
+    <div style="background:#fff;padding:26px 30px 10px;text-align:center"><div style="font-size:24px;font-weight:800;letter-spacing:.14em;color:#8a93a8">REAL-TIME RECOVERY MATRIX</div><svg width="900" height="500" viewBox="0 0 900 640"><line x1="90" x2="890" y1="560.0" y2="560.0" stroke="#F0ECF7"/><text x="78" y="565.0" font-size="14" fill="#8f8896" text-anchor="end">₹0k</text><line x1="90" x2="890" y1="502.2" y2="502.2" stroke="#F0ECF7"/><text x="78" y="507.2" font-size="14" fill="#8f8896" text-anchor="end">₹5k</text><line x1="90" x2="890" y1="444.4" y2="444.4" stroke="#F0ECF7"/><text x="78" y="449.4" font-size="14" fill="#8f8896" text-anchor="end">₹10k</text><line x1="90" x2="890" y1="386.7" y2="386.7" stroke="#F0ECF7"/><text x="78" y="391.7" font-size="14" fill="#8f8896" text-anchor="end">₹15k</text><line x1="90" x2="890" y1="328.9" y2="328.9" stroke="#F0ECF7"/><text x="78" y="333.9" font-size="14" fill="#8f8896" text-anchor="end">₹20k</text><line x1="90" x2="890" y1="271.1" y2="271.1" stroke="#F0ECF7"/><text x="78" y="276.1" font-size="14" fill="#8f8896" text-anchor="end">₹25k</text><line x1="90" x2="890" y1="213.3" y2="213.3" stroke="#F0ECF7"/><text x="78" y="218.3" font-size="14" fill="#8f8896" text-anchor="end">₹30k</text><line x1="90" x2="890" y1="155.6" y2="155.6" stroke="#F0ECF7"/><text x="78" y="160.6" font-size="14" fill="#8f8896" text-anchor="end">₹35k</text><line x1="90" x2="890" y1="97.8" y2="97.8" stroke="#F0ECF7"/><text x="78" y="102.8" font-size="14" fill="#8f8896" text-anchor="end">₹40k</text><line x1="90" x2="890" y1="40.0" y2="40.0" stroke="#F0ECF7"/><text x="78" y="45.0" font-size="14" fill="#8f8896" text-anchor="end">₹45k</text><rect x="96.0" y="265.3" width="27.3" height="294.7" rx="8" fill="#E4DEF9"/><rect x="123.3" y="340.4" width="27.3" height="219.6" rx="8" fill="#5146E5"/><text x="123.3" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Nursery</text><rect x="162.7" y="230.7" width="27.3" height="329.3" rx="8" fill="#E4DEF9"/><rect x="190.0" y="334.7" width="27.3" height="225.3" rx="8" fill="#5146E5"/><text x="190.0" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">LKG</text><rect x="229.3" y="479.1" width="27.3" height="80.9" rx="8" fill="#E4DEF9"/><rect x="256.7" y="539.2" width="27.3" height="20.8" rx="8" fill="#5146E5"/><text x="256.7" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Play</text><rect x="296.0" y="311.6" width="27.3" height="248.4" rx="8" fill="#E4DEF9"/><rect x="323.3" y="354.3" width="27.3" height="205.7" rx="8" fill="#5146E5"/><text x="323.3" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">UKG</text><rect x="362.7" y="290.8" width="27.3" height="269.2" rx="8" fill="#E4DEF9"/><rect x="390.0" y="354.3" width="27.3" height="205.7" rx="8" fill="#5146E5"/><text x="390.0" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class I</text><rect x="429.3" y="140.5" width="27.3" height="419.5" rx="8" fill="#E4DEF9"/><rect x="456.7" y="267.6" width="27.3" height="292.4" rx="8" fill="#5146E5"/><text x="456.7" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class II</text><rect x="496.0" y="74.7" width="27.3" height="485.3" rx="8" fill="#E4DEF9"/><rect x="523.3" y="290.8" width="27.3" height="269.2" rx="8" fill="#5146E5"/><text x="523.3" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class III</text><rect x="562.7" y="290.8" width="27.3" height="269.2" rx="8" fill="#E4DEF9"/><rect x="590.0" y="414.4" width="27.3" height="145.6" rx="8" fill="#5146E5"/><text x="590.0" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class IV</text><rect x="629.3" y="409.8" width="27.3" height="150.2" rx="8" fill="#E4DEF9"/><rect x="656.7" y="429.4" width="27.3" height="130.6" rx="8" fill="#5146E5"/><text x="656.7" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class V</text><rect x="696.0" y="201.8" width="27.3" height="358.2" rx="8" fill="#E4DEF9"/><rect x="723.3" y="326.6" width="27.3" height="233.4" rx="8" fill="#5146E5"/><text x="723.3" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class VI</text><rect x="762.7" y="479.1" width="27.3" height="80.9" rx="8" fill="#E4DEF9"/><rect x="790.0" y="519.6" width="27.3" height="40.4" rx="8" fill="#5146E5"/><text x="790.0" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class VIII</text><rect x="829.3" y="447.9" width="27.3" height="112.1" rx="8" fill="#E4DEF9"/><rect x="856.7" y="469.9" width="27.3" height="90.1" rx="8" fill="#5146E5"/><text x="856.7" y="590" font-size="15" font-weight="700" fill="#4a4550" text-anchor="middle">Class X</text></svg>
+    <div style="display:flex;justify-content:center;gap:30px;font-size:20px;font-weight:700;color:#4a4550;padding-bottom:16px"><span><i style="display:inline-block;width:18px;height:18px;border-radius:9px;background:#E4DEF9;vertical-align:-3px;margin-right:8px"></i>Goal</span><span><i style="display:inline-block;width:18px;height:18px;border-radius:9px;background:#5146E5;vertical-align:-3px;margin-right:8px"></i>Recovery</span></div></div></div>
+  <div class="feat" style="top:1190px">
+    <div><span class="dot">▮</span>Goal vs recovery, per class</div><div><span class="dot">⟳</span>Updates in real time</div>
+  </div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 7 settings -->
+<section class="slide" id="s8">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">08 / 09</div></div>
+  <div class="kick">FULL CONTROL · SETTINGS</div>
+  <h1>Set it up once —<br><span class="p">your way.</span></h1>
+  <div class="mod" style="left:70px;top:440px"><div class="i">🏫</div><div class="t">School Profile</div><div class="d">Name, logo & details on every receipt</div></div>
+  <div class="mod" style="left:395px;top:440px"><div class="i">🎓</div><div class="t">Classes & Sections</div><div class="d">Nursery to Class X, every section</div></div>
+  <div class="mod" style="left:720px;top:440px"><div class="i">₹</div><div class="t">Fee Heads</div><div class="d">Tuition, transport, exam & more</div></div>
+  <div class="mod" style="left:70px;top:645px"><div class="i">▦</div><div class="t">Fee Structure</div><div class="d">Class-wise fee plans</div></div>
+  <div class="mod" style="left:395px;top:645px"><div class="i">🚌</div><div class="t">Bus Routes</div><div class="d">Route-based transport fees</div></div>
+  <div class="mod" style="left:720px;top:645px"><div class="i">%</div><div class="t">Discounts</div><div class="d">Concessions for students</div></div>
+  <div class="mod" style="left:70px;top:850px"><div class="i">⏱</div><div class="t">Late Fee Rules</div><div class="d">Automatic late charges</div></div>
+  <div class="mod" style="left:395px;top:850px"><div class="i">📅</div><div class="t">Academic Years</div><div class="d">Switch sessions, e.g. AY 2026-27</div></div>
+  <div class="mod" style="left:720px;top:850px"><div class="i">👥</div><div class="t">User Management</div><div class="d">Staff logins & admin roles</div></div>
+  <div class="a" style="left:70px;top:1070px;width:940px;height:110px;border-radius:24px;background:#1C1726;color:#fff;display:flex;align-items:center;gap:20px;padding:0 32px;box-sizing:border-box;font-size:26px;font-weight:700"><span style="font-size:40px">🔐</span>Secure staff login · role-based access · data stays private</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 8 CTA -->
+<section class="slide" id="s9">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs</div><div class="num">09 / 09</div></div>
+  <div class="a" style="left:140px;top:120px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle, rgba(90,23,230,0.17), rgba(90,23,230,0) 65%)"></div>
+  <img class="a" src="data:image/png;base64,LOGO" style="left:430px;top:220px;width:220px;height:220px;filter:drop-shadow(0 26px 40px rgba(90,23,230,0.35))">
+  <div class="a" style="left:0;top:510px;width:1080px;text-align:center;font-size:76px;font-weight:800;letter-spacing:-0.045em;line-height:1.04">Still tracking fees<br>in registers?<br><span class="p">Let’s fix that.</span></div>
+  <div class="a" style="left:0;top:790px;width:1080px;text-align:center;font-size:30px;font-weight:500;color:#6a6270">Custom fee management software for schools & institutes.</div>
+  <div class="a" style="left:190px;top:870px;width:700px;height:118px;border-radius:59px;background:var(--pur);color:#fff;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;box-shadow:0 26px 60px rgba(90,23,230,0.38)">DM us “SCHOOL” 💬</div>
+  <div class="a" style="left:0;top:1060px;width:1080px;display:flex;justify-content:center;gap:16px"><div class="chip" style="position:relative">Websites</div><div class="chip" style="position:relative">Mobile Apps</div><div class="chip" style="position:relative;background:#E7DFF6;color:var(--pur)">Custom Software</div></div>
+</section>

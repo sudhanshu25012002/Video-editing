@@ -1,0 +1,32 @@
+<style>
+  :root { --bg: #F3ECDF; --pur: #5A17E6; --ink: #1C1726; --mut: #8A8172; --line: #E2D8C6; --card: #FFFDF8; --cu: #B8743A; }
+  html, body { margin: 0; background: #ccc; }
+  body { font-family: 'Inter', sans-serif; color: var(--ink); }
+  .slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; margin-bottom: 20px; background: var(--bg); background-image: radial-gradient(rgba(90,23,230,0.07) 2.5px, transparent 2.5px); background-size: 44px 44px; }
+  .a { position: absolute; }
+  .top { position: absolute; left: 70px; right: 70px; top: 56px; height: 64px; display: flex; align-items: center; gap: 16px; }
+  .top img { width: 60px; height: 60px; }
+  .brand { font-weight: 800; font-size: 28px; letter-spacing: -0.02em; }
+  .num { margin-left: auto; padding: 10px 22px; border-radius: 30px; background: var(--card); box-shadow: 0 0 0 2px var(--line); font-weight: 800; font-size: 22px; letter-spacing: 0.04em; }
+  .kick { position: absolute; left: 70px; top: 168px; display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-radius: 24px; background: var(--pur); color: #fff; font-weight: 800; font-size: 20px; letter-spacing: 0.1em; }
+  h1 { position: absolute; left: 70px; right: 70px; top: 222px; margin: 0; font-size: 76px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.02; }
+  .p { color: var(--pur); } .cu { color: var(--cu); }
+  .sub { position: absolute; left: 70px; right: 70px; font-size: 28px; font-weight: 500; color: #6a6270; line-height: 1.4; }
+  .browser { position: absolute; border-radius: 22px; background: var(--card); box-shadow: 0 30px 70px rgba(28,23,38,0.16), 0 0 0 2px var(--line); overflow: hidden; }
+  .browser .bar { height: 44px; background: #EDE5D7; display: flex; align-items: center; gap: 9px; padding-left: 18px; }
+  .browser .bar i { width: 13px; height: 13px; border-radius: 7px; display: block; }
+  .browser .url { margin-left: 16px; height: 28px; border-radius: 14px; background: var(--card); font-size: 15px; font-weight: 600; color: var(--mut); display: flex; align-items: center; padding: 0 16px; }
+  .browser img { display: block; width: 100%; }
+  .phone { position: absolute; border-radius: 50px; background: #16110f; padding: 12px; box-shadow: 0 34px 70px rgba(28,23,38,0.25), inset 0 0 0 2px #3a2f2a; }
+  .phone .scr { border-radius: 39px; overflow: hidden; position: relative; }
+  .phone .scr img { display: block; width: 100%; }
+  .phone .isl { position: absolute; left: 50%; top: 9px; width: 84px; height: 24px; margin-left: -42px; border-radius: 12px; background: #000; z-index: 2; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 20px; background: var(--card); box-shadow: 0 14px 34px rgba(28,23,38,0.14), 0 0 0 2px var(--line); font-weight: 800; font-size: 24px; white-space: nowrap; }
+  .dot { width: 34px; height: 34px; border-radius: 17px; background: var(--pur); color: #fff; font-size: 18px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .pin { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 20px; background: var(--pur); color: #fff; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 7px rgba(90,23,230,0.22); }
+  .foot { position: absolute; left: 70px; right: 70px; bottom: 48px; display: flex; align-items: center; justify-content: space-between; font-size: 22px; font-weight: 700; color: var(--mut); }
+  .foot b { color: var(--ink); }
+  .swipe { color: var(--pur); font-weight: 800; }
+  .stat { position: absolute; padding: 22px 26px; border-radius: 22px; background: var(--card); box-shadow: 0 14px 34px rgba(28,23,38,0.12), 0 0 0 2px var(--line); }
+  .stat .v { font-size: 44px; font-weight: 900; letter-spacing: -0.03em; } .stat .l { font-size: 18px; font-weight: 700; color: var(--mut); letter-spacing: .06em; margin-top: 4px; }
+</style></head><body>
