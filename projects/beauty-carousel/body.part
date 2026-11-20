@@ -1,0 +1,174 @@
+<style>
+  .bscr { position: relative; width: 360px; height: 780px; font-family: 'Inter', sans-serif; color: #3B2A2A; background: #FFF8F5; overflow: hidden; }
+  .bsb { height: 34px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; }
+  .bnav { height: 46px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+  .blogo { font-family: 'DejaVu Serif', Georgia, serif; font-size: 20px; letter-spacing: .26em; color: #3B2A2A; }
+  .ph { background-size: cover; background-position: center; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 20px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .bbtn { display: flex; align-items: center; justify-content: center; border-radius: 26px; font-weight: 800; font-size: 14px; }
+  .glass { background: rgba(255,248,245,0.72); backdrop-filter: blur(14px); box-shadow: 0 10px 30px rgba(59,42,42,0.12); }
+  .serif { font-family: 'DejaVu Serif', Georgia, serif; }
+</style>
+<section class="slide" id="s1"></section><section class="slide" id="s2"></section><section class="slide" id="s3"></section><section class="slide" id="s4"></section>
+<section class="slide" id="s5"></section><section class="slide" id="s6"></section><section class="slide" id="s7"></section><section class="slide" id="s8"></section>
+<script>
+const ROSE = '#C26D6F', COCOA = '#3B2A2A', BLUSH = '#F6E1DC', NUDE = '#EAD5C8', PEARL = '#FFF8F5', SAGE = '#8FA88E';
+const I = id => `url(img/${id}.jpg)`;
+const PROD = [
+  { n: 'Glow Drops 10% Niacinamide', s: 'Serum · 30 ml', p: '₹899', img: '30229022', r: '4.9', tag: 'Bestseller' },
+  { n: 'Cloud Barrier Cream', s: 'Moisturiser · 50 g', p: '₹749', img: '18350885', r: '4.8', tag: 'New' },
+  { n: 'Rose Hydra Toner', s: 'Toner · 150 ml', p: '₹549', img: '13608711', r: '4.7', tag: '' },
+  { n: 'Velvet Matte Lip', s: 'Lipstick · 12 shades', p: '₹499', img: '2533266', r: '4.8', tag: 'Trending' },
+  { n: 'Golden Facial Oil', s: 'Face oil · 30 ml', p: '₹999', img: '8140898', r: '4.9', tag: '' },
+  { n: 'Daily Shield SPF 50', s: 'Sunscreen · 50 ml', p: '₹649', img: '8533216', r: '4.8', tag: 'New' }];
+const SB = '<div class="bsb"><span>9:41</span><span>●●● ▮</span></div>';
+const NAV = `<div class="bnav"><span style="font-size:18px">☰</span><span class="blogo">LUMÉA</span><span style="font-size:16px">⌕ &nbsp;🛍</span></div>`;
+const pcard = (k, w = 156, h = 170) => `<div style="width:${w}px"><div class="ph" style="height:${h}px;border-radius:18px;background-image:${I(PROD[k].img)};position:relative">${PROD[k].tag ? `<span class="pill" style="position:absolute;left:8px;top:8px;background:${PEARL};color:${ROSE};padding:4px 9px;font-size:10px">${PROD[k].tag}</span>` : ''}<span style="position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:15px;background:${COCOA};color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center">+</span></div>
+  <div style="font-size:12.5px;font-weight:800;margin-top:8px;line-height:1.25">${PROD[k].n}</div><div style="font-size:11px;color:#9a8580;margin-top:2px">${PROD[k].s}</div><div style="display:flex;justify-content:space-between;margin-top:4px;font-size:13px;font-weight:800"><span>${PROD[k].p}</span><span style="color:#c98a2b">★ ${PROD[k].r}</span></div></div>`;
+const SCREENS = {
+  home: () => `<div class="bscr">${SB}${NAV}
+    <div class="ph" style="margin:4px 14px 0;height:300px;border-radius:26px;background-image:${I('3762890')};background-position:center 30%;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(59,42,42,0) 40%,rgba(59,42,42,0.55))"></div>
+      <div class="serif" style="position:absolute;left:18px;bottom:62px;color:#fff;font-size:28px;line-height:1.1;font-style:italic">Skin that<br>glows, naturally.</div>
+      <div class="bbtn" style="position:absolute;left:18px;bottom:18px;width:130px;height:36px;background:${PEARL};color:${COCOA};font-size:12px">Shop now →</div></div>
+    <div style="margin:16px 16px 8px;font-size:15px;font-weight:800">Shop by concern</div>
+    <div style="display:flex;gap:8px;margin:0 16px">${[['✨', 'Glow'], ['💧', 'Hydration'], ['🌿', 'Acne'], ['⏳', 'Anti-ageing']].map(([e, n], i) => `<span class="pill" style="background:${i ? BLUSH : COCOA};color:${i ? COCOA : '#fff'}">${e} ${n}</span>`).join('')}</div>
+    <div style="display:flex;justify-content:space-between;margin:16px 16px 8px;font-size:15px;font-weight:800">Bestsellers<span style="font-size:12px;color:${ROSE}">View all</span></div>
+    <div style="display:flex;gap:16px;margin:0 16px">${pcard(0)}${pcard(3)}</div></div>`,
+  quiz1: () => `<div class="bscr" style="background:${BLUSH}">${SB}<div class="bnav"><span>←</span><span style="font-size:12px;font-weight:800;letter-spacing:.14em">SKIN QUIZ · 2/4</span><span>✕</span></div>
+    <div style="margin:6px 18px;height:6px;border-radius:3px;background:#fff"><div style="width:50%;height:6px;border-radius:3px;background:${ROSE}"></div></div>
+    <div class="serif" style="margin:28px 18px 6px;font-size:26px;line-height:1.15">What’s your<br>skin type?</div><div style="margin:0 18px 18px;font-size:12px;color:#8a7570">We’ll build a routine just for you.</div>
+    ${[['💧', 'Dry', 'Feels tight, flaky'], ['🌗', 'Combination', 'Oily T-zone, dry cheeks'], ['✨', 'Oily', 'Shiny by noon'], ['🌸', 'Sensitive', 'Reacts easily']].map(([e, n, d], i) => `<div style="margin:0 18px 12px;padding:14px 16px;border-radius:20px;background:${i === 1 ? COCOA : '#fff'};color:${i === 1 ? '#fff' : COCOA};display:flex;align-items:center;gap:14px"><div style="width:44px;height:44px;border-radius:14px;background:${i === 1 ? 'rgba(255,255,255,0.15)' : BLUSH};font-size:22px;display:flex;align-items:center;justify-content:center">${e}</div><div style="flex:1"><div style="font-weight:800;font-size:15px">${n}</div><div style="font-size:11.5px;opacity:.7">${d}</div></div><div style="width:22px;height:22px;border-radius:11px;border:2px solid ${i === 1 ? '#fff' : '#d9c4be'};background:${i === 1 ? ROSE : 'transparent'}"></div></div>`).join('')}
+    <div class="bbtn" style="position:absolute;left:18px;right:18px;bottom:22px;height:52px;background:${ROSE};color:#fff">Next →</div></div>`,
+  quiz2: () => `<div class="bscr">${SB}<div class="bnav"><span>←</span><span style="font-size:12px;font-weight:800;letter-spacing:.14em">YOUR ROUTINE</span><span>♡</span></div>
+    <div class="ph" style="margin:4px 16px 0;height:150px;border-radius:24px;background-image:${I('9038626')};background-position:center 25%;position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(59,42,42,0.6),rgba(59,42,42,0))"></div><div style="position:absolute;left:16px;top:28px;color:#fff"><div style="font-size:11px;font-weight:800;letter-spacing:.14em;opacity:.85">MATCH 96%</div><div class="serif" style="font-size:22px;margin-top:4px;line-height:1.1">Combination<br>skin routine</div></div></div>
+    <div style="display:flex;gap:8px;margin:14px 16px 6px"><span class="pill" style="background:${COCOA};color:#fff">☀ AM</span><span class="pill" style="background:${BLUSH}">☾ PM</span></div>
+    ${[[2, 'Step 1 · Tone'], [0, 'Step 2 · Treat'], [1, 'Step 3 · Moisturise'], [5, 'Step 4 · Protect']].map(([k, st]) => `<div style="margin:8px 16px;padding:10px;border-radius:18px;background:#fff;display:flex;gap:12px;align-items:center"><div class="ph" style="width:56px;height:56px;border-radius:14px;background-image:${I(PROD[k].img)}"></div><div style="flex:1"><div style="font-size:10.5px;font-weight:800;color:${ROSE};letter-spacing:.06em">${st.toUpperCase()}</div><div style="font-size:13px;font-weight:800">${PROD[k].n}</div></div><div style="font-weight:800;font-size:13px">${PROD[k].p}</div></div>`).join('')}
+    <div class="bbtn" style="position:absolute;left:16px;right:16px;bottom:22px;height:52px;background:${COCOA};color:#fff">Add full routine · Save 15%</div></div>`,
+  pdp: () => `<div class="bscr">${SB}<div class="bnav"><span>←</span><span class="blogo" style="font-size:15px">LUMÉA</span><span>♡ 🛍</span></div>
+    <div class="ph" style="margin:0 14px;height:330px;border-radius:26px;background-image:${I('30229022')};position:relative"><span class="pill glass" style="position:absolute;left:12px;top:12px;color:${ROSE}">✨ Bestseller</span><span class="pill glass" style="position:absolute;right:12px;bottom:12px">▶ How to use</span></div>
+    <div style="display:flex;justify-content:center;gap:6px;margin-top:10px">${[1, 0, 0, 0].map(o => `<i style="width:${o ? 18 : 6}px;height:6px;border-radius:3px;background:${o ? ROSE : '#e7d3cd'};display:block"></i>`).join('')}</div>
+    <div class="serif" style="margin:10px 16px 0;font-size:21px">Glow Drops 10% Niacinamide</div>
+    <div style="margin:6px 16px 0;display:flex;align-items:center;gap:10px"><span style="font-size:19px;font-weight:800">₹899</span><span style="font-size:12px;color:#c98a2b;font-weight:800">★ 4.9 (2.4k)</span><span class="pill" style="margin-left:auto;background:#E4EEE3;color:#3d6b3c">Suits combination skin</span></div>
+    <div style="margin:12px 16px 6px;font-size:11.5px;font-weight:800;letter-spacing:.08em;color:#9a8580">KEY INGREDIENTS</div>
+    <div style="display:flex;gap:6px;margin:0 16px;flex-wrap:wrap">${['Niacinamide 10%', 'Zinc 1%', 'Hyaluronic acid'].map(x => `<span class="pill" style="background:${BLUSH}">${x}</span>`).join('')}</div>
+    <div style="margin:12px 16px 0;display:flex;gap:8px">${['Vegan', 'Cruelty-free', 'Fragrance-free'].map(x => `<span style="font-size:11px;font-weight:700;color:#3d6b3c">✓ ${x}</span>`).join('')}</div>
+    <div style="position:absolute;left:16px;right:16px;bottom:22px;display:flex;gap:10px"><div class="bbtn" style="width:110px;height:52px;background:#fff;border:1.5px solid ${COCOA};font-size:12px">↻ Subscribe</div><div class="bbtn" style="flex:1;height:52px;background:${COCOA};color:#fff">Add to bag</div></div></div>`,
+  shade: () => `<div class="bscr">${SB}<div class="bnav"><span>←</span><span class="blogo" style="font-size:15px">LUMÉA</span><span>♡ 🛍</span></div>
+    <div class="ph" style="margin:0 14px;height:290px;border-radius:26px;background-image:${I('2533266')};background-position:60% center"></div>
+    <div class="serif" style="margin:14px 16px 0;font-size:21px">Velvet Matte Lip</div><div style="margin:4px 16px 0;font-size:19px;font-weight:800">₹499 <span style="font-size:12px;color:#c98a2b">★ 4.8</span></div>
+    <div style="margin:14px 16px 8px;font-size:11.5px;font-weight:800;letter-spacing:.08em;color:#9a8580">SHADE · <span style="color:${COCOA}">ROSE PETAL</span></div>
+    <div style="display:grid;grid-template-columns:repeat(6,40px);gap:12px;margin:0 16px">${['#E37C93', '#C8505F', '#9E2F3C', '#D98C7A', '#B85C55', '#7A3B3B', '#F0A3A8', '#D46A6A', '#A94F57', '#E8A08B', '#8F4A47', '#5E2B2E'].map((c, i) => `<i style="width:40px;height:40px;border-radius:20px;background:${c};display:block;box-shadow:${i === 0 ? `0 0 0 3px ${PEARL},0 0 0 5px ${COCOA}` : 'none'}"></i>`).join('')}</div>
+    <div style="margin:16px 16px 0;padding:12px 14px;border-radius:18px;background:${BLUSH};display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700"><span style="font-size:20px">📷</span>Try on virtually — find your shade</div>
+    <div class="bbtn" style="position:absolute;left:16px;right:16px;bottom:22px;height:52px;background:${COCOA};color:#fff">Add to bag · ₹499</div></div>`,
+  cart: () => `<div class="bscr">${SB}<div class="bnav"><span>←</span><span style="font-weight:800">Your bag (3)</span><span></span></div>
+    <div style="margin:4px 16px 10px;padding:12px 14px;border-radius:18px;background:${BLUSH}"><div style="font-size:12px;font-weight:800">🎁 Free mini cleanser unlocked!</div><div style="margin-top:8px;height:6px;border-radius:3px;background:#fff"><div style="width:100%;height:6px;border-radius:3px;background:${ROSE}"></div></div></div>
+    ${[0, 1, 5].map(k => `<div style="margin:8px 16px;padding:10px;border-radius:18px;background:#fff;display:flex;gap:12px;align-items:center"><div class="ph" style="width:64px;height:64px;border-radius:14px;background-image:${I(PROD[k].img)}"></div><div style="flex:1"><div style="font-size:13px;font-weight:800">${PROD[k].n}</div><div style="font-size:11px;color:#9a8580">${PROD[k].s}</div><div style="font-size:13px;font-weight:800;margin-top:4px">${PROD[k].p}</div></div><span style="font-size:12px;font-weight:800;border:1px solid #ead7d1;border-radius:14px;padding:4px 10px">− 1 +</span></div>`).join('')}
+    <div style="margin:10px 16px;padding:12px 14px;border-radius:18px;background:#fff;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:800">↻ Subscribe & save 10%</div><div style="font-size:11px;color:#9a8580">Refill every 30 days</div></div><span style="width:44px;height:26px;border-radius:13px;background:${ROSE};position:relative;display:block"><i style="position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:10px;background:#fff"></i></span></div>
+    <div style="margin:0 16px;font-size:13px">${[['Routine bundle −15%', '− ₹344'], ['Total', '₹1,953']].map(([a, b], i) => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:${i ? 800 : 600};font-size:${i ? 17 : 13}px">${a}<span>${b}</span></div>`).join('')}</div>
+    <div class="bbtn" style="position:absolute;left:16px;right:16px;bottom:22px;height:52px;background:${COCOA};color:#fff">Checkout · UPI / Card / COD</div></div>`,
+};
+//HELPERS
+function chrome(s, file) { E(s, {}, `<div class="ic on">▲</div><div class="ic">#</div><div class="ic">□</div><div class="ic">✎</div><div class="ic">T</div><div class="ic">💬</div><div class="file">Luméa Skin / <b>${file}</b></div>${AV.map(([l, c]) => `<div class="av" style="background:${c}">${l}</div>`).join('')}<div class="share">Share</div><div style="color:#ccc;font-weight:700">▶</div>`, 'tb'); }
+const tag = (s, x, y, txt, bg = '#0D99FF') => E(s, { left: x + 'px', top: y + 'px', background: bg, color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 10px', borderRadius: '6px', zIndex: 26, whiteSpace: 'nowrap' }, txt);
+const glassCard = (s, x, y, w, html, z = 27) => E(s, { left: x + 'px', top: y + 'px', width: w + 'px', borderRadius: '24px', background: 'rgba(255,248,245,0.85)', backdropFilter: 'blur(12px)', boxShadow: '0 24px 60px rgba(59,42,42,0.18), 0 0 0 1.5px rgba(255,255,255,0.8)', padding: '18px 20px', boxSizing: 'border-box', zIndex: z }, html);
+
+// 1 cover
+{ const s = SS[1]; chrome(s, 'Store — v1');
+  head(s, 'STOREFRONT DESIGN · BEAUTY & SKINCARE', 'A skincare store<br>designed to <span class="p">glow.</span>');
+  frame(s, 'pdp', 60, 480, 0.82, 'Product'); frame(s, 'quiz2', 735, 480, 0.82, 'Routine');
+  const [x, y, w, h] = frame(s, 'home', 365, 440, 0.97, 'Home'); sel(s, x, y, w, h, '390 × 844');
+  glassCard(s, 40, 1080, 300, `<div style="display:flex;gap:12px;align-items:center"><div class="ph" style="width:64px;height:64px;border-radius:16px;background-image:${I('18350885')}"></div><div><div style="font-size:15px;font-weight:800">New order 🎉</div><div style="font-size:13px;color:#8a7570">Cloud Barrier Cream · ₹749</div></div></div>`);
+  glassCard(s, 760, 1150, 280, `<div style="font-size:13px;font-weight:800;color:#9a8580">TODAY</div><div style="font-size:30px;font-weight:900">₹18,420</div><div style="font-size:13px;font-weight:800;color:#3d6b3c">▲ 42 orders</div>`);
+  cursor(s, 660, 760, 'HeliosLabs', '#5A17E6'); cursor(s, 190, 1000, 'Ananya · Designer', '#F24E1E');
+  foot(s, '01'); }
+
+// 2 brand system with real moodboard
+{ const s = SS[2]; chrome(s, 'Brand System');
+  head(s, 'BRAND SYSTEM & MOODBOARD', 'Soft, clean,<br><span class="p">clinical-luxe.</span>');
+  E(s, { left: '60px', top: '406px' }, 'Luméa — Moodboard', 'flabel');
+  const mb = E(s, { left: '60px', top: '430px', width: '460px', height: '760px' });
+  [['3762890', 0, 0, 220, 300], ['30229017_top', 236, 0, 224, 190], ['7797121', 236, 206, 224, 250], ['2533266', 0, 316, 220, 140], ['9038626', 0, 472, 220, 288], ['8140898', 236, 472, 224, 288]].forEach(([id, x, y, w, h]) => E(mb, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', borderRadius: '18px', backgroundImage: I(id), backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 10px 30px rgba(59,42,42,0.12)' }));
+  E(s, { left: '560px', top: '406px' }, 'Luméa — Style guide', 'flabel');
+  const g = E(s, { left: '560px', top: '430px', width: '460px', height: '760px', background: '#fff', borderRadius: '6px', boxShadow: '0 20px 50px rgba(28,23,38,0.12)' });
+  g.innerHTML = `<div style="position:absolute;left:30px;top:28px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">WORDMARK</div><div class="serif" style="position:absolute;left:30px;top:52px;font-size:46px;letter-spacing:.24em;color:${COCOA}">LUMÉA</div><div style="position:absolute;left:32px;top:112px;font-size:13px;letter-spacing:.3em;color:#9a8580">SKIN · SCIENCE · GLOW</div>
+    <div style="position:absolute;left:30px;top:160px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">PALETTE</div>
+    ${[[COCOA, 'Cocoa'], [ROSE, 'Rose clay'], [BLUSH, 'Blush'], [NUDE, 'Nude'], [SAGE, 'Sage']].map(([c, n], i) => `<div style="position:absolute;left:${30 + i * 82}px;top:188px;width:70px"><div style="height:70px;border-radius:35px;background:${c};box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08)"></div><div style="font-size:12px;font-weight:800;margin-top:6px;text-align:center">${n}</div></div>`).join('')}
+    <div style="position:absolute;left:30px;top:300px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">TYPE</div>
+    <div class="serif" style="position:absolute;left:30px;top:326px;font-size:52px;font-style:italic;color:${ROSE}">Aa</div><div style="position:absolute;left:110px;top:336px;font-size:14px;line-height:1.5"><b class="serif" style="font-size:17px">Editorial serif</b><br>Headlines, italics</div>
+    <div style="position:absolute;left:250px;top:326px;font-size:52px;font-weight:800">Aa</div><div style="position:absolute;left:330px;top:336px;font-size:14px;line-height:1.5"><b style="font-size:17px">Inter</b><br>UI & body</div>
+    <div style="position:absolute;left:30px;top:420px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">COMPONENTS</div>
+    <div class="bbtn" style="position:absolute;left:30px;top:450px;width:190px;height:48px;background:${COCOA};color:#fff">Add to bag</div><div class="bbtn" style="position:absolute;left:236px;top:450px;width:190px;height:48px;border:1.5px solid ${COCOA};box-sizing:border-box">↻ Subscribe</div>
+    <div style="position:absolute;left:30px;top:516px;display:flex;gap:8px;flex-wrap:wrap;width:400px">${['✨ Glow', '💧 Hydration', '🌿 Acne', 'Niacinamide 10%', 'Vegan ✓'].map((c, i) => `<span class="pill" style="background:${i ? BLUSH : COCOA};color:${i ? COCOA : '#fff'};font-size:13px">${c}</span>`).join('')}</div>
+    <div style="position:absolute;left:30px;top:616px;display:flex;gap:10px">${['#E37C93', '#C8505F', '#9E2F3C', '#D98C7A', '#7A3B3B'].map((c, i) => `<i style="width:40px;height:40px;border-radius:20px;background:${c};display:block;box-shadow:${i ? 'none' : `0 0 0 3px #fff,0 0 0 5px ${COCOA}`}"></i>`).join('')}<span style="margin-left:8px;font-size:13px;font-weight:700;align-self:center;color:#9a8580">Shade swatch</span></div>
+    <div style="position:absolute;left:30px;top:690px;font-size:14px;font-weight:800;color:#c98a2b">★★★★★ <span style="color:${COCOA}">4.9 · 2.4k reviews</span></div>`;
+  sel(s, 560 + 30 - 6, 430 + 616 - 6, 252, 52); tag(s, 560 + 30, 430 + 616 - 36, '◇ Shade Swatch', '#9747FF');
+  cursor(s, 380, 560, 'Client', '#0FA958'); comment(s, 280, 1110, 'Client', 'This feels premium AND friendly 🌸', '#0FA958');
+  foot(s, '02'); }
+
+// 3 home + concern
+{ const s = SS[3]; chrome(s, 'Mobile — Home');
+  head(s, 'HOME SCREEN', 'Shop by <span class="p">skin concern,</span><br>not just category.');
+  const [x, y, w, h] = frame(s, 'home', 90, 450, 1.0, 'Home'); sel(s, x + 16, y + 34 + 46 + 4 + 300 + 16 + 26 - 4, 328, 38, 'Concern chips');
+  comment(s, 500, 470, 'HeliosLabs', 'Real model photography + editorial hero');
+  comment(s, 500, 820, 'HeliosLabs', 'Concern-first navigation — Glow, Hydration, Acne…');
+  comment(s, 500, 1060, 'HeliosLabs', 'Bestsellers with ratings & one-tap add');
+  glassCard(s, 560, 1160, 400, `<div style="font-size:13px;font-weight:800;color:#9a8580;letter-spacing:.08em">WHY IT CONVERTS</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">Customers shop by their <span style="color:${ROSE}">problem</span> — so the store starts there.</div>`);
+  foot(s, '03'); }
+
+// 4 skin quiz flow
+{ const s = SS[4]; chrome(s, 'Prototype — Skin Quiz');
+  head(s, 'PERSONALISED SKIN QUIZ', 'A quiz that sells<br><span class="p">a full routine.</span>');
+  frame(s, 'quiz1', 90, 450, 1.0, 'Quiz — skin type'); frame(s, 'quiz2', 630, 450, 1.0, 'Result — your routine');
+  sel(s, 90 + 18, 450 + 34 + 46 + 6 + 28 + 70 + 18 + 76, 324, 72);
+  noodle(s, 90 + 342 + 8, 450 + 300, 630 - 6, 450 + 160);
+  tag(s, 470, 520, 'On tap → Smart animate');
+  glassCard(s, 640, 1170, 380, `<div style="display:flex;align-items:center;gap:14px"><div style="font-size:40px">📈</div><div><div style="font-size:15px;font-weight:800">Bigger orders</div><div style="font-size:13px;color:#8a7570">Routine bundles sell 4 products, not 1</div></div></div>`);
+  foot(s, '04'); }
+
+// 5 product + shade finder
+{ const s = SS[5]; chrome(s, 'Mobile — Product pages');
+  head(s, 'PRODUCT PAGES', 'Ingredients, shades<br>& <span class="p">trust — up front.</span>');
+  frame(s, 'pdp', 90, 450, 1.0, 'Skincare product'); frame(s, 'shade', 630, 450, 1.0, 'Makeup — shade finder');
+  sel(s, 90 + 16, 450 + 34 + 46 + 330 + 26 + 10 + 34 + 30, 328, 70, 'Ingredient tags');
+  comment(s, 380, 860, 'HeliosLabs', 'Shade picker + virtual try-on for makeup');
+  cursor(s, 700, 1010, 'Ananya · Designer', '#F24E1E');
+  foot(s, '05'); }
+
+// 6 bag: bundles, gifts, subscription
+{ const s = SS[6]; chrome(s, 'Mobile — Bag');
+  head(s, 'BAG THAT GROWS ORDERS', 'Bundles, free gifts<br>& <span class="p">auto-refills.</span>');
+  const [x, y, w, h] = frame(s, 'cart', 90, 450, 1.0, 'Bag'); sel(s, x + 16, y + 34 + 46 + 4 + 10 + 3 * 92 + 10, 328, 66, 'Subscription toggle');
+  [['🎁', 'Free gift unlocks', 'Mini cleanser over ₹1,500'], ['🧴', 'Routine bundles', 'Save 15% on full routine'], ['↻', 'Subscribe & save', 'Repeat orders every 30 days'], ['💳', 'UPI · Card · COD', 'Checkout in seconds']].forEach(([ic, n, d], k) => glassCard(s, 500, 470 + k * 180, 520, `<div style="display:flex;gap:16px;align-items:center"><div style="width:70px;height:70px;border-radius:20px;background:${BLUSH};font-size:34px;display:flex;align-items:center;justify-content:center">${ic}</div><div><div style="font-size:22px;font-weight:800">${n}</div><div style="font-size:16px;color:#8a7570;margin-top:2px">${d}</div></div></div>`));
+  cursor(s, 880, 1180, 'HeliosLabs', '#5A17E6');
+  foot(s, '06'); }
+
+// 7 responsive: desktop + tablet + phone with real images
+{ const s = SS[7]; chrome(s, 'Responsive — all devices');
+  head(s, 'EVERY SCREEN, PIXEL-PERFECT', 'Desktop. Tablet.<br><span class="p">Phone.</span>');
+  E(s, { left: '60px', top: '426px' }, 'Desktop — 1440', 'flabel');
+  const d = E(s, { left: '60px', top: '450px', width: '820px', height: '520px', background: PEARL, overflow: 'hidden', boxShadow: '0 20px 50px rgba(28,23,38,0.14)' });
+  d.innerHTML = `<div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-size:13px;font-weight:700"><span>Skincare &nbsp; Makeup &nbsp; Routines &nbsp; Quiz</span><span class="blogo" style="font-size:22px">LUMÉA</span><span>⌕ &nbsp; ♡ &nbsp; 🛍</span></div>
+    <div style="position:absolute;left:30px;top:66px;width:760px;height:250px;border-radius:24px;overflow:hidden;display:flex"><div style="flex:1;background:${BLUSH};padding:40px 34px;box-sizing:border-box"><div style="font-size:12px;font-weight:800;letter-spacing:.16em;color:${ROSE}">NEW · GLOW EDIT</div><div class="serif" style="font-size:38px;line-height:1.1;margin-top:10px;font-style:italic">Your glow,<br>your routine.</div><div class="bbtn" style="width:170px;height:44px;background:${COCOA};color:#fff;margin-top:22px;font-size:13px">Take the skin quiz</div></div><div class="ph" style="flex:1;background-image:${I('7010890')}"></div></div>
+    <div style="position:absolute;left:30px;top:336px;display:flex;gap:16px">${[0, 1, 2, 3, 4].map(k => `<div style="width:140px"><div class="ph" style="height:120px;border-radius:14px;background-image:${I(PROD[k].img)}"></div><div style="font-size:11px;font-weight:800;margin-top:6px">${PROD[k].n}</div><div style="font-size:11px;font-weight:800;color:${ROSE}">${PROD[k].p}</div></div>`).join('')}</div>`;
+  E(s, { left: '60px', top: '996px' }, 'Tablet', 'flabel');
+  const tb = E(s, { left: '60px', top: '1020px', width: '430px', height: '250px', background: PEARL, overflow: 'hidden', borderRadius: '6px', boxShadow: '0 20px 50px rgba(28,23,38,0.18)', zIndex: 3 });
+  tb.innerHTML = `<div class="blogo" style="text-align:center;padding:16px 0;font-size:18px">LUMÉA</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:0 18px">${[0, 3, 4, 1, 5, 2].map(k => `<div><div class="ph" style="height:120px;border-radius:12px;background-image:${I(PROD[k].img)}"></div><div style="font-size:10px;font-weight:800;margin-top:4px">${PROD[k].p}</div></div>`).join('')}</div>`;
+  frame(s, 'shade', 520, 1020, 0.32, 'Phone');
+  E(s, { left: '680px', top: '1020px', display: 'flex', flexDirection: 'column', gap: '14px', zIndex: 26 }, ['Same brand everywhere', 'Fast on 4G', 'SEO ready'].map(t => `<div style="padding:12px 18px;border-radius:16px;background:#FFFDF8;box-shadow:0 10px 26px rgba(28,23,38,0.12),0 0 0 2px #E2D8C6;font-weight:800;font-size:20px">✓ ${t}</div>`).join(''));
+  foot(s, '07'); }
+
+// 8 CTA
+{ const s = SS[8]; chrome(s, 'Your Beauty Brand — v1');
+  E(s, { left: '140px', top: '120px', width: '800px', height: '800px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(194,109,111,0.22), rgba(194,109,111,0) 65%)' });
+  [['3762890', 90, 240, -8], ['30229022', 820, 230, 7], ['2533266', 70, 640, 6], ['8140898', 850, 640, -6]].forEach(([id, x, y, r]) => E(s, { left: x + 'px', top: y + 'px', width: '170px', height: '210px', borderRadius: '22px', backgroundImage: I(id), backgroundSize: 'cover', backgroundPosition: 'center', transform: `rotate(${r}deg)`, boxShadow: '0 20px 40px rgba(59,42,42,0.2)', border: '6px solid #fff' }));
+  E(s, { left: '420px', top: '230px', width: '240px', height: '240px', filter: 'drop-shadow(0 26px 40px rgba(90,23,230,0.35))' }, '<img src="data:image/png;base64,LOGO" style="width:240px;height:240px">');
+  sel(s, 410, 220, 260, 260, 'Your brand');
+  E(s, { left: 0, top: '560px', width: '1080px', textAlign: 'center', fontSize: '70px', fontWeight: 800, letterSpacing: '-0.045em', lineHeight: 1.04 }, 'A beauty brand?<br>Give it a store<br><span class="p">that glows.</span>');
+  E(s, { left: 0, top: '800px', width: '1080px', textAlign: 'center', fontSize: '26px', fontWeight: 600, color: '#6a6270', lineHeight: 1.35 }, 'Skin quiz · routines · shades · subscriptions<br>— HeliosLabs Storefront');
+  E(s, { left: '290px', top: '895px', width: '500px', height: '70px', borderRadius: '35px', background: '#FFFDF8', boxShadow: '0 0 0 2px #E2D8C6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 800 }, 'Plans from <span class="p">&nbsp;₹999/month</span>');
+  E(s, { left: '190px', top: '985px', width: '700px', height: '116px', borderRadius: '58px', background: '#5A17E6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '38px', fontWeight: 800, boxShadow: '0 26px 60px rgba(90,23,230,0.38)' }, 'DM “STORE” for your demo 💬');
+  cursor(s, 760, 1060, 'You', '#F24E1E');
+  E(s, { left: 0, top: '1160px', width: '1080px', textAlign: 'center', fontSize: '24px', fontWeight: 700, color: '#8A8172' }, '@helioslabs.store');
+  foot(s, '08', true); }
+</script>
