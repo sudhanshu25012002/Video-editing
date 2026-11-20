@@ -1,0 +1,97 @@
+<section class="slide" id="s1"></section>
+<section class="slide" id="s2"></section>
+<section class="slide" id="s3"></section>
+<section class="slide" id="s4"></section>
+<section class="slide" id="s5"></section>
+<section class="slide" id="s6"></section>
+<section class="slide" id="s7"></section>
+<script>
+const IMG = f => () => `<img src="shots/${f}.jpg" style="width:360px;display:block">`;
+const SCREENS = { home: IMG('m_home'), home2: IMG('m_home2'), shop: IMG('m_shop'), pdp: IMG('m_pdp'), pdp2: IMG('m_pdp2'), cart: IMG('m_cart') };
+//HELPERS
+function chrome(s, file) { E(s, {}, `<div class="ic on">▲</div><div class="ic">#</div><div class="ic">□</div><div class="ic">✎</div><div class="ic">T</div><div class="ic">💬</div><div class="file">Aurelia Store / <b>${file}</b></div>${AV.map(([l, c]) => `<div class="av" style="background:${c}">${l}</div>`).join('')}<div class="share">Share</div><div style="color:#ccc;font-weight:700">▶</div>`, 'tb'); }
+function dframe(s, img, x, y, w, label) { E(s, { left: x + 'px', top: y - 24 + 'px' }, label, 'flabel'); E(s, { left: x + 'px', top: y + 'px', width: w + 'px' }, `<img src="shots/${img}.jpg" style="width:${w}px;display:block">`, 'frame'); return [x, y, w, w * 0.625]; }
+const INK = '#111111';
+
+// 1 cover
+{ const s = SS[1]; chrome(s, 'Storefront — v1');
+  head(s, 'STOREFRONT DESIGN · AURELIA', 'Designing a <span class="p">luxury fashion</span><br>store, screen by screen.');
+  frame(s, 'shop', 60, 470, 0.82, 'Collection'); frame(s, 'pdp', 735, 470, 0.82, 'Product');
+  const [x, y, w, h] = frame(s, 'home', 365, 430, 0.97, 'Home'); sel(s, x, y, w, h, '390 × 844');
+  cursor(s, 640, 760, 'HeliosLabs', '#5A17E6'); cursor(s, 170, 1000, 'Priya · Designer', '#F24E1E');
+  foot(s, '01'); }
+
+// 2 style guide
+{ const s = SS[2]; chrome(s, 'Design System');
+  head(s, 'BRAND STYLE GUIDE', 'Quiet luxury,<br><span class="p">by design.</span>');
+  E(s, { left: '60px', top: '406px' }, 'Aurelia — Style guide', 'flabel');
+  const g = E(s, { left: '60px', top: '430px', width: '960px', height: '800px', background: '#fff', borderRadius: '6px', boxShadow: '0 20px 50px rgba(28,23,38,0.12)' });
+  g.innerHTML = `<div style="position:absolute;left:40px;top:36px;font-size:15px;font-weight:800;letter-spacing:.14em;color:#8f8896">WORDMARK</div><div style="position:absolute;left:40px;top:66px;font-family:'DejaVu Serif',serif;font-size:56px;letter-spacing:.3em;color:${INK}">AURELIA</div><div style="position:absolute;left:44px;top:140px;font-size:15px;letter-spacing:.3em;color:#8a8580">ATELIER • NEW YORK</div>
+    <div style="position:absolute;left:40px;top:200px;font-size:15px;font-weight:800;letter-spacing:.14em;color:#8f8896">COLOURS</div>
+    ${[[INK, 'Noir', '#111111'], ['#F7F4EE', 'Ivory', '#F7F4EE'], ['#E7E0D4', 'Sand', '#E7E0D4'], ['#A79E90', 'Taupe', '#A79E90'], ['#C2185B', 'Sale', '#C2185B']].map(([c, n, h], i) => `<div style="position:absolute;left:${40 + i * 178}px;top:236px;width:160px"><div style="height:110px;border-radius:4px;background:${c};box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08)"></div><div style="font-size:16px;font-weight:800;margin-top:8px">${n}</div><div style="font-size:14px;color:#8f8896;font-family:'DejaVu Sans Mono'">${h}</div></div>`).join('')}
+    <div style="position:absolute;left:40px;top:430px;font-size:15px;font-weight:800;letter-spacing:.14em;color:#8f8896">TYPOGRAPHY</div>
+    <div style="position:absolute;left:40px;top:460px;font-family:'DejaVu Serif',serif;font-size:84px;line-height:1;font-style:italic">Aa</div><div style="position:absolute;left:170px;top:470px;font-size:16px;line-height:1.5"><b style="font-family:'DejaVu Serif',serif;font-size:20px">Editorial Serif</b><br>Headlines & italics</div>
+    <div style="position:absolute;left:40px;top:580px;font-size:40px;line-height:1;font-weight:600;letter-spacing:.24em">ABC</div><div style="position:absolute;left:170px;top:572px;font-size:16px;line-height:1.5"><b style="font-size:20px">Tracked Caps</b><br>Buttons & labels</div>
+    <div style="position:absolute;left:40px;top:680px;font-size:16px;color:#6a6270;width:380px;line-height:1.5">Monochrome palette, generous white space and editorial photography — a luxury feel on every screen.</div>
+    <div style="position:absolute;left:490px;top:430px;font-size:15px;font-weight:800;letter-spacing:.14em;color:#8f8896">COMPONENTS</div>
+    <div style="position:absolute;left:490px;top:466px;width:210px;height:54px;background:${INK};color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;letter-spacing:.2em">EXPLORE</div><div style="position:absolute;left:716px;top:466px;width:210px;height:54px;border:1.5px solid ${INK};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;letter-spacing:.2em;box-sizing:border-box">THE COAT</div>
+    <div style="position:absolute;left:490px;top:546px;display:flex;gap:8px">${['XS', 'S', 'M', 'L', 'XL'].map((z, i) => `<div style="width:52px;height:44px;border:1.5px solid ${i ? '#ddd' : INK};background:${i ? '#fff' : INK};color:${i ? INK : '#fff'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">${z}</div>`).join('')}</div>
+    <div style="position:absolute;left:490px;top:614px;display:flex;gap:10px"><span style="background:${INK};color:#fff;font-size:13px;font-weight:800;letter-spacing:.1em;padding:5px 10px">NEW</span><span style="background:#FCE4EC;color:#C2185B;font-size:13px;font-weight:800;padding:5px 10px">SAVE 23%</span><span style="color:#1f9d55;font-size:13px;font-weight:800;padding:5px 0">IN STOCK</span></div>
+    <div style="position:absolute;left:490px;top:664px;font-family:'DejaVu Serif',serif;font-size:28px">$890.00 <span style="font-size:18px;color:#aaa;text-decoration:line-through">$1,150.00</span></div>
+    <div style="position:absolute;left:490px;top:716px;display:flex;gap:10px">${[['#F7F4EE', 'Ivory Cream'], ['#C9B8A3', 'Warm Taupe'], [INK, 'Noir Obsidian']].map(([c, n], i) => `<span style="display:flex;align-items:center;gap:6px;border:1.5px solid ${i ? '#ddd' : INK};padding:6px 10px;font-size:13px;font-weight:600"><i style="width:14px;height:14px;border-radius:7px;background:${c};display:block;box-shadow:inset 0 0 0 1px #ccc"></i>${n}</span>`).join('')}</div>`;
+  sel(s, 60 + 490 - 6, 430 + 546 - 6, 300, 56); cursor(s, 860, 1010, 'HeliosLabs', '#5A17E6');
+  comment(s, 100, 1080, 'Client', 'Elegant & minimal — exactly our brand. ✨', '#0FA958');
+  foot(s, '02'); }
+
+// 3 desktop homepage
+{ const s = SS[3]; chrome(s, 'Desktop — Home');
+  head(s, 'DESKTOP HOMEPAGE', 'A homepage that<br><span class="p">feels like a boutique.</span>');
+  const [x, y, w, h] = dframe(s, 'd_home', 60, 450, 960, 'Desktop — 1440'); sel(s, x, y, w, h, '1440 × 900');
+  comment(s, 70, 1080, 'HeliosLabs', 'Editorial hero with two clear CTAs');
+  comment(s, 560, 1080, 'HeliosLabs', 'Offer bar + trust stats up top');
+  cursor(s, 900, 700, 'Priya · Designer', '#F24E1E');
+  foot(s, '03'); }
+
+// 4 mobile home flow
+{ const s = SS[4]; chrome(s, 'Mobile — Home');
+  head(s, 'MOBILE HOMEPAGE', 'Built for the<br><span class="p">phone first.</span>');
+  frame(s, 'home', 90, 450, 1.0, 'Home — hero'); frame(s, 'home2', 630, 450, 1.0, 'Home — categories');
+  noodle(s, 90 + 360 + 6, 450 + 440, 630 - 6, 450 + 160);
+  E(s, { left: '470px', top: '540px', background: '#0D99FF', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 10px', borderRadius: '6px', zIndex: 26 }, 'Scroll → Explore');
+  cursor(s, 900, 1150, 'HeliosLabs', '#5A17E6');
+  foot(s, '04'); }
+
+// 5 collection -> product
+{ const s = SS[5]; chrome(s, 'Mobile — Prototype');
+  head(s, 'COLLECTION → PRODUCT', 'Browse the edit.<br><span class="p">Fall for the coat.</span>');
+  frame(s, 'shop', 90, 450, 1.0, 'Collection'); frame(s, 'pdp', 630, 450, 1.0, 'Product');
+  sel(s, 90 + 18, 450 + 120, 324, 520, 'Product Card');
+  noodle(s, 90 + 342 + 8, 450 + 380, 630 - 6, 450 + 200);
+  E(s, { left: '470px', top: '520px', background: '#0D99FF', color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 10px', borderRadius: '6px', zIndex: 26 }, 'On tap → Smart animate');
+  cursor(s, 880, 1150, 'Client', '#0FA958');
+  foot(s, '05'); }
+
+// 6 size -> bag + dev mode
+{ const s = SS[6]; chrome(s, 'Mobile — Checkout flow');
+  head(s, 'SHADE · SIZE · BAG', 'From “I love it”<br><span class="p">to checkout.</span>');
+  frame(s, 'pdp2', 60, 450, 0.9, 'Product — options'); frame(s, 'cart', 440, 450, 0.9, 'Atelier bag');
+  noodle(s, 60 + 324 + 6, 450 + 330, 440 - 6, 450 + 160);
+  const dev = E(s, { left: '800px', top: '450px', width: '230px', height: '540px', background: '#2C2C2C', borderRadius: '10px', color: '#ddd', fontFamily: "'DejaVu Sans Mono'", fontSize: '14px', padding: '18px', boxSizing: 'border-box', boxShadow: '0 20px 50px rgba(28,23,38,0.25)', zIndex: 26 });
+  dev.innerHTML = `<div style="font-family:Inter;font-weight:800;color:#fff;font-size:15px;margin-bottom:12px">&lt;/&gt; Inspect<br><span style="color:#0D99FF">Button / Add to bag</span></div><div style="line-height:1.8"><span style="color:#9cdcfe">bg</span>: <span style="color:#ce9178">#111111</span><br><span style="color:#9cdcfe">color</span>: <span style="color:#ce9178">#FFFFFF</span><br><span style="color:#9cdcfe">height</span>: 48px<br><span style="color:#9cdcfe">letter-sp</span>: .2em<br><span style="color:#9cdcfe">font</span>: 700 13px</div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #444;font-family:Inter;font-size:15px;line-height:1.9;color:#eee">${['Shade picker', 'Size + guide', 'Express checkout', 'Free-shipping bar'].map(t => `<div><span style="color:#0FA958">✓</span> ${t}</div>`).join('')}</div>`;
+  E(s, { left: '800px', top: '1010px', padding: '12px 18px', borderRadius: '14px', background: '#1f9d55', color: '#fff', fontWeight: 800, fontSize: '19px', zIndex: 26 }, '● Built & live');
+  foot(s, '06'); }
+
+// 7 CTA
+{ const s = SS[7]; chrome(s, 'Your Brand — v1');
+  E(s, { left: '140px', top: '130px', width: '800px', height: '800px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(90,23,230,0.17), rgba(90,23,230,0) 65%)' });
+  E(s, { left: '420px', top: '230px', width: '240px', height: '240px', filter: 'drop-shadow(0 26px 40px rgba(90,23,230,0.35))' }, '<img src="data:image/png;base64,LOGO" style="width:240px;height:240px">');
+  sel(s, 410, 220, 260, 260, 'Your brand');
+  E(s, { left: 0, top: '540px', width: '1080px', textAlign: 'center', fontSize: '72px', fontWeight: 800, letterSpacing: '-0.045em', lineHeight: 1.04 }, 'A fashion brand?<br>Your store should<br><span class="p">feel this premium.</span>');
+  E(s, { left: 0, top: '800px', width: '1080px', textAlign: 'center', fontSize: '30px', fontWeight: 600, color: '#6a6270' }, 'Design · Build · Hosting · Maintenance — HeliosLabs Storefront');
+  E(s, { left: '290px', top: '870px', width: '500px', height: '70px', borderRadius: '35px', background: '#FFFDF8', boxShadow: '0 0 0 2px #E2D8C6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 800 }, 'Plans from <span class="p">&nbsp;₹999/month</span>');
+  E(s, { left: '190px', top: '975px', width: '700px', height: '116px', borderRadius: '58px', background: '#5A17E6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '38px', fontWeight: 800, boxShadow: '0 26px 60px rgba(90,23,230,0.38)' }, 'DM “STORE” for your demo 💬');
+  cursor(s, 760, 1050, 'You', '#F24E1E');
+  E(s, { left: 0, top: '1150px', width: '1080px', textAlign: 'center', fontSize: '26px', fontWeight: 800 }, '<span style="display:inline-flex;align-items:center;gap:10px;padding:10px 22px;border-radius:24px;background:#FFFDF8;box-shadow:0 0 0 2px #E2D8C6"><i style="width:12px;height:12px;border-radius:6px;background:#1f9d55;display:block"></i>Live demo · shop.helioslabs.in</span>');
+  foot(s, '07', true); }
+</script>
