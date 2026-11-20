@@ -1,0 +1,120 @@
+<style>
+  .browser { position: absolute; border-radius: 20px; background: var(--card); box-shadow: 0 30px 70px rgba(28,23,38,0.16), 0 0 0 2px var(--line); overflow: hidden; }
+  .browser .bar { height: 42px; background: #EDE5D7; display: flex; align-items: center; gap: 9px; padding-left: 18px; }
+  .browser .bar i { width: 12px; height: 12px; border-radius: 6px; display: block; }
+  .browser .url { margin-left: 14px; height: 26px; border-radius: 13px; background: var(--card); font-size: 15px; font-weight: 600; color: var(--mut); display: flex; align-items: center; padding: 0 14px; }
+  .browser img { display: block; width: 100%; }
+</style>
+<!-- 1 cover -->
+<section class="slide" id="s1">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">01 / 08</div></div>
+  <div class="kick">LIVE DEMO STORE · MADHURAM & CO.</div>
+  <h1>See a real store<br>built on <span class="p">Storefront.</span></h1>
+  <div class="sub" style="top:410px">A sweets & bakery brand — shop, cart, checkout & WhatsApp ordering, ready to use.</div>
+  <div class="browser" style="left:60px;top:520px;width:760px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 store.helioslabs.in</div></div><img src="shots/desk_top.jpg"></div>
+  <div class="phone" style="left:720px;top:600px;width:300px;z-index:3"><div class="scr"><div class="isl"></div><img src="shots/m_00.jpg"></div></div>
+  <div class="chip" style="left:60px;top:1060px"><span class="dot">✓</span>Desktop + mobile</div>
+  <div class="chip" style="left:60px;top:1145px"><span class="dot">✓</span>Try it yourself — it’s live</div>
+  <div class="foot"><span class="live"><i></i>Live demo · store.helioslabs.in</span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 2 homepage -->
+<section class="slide" id="s2">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">02 / 08</div></div>
+  <div class="kick">HOMEPAGE</div>
+  <h1>Your brand,<br><span class="p">front and centre.</span></h1>
+  <div class="phone" style="left:90px;top:440px;width:330px;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/m_00.jpg"></div></div>
+  <div class="phone" style="left:470px;top:470px;width:330px;transform:rotate(3deg)"><div class="scr"><div class="isl"></div><img src="shots/m_01.jpg"></div></div>
+  <div class="chip" style="right:30px;top:480px"><span class="dot">%</span>Offer bar & discount code</div>
+  <div class="chip" style="right:30px;top:820px"><span class="dot">✆</span>WhatsApp order button</div>
+  <div class="chip" style="right:30px;top:905px"><span class="dot">🚚</span>Free-shipping promo</div>
+  <div class="chip" style="left:30px;top:1150px"><span class="dot">▦</span>Shop by category</div>
+  <div class="foot" style="bottom:30px"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 3 catalogue -->
+<section class="slide" id="s3">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">03 / 08</div></div>
+  <div class="kick">PRODUCT CATALOGUE</div>
+  <h1>Every product,<br><span class="p">easy to find.</span></h1>
+  <div class="browser" style="left:60px;top:440px;width:700px;transform:rotate(-1.5deg)"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><div class="url">🔒 store.helioslabs.in/shop</div></div><img src="shots/dshop.jpg"></div>
+  <div class="phone" style="left:700px;top:620px;width:310px;z-index:3"><div class="scr"><div class="isl"></div><img src="shots/mshop_1.jpg"></div></div>
+  <div class="chip" style="left:60px;top:930px"><span class="dot">⌕</span>Search & sort</div>
+  <div class="chip" style="left:60px;top:1015px"><span class="dot">▤</span>Category & dietary filters</div>
+  <div class="chip" style="left:60px;top:1100px"><span class="dot">%</span>Discount & veg / eggless badges</div>
+  <div class="chip" style="left:60px;top:1185px"><span class="dot">★</span>Ratings on every product</div>
+  <div class="foot" style="bottom:30px"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 4 product -->
+<section class="slide" id="s4">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">04 / 08</div></div>
+  <div class="kick">PRODUCT PAGE</div>
+  <h1>Pick the size.<br><span class="p">Buy in one tap.</span></h1>
+  <div class="phone" style="left:90px;top:440px;width:330px;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/mpdp_0.jpg"></div></div>
+  <div class="phone" style="left:470px;top:470px;width:330px;transform:rotate(3deg)"><div class="scr"><div class="isl"></div><img src="shots/mpdp_1.jpg"></div></div>
+  <div class="chip" style="right:30px;top:500px"><span class="dot">▣</span>Size / box options</div>
+  <div class="chip" style="right:30px;top:585px"><span class="dot">✓</span>Live stock count</div>
+  <div class="chip" style="right:30px;top:900px"><span class="dot">🛍</span>Add to basket</div>
+  <div class="chip" style="right:30px;top:985px"><span class="dot">✆</span>Buy via WhatsApp</div>
+  <div class="chip" style="left:30px;top:1150px"><span class="dot">✓</span>Notes, storage & delivery info</div>
+  <div class="foot" style="bottom:30px"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 5 basket + checkout -->
+<section class="slide" id="s5">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">05 / 08</div></div>
+  <div class="kick">BASKET & CHECKOUT</div>
+  <h1>Checkout that<br><span class="p">just works.</span></h1>
+  <div class="phone" style="left:60px;top:500px;width:290px;transform:rotate(-5deg)"><div class="scr"><div class="isl"></div><img src="shots/madd.jpg"></div></div>
+  <div class="phone" style="left:395px;top:450px;width:290px;z-index:2"><div class="scr"><div class="isl"></div><img src="shots/mcheckout_0.jpg"></div></div>
+  <div class="phone" style="left:730px;top:500px;width:290px;transform:rotate(5deg)"><div class="scr"><div class="isl"></div><img src="shots/mcheckout_1.jpg"></div></div>
+  <div class="chip" style="left:40px;top:1140px"><span class="dot">🚚</span>Free-delivery progress</div>
+  <div class="chip" style="left:410px;top:1225px"><span class="dot">✓</span>Simple 3-step checkout</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 6 payments -->
+<section class="slide" id="s6">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">06 / 08</div></div>
+  <div class="kick">ORDERS & PAYMENTS</div>
+  <h1>WhatsApp orders<br><span class="p">or online payment.</span></h1>
+  <div class="a" style="left:60px;top:450px;width:460px;height:420px;border-radius:30px;background:#FFFDF8;box-shadow:0 24px 60px rgba(28,23,38,0.12),0 0 0 2px var(--line);padding:36px;box-sizing:border-box">
+    <div style="width:90px;height:90px;border-radius:24px;background:#25d366;color:#fff;font-size:50px;display:flex;align-items:center;justify-content:center">✆</div>
+    <div style="font-size:36px;font-weight:800;margin-top:24px;letter-spacing:-0.02em">WhatsApp handoff</div>
+    <div style="font-size:23px;font-weight:500;color:#6a6270;margin-top:12px;line-height:1.4">Order summary opens straight in WhatsApp — confirm, add custom instructions, done.</div></div>
+  <div class="a" style="left:560px;top:450px;width:460px;height:420px;border-radius:30px;background:#5A17E6;color:#fff;box-shadow:0 24px 60px rgba(90,23,230,0.3);padding:36px;box-sizing:border-box">
+    <div style="width:90px;height:90px;border-radius:24px;background:rgba(255,255,255,0.18);font-size:46px;display:flex;align-items:center;justify-content:center">₹</div>
+    <div style="font-size:36px;font-weight:800;margin-top:24px;letter-spacing:-0.02em">Pay online</div>
+    <div style="font-size:23px;font-weight:500;opacity:.88;margin-top:12px;line-height:1.4">UPI, cards & net banking through a payment gateway.</div></div>
+  <div class="a" style="left:60px;top:910px;width:960px;display:grid;grid-template-columns:1fr 1fr;gap:18px 24px;font-size:26px;font-weight:700">
+    <div>✓ Delivery address & PIN code</div><div>✓ WhatsApp order confirmation</div><div>✓ Discount codes & offers</div><div>✓ Packaging / gift notes</div></div>
+  <div class="a" style="left:60px;top:1100px;width:960px;height:110px;border-radius:24px;background:#1C1726;color:#fff;display:flex;align-items:center;gap:20px;padding:0 32px;box-sizing:border-box;font-size:26px;font-weight:700"><span style="font-size:40px">🛠</span>Plus your own Admin Panel to manage products & orders</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 7 brand story -->
+<section class="slide" id="s7">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">07 / 08</div></div>
+  <div class="kick">BRAND STORY & TRUST</div>
+  <h1>Tell your story.<br><span class="p">Earn their trust.</span></h1>
+  <div class="phone" style="left:60px;top:500px;width:290px;transform:rotate(-5deg)"><div class="scr"><div class="isl"></div><img src="shots/m_06.jpg"></div></div>
+  <div class="phone" style="left:395px;top:450px;width:290px;z-index:2"><div class="scr"><div class="isl"></div><img src="shots/m_07.jpg"></div></div>
+  <div class="phone" style="left:730px;top:500px;width:290px;transform:rotate(5deg)"><div class="scr"><div class="isl"></div><img src="shots/m_08.jpg"></div></div>
+  <div class="chip" style="left:60px;top:1140px"><span class="dot">✓</span>Heritage story</div>
+  <div class="chip" style="left:380px;top:1140px"><span class="dot">★</span>Verified reviews</div>
+  <div class="chip" style="left:720px;top:1140px"><span class="dot">📍</span>Store locations</div>
+  <div class="foot"><span></span><span class="swipe">Swipe →</span></div>
+</section>
+
+<!-- 8 CTA -->
+<section class="slide" id="s8">
+  <div class="top"><img src="data:image/png;base64,LOGO"><div class="brand">HeliosLabs Storefront</div><div class="num">08 / 08</div></div>
+  <div class="a" style="left:140px;top:120px;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle, rgba(90,23,230,0.17), rgba(90,23,230,0) 65%)"></div>
+  <img class="a" src="data:image/png;base64,LOGO" style="left:430px;top:220px;width:220px;height:220px;filter:drop-shadow(0 26px 40px rgba(90,23,230,0.35))">
+  <div class="a" style="left:0;top:510px;width:1080px;text-align:center;font-size:76px;font-weight:800;letter-spacing:-0.045em;line-height:1.04">Imagine <span class="p">your brand</span><br>with a store<br>like this.</div>
+  <div class="a" style="left:0;top:790px;width:1080px;text-align:center;font-size:30px;font-weight:500;color:#6a6270">Store · WhatsApp checkout · payments · hosting — all included.</div>
+  <div class="a" style="left:290px;top:860px;width:500px;height:70px;border-radius:35px;background:#FFFDF8;box-shadow:0 0 0 2px #E2D8C6;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800">Plans from <span class="p">&nbsp;₹999/month</span></div>
+  <div class="a" style="left:190px;top:965px;width:700px;height:116px;border-radius:58px;background:var(--pur);color:#fff;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;box-shadow:0 26px 60px rgba(90,23,230,0.38)">DM “STORE” 💬</div>
+  <div class="a" style="left:0;top:1150px;width:1080px;text-align:center;font-size:26px"><span class="live"><i></i>Try the live demo · store.helioslabs.in</span></div>
+</section>
