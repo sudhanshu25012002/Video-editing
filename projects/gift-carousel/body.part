@@ -1,0 +1,169 @@
+<style>
+  .g { position: relative; width: 360px; height: 780px; font-family: 'Inter', sans-serif; color: #3E2433; background: #FBF3E8; overflow: hidden; }
+  .gsb { height: 34px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; }
+  .gnav { height: 46px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+  .glogo { font-family: 'DejaVu Serif', Georgia, serif; font-size: 19px; font-weight: 700; color: #3E2433; }
+  .glogo i { font-style: normal; color: #C8553D; }
+  .ph { background-size: cover; background-position: center; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 20px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .gbtn { display: flex; align-items: center; justify-content: center; border-radius: 16px; font-weight: 800; font-size: 14px; }
+  .serif { font-family: 'DejaVu Serif', Georgia, serif; }
+  .script { font-family: 'DejaVu Serif', Georgia, serif; font-style: italic; }
+</style>
+<section class="slide" id="s1"></section><section class="slide" id="s2"></section><section class="slide" id="s3"></section><section class="slide" id="s4"></section>
+<section class="slide" id="s5"></section><section class="slide" id="s6"></section><section class="slide" id="s7"></section><section class="slide" id="s8"></section>
+<script>
+const TERRA = '#C8553D', PLUM = '#3E2433', CREAM = '#FBF3E8', GOLD = '#D4A24C', ROSE = '#F2D7CF', SAGE = '#9CB59A';
+const I = id => `url(img/${id}.jpg)`;
+const P = [
+  { n: 'Name Mug — “Riya ❤”', s: 'Custom mug · 330 ml', p: '₹449', img: '13360742', tag: 'Personalised' },
+  { n: 'Memory Photo Frame', s: 'Your photo · wooden', p: '₹799', img: '4464204', tag: 'Bestseller' },
+  { n: 'Initial Pendant', s: 'Gold-plated · A–Z', p: '₹1,299', img: '13292666', tag: '' },
+  { n: 'Custom Label Candle', s: 'Soy wax · 40 hrs', p: '₹599', img: '12336392', tag: 'New' },
+  { n: 'Surprise Gift Box', s: 'Curated hamper', p: '₹1,499', img: '10520248', tag: '' },
+  { n: 'Couple Star Necklace', s: 'Engraved date', p: '₹999', img: '13325931', tag: '' }];
+const SB = '<div class="gsb"><span>9:41</span><span>●●● ▮</span></div>';
+const NAV = `<div class="gnav"><span style="font-size:18px">☰</span><span class="glogo">Tohfa<i>&</i>Co.</span><span style="font-size:16px">⌕ &nbsp;🎁</span></div>`;
+const pc = (k, w = 156, h = 160) => `<div style="width:${w}px"><div class="ph" style="height:${h}px;border-radius:18px;background-image:${I(P[k].img)};position:relative">${P[k].tag ? `<span class="pill" style="position:absolute;left:8px;top:8px;background:${CREAM};color:${TERRA};padding:4px 9px;font-size:10px">✎ ${P[k].tag}</span>` : ''}</div>
+  <div style="font-size:12.5px;font-weight:800;margin-top:8px;line-height:1.25">${P[k].n}</div><div style="font-size:11px;color:#9a8478;margin-top:2px">${P[k].s}</div><div style="font-size:13px;font-weight:800;margin-top:4px;color:${TERRA}">${P[k].p}</div></div>`;
+const SCREENS = {
+  home: () => `<div class="g">${SB}${NAV}
+    <div class="ph" style="margin:4px 14px 0;height:250px;border-radius:24px;background-image:${I('5493197')};background-position:center 30%;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(62,36,51,0) 35%,rgba(62,36,51,0.7))"></div>
+      <div class="serif" style="position:absolute;left:18px;bottom:58px;color:#fff;font-size:25px;line-height:1.12">Gifts that say<br><span class="script" style="color:#F7D9A0">their name.</span></div>
+      <div class="gbtn" style="position:absolute;left:18px;bottom:16px;width:150px;height:34px;background:${CREAM};color:${PLUM};font-size:12px;border-radius:17px">Personalise now →</div></div>
+    <div style="margin:14px 16px 8px;font-size:15px;font-weight:800">Shop by occasion</div>
+    <div style="display:flex;gap:10px;margin:0 16px">${[['🎂', 'Birthday'], ['💍', 'Anniversary'], ['🪔', 'Diwali'], ['🧵', 'Rakhi']].map(([e, n], i) => `<div style="text-align:center;width:72px"><div style="width:64px;height:64px;border-radius:32px;margin:0 auto;background:${i ? ROSE : TERRA};font-size:28px;display:flex;align-items:center;justify-content:center">${e}</div><div style="font-size:11px;font-weight:700;margin-top:5px">${n}</div></div>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin:14px 16px 0">${['For Her', 'For Him', 'Mom', 'Friends'].map((n, i) => `<span class="pill" style="background:${i ? '#fff' : PLUM};color:${i ? PLUM : '#fff'};box-shadow:0 0 0 1px #eadccd">${n}</span>`).join('')}</div>
+    <div style="display:flex;justify-content:space-between;margin:14px 16px 8px;font-size:15px;font-weight:800">Personalise it ✎<span style="font-size:12px;color:${TERRA}">View all</span></div>
+    <div style="display:flex;gap:16px;margin:0 16px">${pc(0, 156, 120)}${pc(1, 156, 120)}</div></div>`,
+  mug: () => `<div class="g">${SB}<div class="gnav"><span>←</span><span style="font-size:12px;font-weight:800;letter-spacing:.12em">PERSONALISE</span><span>♡</span></div>
+    <div style="margin:0 14px;height:250px;border-radius:24px;position:relative;overflow:hidden" class="ph" ><div class="ph" style="position:absolute;inset:0;background-image:${I('13360742')};background-position:center"></div>
+      <div class="script" style="position:absolute;left:96px;top:96px;width:120px;text-align:center;font-size:30px;color:${TERRA};transform:rotate(-2deg)">Riya ❤</div>
+      <span class="pill" style="position:absolute;right:12px;top:12px;background:rgba(251,243,232,0.9)">● Live preview</span></div>
+    <div class="serif" style="margin:12px 16px 0;font-size:20px">Name Mug</div><div style="margin:2px 16px 0;font-size:18px;font-weight:800;color:${TERRA}">₹449</div>
+    <div style="margin:12px 16px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;color:#9a8478">NAME / MESSAGE</div>
+    <div style="margin:0 16px;height:46px;border-radius:14px;background:#fff;box-shadow:0 0 0 2px ${TERRA};display:flex;align-items:center;padding:0 14px;font-size:16px;font-weight:700">Riya ❤<span style="margin-left:2px;width:2px;height:20px;background:${TERRA};display:block"></span><span style="margin-left:auto;font-size:11px;color:#9a8478">6/12</span></div>
+    <div style="margin:12px 16px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;color:#9a8478">FONT</div>
+    <div style="display:flex;gap:8px;margin:0 16px">${[['Script', 'script'], ['Classic', 'serif'], ['Bold', '']].map(([n, c], i) => `<span class="pill ${c}" style="background:${i ? '#fff' : PLUM};color:${i ? PLUM : '#fff'};box-shadow:0 0 0 1px #eadccd;font-size:14px;${c === '' ? 'font-weight:900' : ''}">${n}</span>`).join('')}</div>
+    <div style="margin:12px 16px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;color:#9a8478">INK COLOUR</div>
+    <div style="display:flex;gap:10px;margin:0 16px">${[TERRA, PLUM, GOLD, '#2E6FD8', '#1f9d55'].map((c, i) => `<i style="width:32px;height:32px;border-radius:16px;background:${c};display:block;box-shadow:${i ? 'none' : `0 0 0 3px ${CREAM},0 0 0 5px ${PLUM}`}"></i>`).join('')}</div>
+    <div class="gbtn" style="position:absolute;left:16px;right:16px;bottom:22px;height:52px;background:${TERRA};color:#fff">Add to bag · ₹449</div></div>`,
+  frame: () => `<div class="g">${SB}<div class="gnav"><span>←</span><span style="font-size:12px;font-weight:800;letter-spacing:.12em">PERSONALISE</span><span>♡</span></div>
+    <div style="margin:0 14px;height:360px;border-radius:24px;position:relative;overflow:hidden"><div class="ph" style="position:absolute;inset:0;background-image:${I('4464204')};background-position:center"></div>
+      <div class="ph" style="position:absolute;left:130px;top:130px;width:84px;height:106px;background-image:${I('5910938')};background-position:center"></div>
+      <span class="pill" style="position:absolute;right:12px;top:12px;background:rgba(251,243,232,0.9)">● Live preview</span></div>
+    <div class="serif" style="margin:12px 16px 0;font-size:20px">Memory Photo Frame</div><div style="margin:2px 16px 0;font-size:18px;font-weight:800;color:${TERRA}">₹799</div>
+    <div style="margin:12px 16px 0;display:flex;gap:10px"><div style="flex:1;height:76px;border-radius:16px;border:2px dashed ${TERRA};display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${TERRA}"><div style="font-size:22px">⇪</div>Upload photo</div><div class="ph" style="width:76px;height:76px;border-radius:16px;background-image:${I('5910938')};box-shadow:0 0 0 3px ${TERRA}"></div></div>
+    <div style="margin:12px 16px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;color:#9a8478">FINISH</div>
+    <div style="display:flex;gap:8px;margin:0 16px">${['Natural wood', 'Walnut', 'White'].map((n, i) => `<span class="pill" style="background:${i ? '#fff' : PLUM};color:${i ? PLUM : '#fff'};box-shadow:0 0 0 1px #eadccd">${n}</span>`).join('')}</div>
+    <div class="gbtn" style="position:absolute;left:16px;right:16px;bottom:22px;height:52px;background:${TERRA};color:#fff">Add to bag · ₹799</div></div>`,
+  giftopts: () => `<div class="g">${SB}<div class="gnav"><span>←</span><span style="font-weight:800">Make it a gift 🎁</span><span></span></div>
+    <div style="margin:4px 16px 8px;font-size:11px;font-weight:800;letter-spacing:.08em;color:#9a8478">GIFT WRAP</div>
+    <div style="display:flex;gap:10px;margin:0 16px">${[['10520248', 'Golden'], ['6102143', 'Red ribbon'], ['29873592', 'Classic']].map(([id, n], i) => `<div style="width:100px;text-align:center"><div class="ph" style="height:90px;border-radius:14px;background-image:${I(id)};box-shadow:${i ? 'none' : `0 0 0 3px ${TERRA}`}"></div><div style="font-size:11px;font-weight:700;margin-top:5px">${n}${i ? '' : ' ✓'}</div></div>`).join('')}</div>
+    <div style="margin:14px 16px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;color:#9a8478">HANDWRITTEN NOTE</div>
+    <div style="margin:0 16px;padding:14px 16px;border-radius:16px;background:#fff;box-shadow:0 6px 18px rgba(62,36,51,0.08);transform:rotate(-1deg)"><div class="script" style="font-size:16px;line-height:1.5;color:${PLUM}">Happy birthday Riya!<br>Here’s to many more chai dates ☕<br>— Aman</div></div>
+    <div style="margin:14px 16px 0;background:#fff;border-radius:16px;padding:4px 14px">${[['📅', 'Deliver on 24 Nov', 'Birthday'], ['🙈', 'Hide price on invoice', ''], ['📍', 'Send to someone else', 'Riya · Pune']].map(([e, a, b], k) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;${k < 2 ? 'border-bottom:1px solid #f1e6da' : ''};font-size:13px;font-weight:700"><span style="font-size:18px">${e}</span>${a}<span style="margin-left:auto;font-size:11px;color:#9a8478">${b}</span><span style="width:38px;height:22px;border-radius:11px;background:${TERRA};position:relative;display:block;flex:none"><i style="position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:8px;background:#fff"></i></span></div>`).join('')}</div>
+    <div class="gbtn" style="position:absolute;left:16px;right:16px;bottom:22px;height:52px;background:${PLUM};color:#fff">Checkout · ₹1,327</div></div>`,
+  track: () => `<div class="g">${SB}<div class="gnav"><span>←</span><span style="font-weight:800">Order #TC-4821</span><span></span></div>
+    <div style="margin:4px 16px;padding:14px;border-radius:18px;background:#fff;display:flex;gap:12px;align-items:center"><div class="ph" style="width:64px;height:64px;border-radius:14px;background-image:${I('13360742')};position:relative"><span class="script" style="position:absolute;left:14px;top:22px;font-size:11px;color:${TERRA}">Riya ❤</span></div><div><div style="font-size:14px;font-weight:800">Name Mug + Photo Frame</div><div style="font-size:12px;color:#9a8478">Arriving 24 Nov · Birthday</div></div></div>
+    <div style="margin:10px 16px;padding:16px;border-radius:18px;background:#fff">${[['✎', 'Being personalised', 'Your design is approved', 1], ['🔍', 'Quality check', 'Print looks perfect', 1], ['🎁', 'Gift-wrapped', 'Golden wrap + note', 1], ['🚚', 'Out for delivery', 'Today, by 6 PM', 0], ['🥳', 'Delivered', '', 0]].map(([e, a, b, d], k) => `<div style="display:flex;gap:14px;align-items:flex-start;position:relative;padding-bottom:${k < 4 ? 16 : 0}px">${k < 4 ? `<i style="position:absolute;left:16px;top:34px;width:2px;height:${30}px;background:${d ? TERRA : '#eadccd'};display:block"></i>` : ''}<div style="width:34px;height:34px;border-radius:17px;background:${d ? TERRA : ROSE};color:${d ? '#fff' : PLUM};font-size:15px;display:flex;align-items:center;justify-content:center;flex:none">${e}</div><div><div style="font-size:13.5px;font-weight:800;color:${d ? PLUM : '#a99'}">${a}</div><div style="font-size:11.5px;color:#9a8478">${b}</div></div></div>`).join('')}</div>
+    <div style="margin:0 16px;padding:12px 14px;border-radius:16px;background:#E6F4EA;display:flex;gap:10px;align-items:center;font-size:12.5px;font-weight:700;color:#1d6b3a"><span style="font-size:20px">✆</span>Updates on WhatsApp — for you & the surprise stays safe 🤫</div></div>`,
+};
+//HELPERS
+function chrome(s, file) { E(s, {}, `<div class="ic on">▲</div><div class="ic">#</div><div class="ic">□</div><div class="ic">✎</div><div class="ic">T</div><div class="ic">💬</div><div class="file">Tohfa & Co. / <b>${file}</b></div>${AV.map(([l, c]) => `<div class="av" style="background:${c}">${l}</div>`).join('')}<div class="share">Share</div><div style="color:#ccc;font-weight:700">▶</div>`, 'tb'); }
+const tag = (s, x, y, txt, bg = '#0D99FF') => E(s, { left: x + 'px', top: y + 'px', background: bg, color: '#fff', fontSize: '14px', fontWeight: 700, padding: '5px 10px', borderRadius: '6px', zIndex: 26, whiteSpace: 'nowrap' }, txt);
+const gc = (s, x, y, w, html, z = 27) => E(s, { left: x + 'px', top: y + 'px', width: w + 'px', borderRadius: '24px', background: 'rgba(251,243,232,0.9)', backdropFilter: 'blur(12px)', boxShadow: '0 24px 60px rgba(62,36,51,0.18), 0 0 0 1.5px rgba(255,255,255,0.8)', padding: '18px 20px', boxSizing: 'border-box', zIndex: z }, html);
+
+// 1 cover
+{ const s = SS[1]; chrome(s, 'Store — v1');
+  head(s, 'STOREFRONT DESIGN · GIFTS & PERSONALISED', 'A gift store where every<br>gift says <span class="p">their name.</span>');
+  frame(s, 'mug', 60, 480, 0.82, 'Personalise'); frame(s, 'giftopts', 735, 480, 0.82, 'Gift options');
+  const [x, y, w, h] = frame(s, 'home', 365, 440, 0.97, 'Home'); sel(s, x, y, w, h, '390 × 844');
+  gc(s, 40, 1090, 320, `<div style="display:flex;gap:12px;align-items:center"><div class="ph" style="width:64px;height:64px;border-radius:16px;background-image:${I('13360742')}"></div><div><div style="font-size:15px;font-weight:800">New order 🎉</div><div style="font-size:13px;color:#8a7468">Name Mug “Riya ❤” · ₹449</div></div></div>`);
+  gc(s, 740, 1160, 290, `<div style="font-size:13px;font-weight:800;color:#9a8478">THIS WEEK</div><div style="font-size:30px;font-weight:900">126 gifts</div><div style="font-size:13px;font-weight:800;color:#1f9d55">▲ 3× before Diwali</div>`);
+  cursor(s, 660, 760, 'HeliosLabs', '#5A17E6'); cursor(s, 190, 1000, 'Kavya · Designer', '#F24E1E');
+  foot(s, '01'); }
+
+// 2 brand system with real moodboard
+{ const s = SS[2]; chrome(s, 'Brand System');
+  head(s, 'BRAND SYSTEM & MOODBOARD', 'Warm, personal,<br><span class="p">made with love.</span>');
+  E(s, { left: '60px', top: '406px' }, 'Tohfa & Co. — Moodboard', 'flabel');
+  const mb = E(s, { left: '60px', top: '430px', width: '460px', height: '760px' });
+  [['5493197', 0, 0, 220, 300], ['264771', 236, 0, 224, 190], ['13292666', 236, 206, 224, 250], ['6102143', 0, 316, 220, 140], ['842876', 0, 472, 220, 288], ['7319326', 236, 472, 224, 288]].forEach(([id, x, y, w, h]) => E(mb, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', borderRadius: '18px', backgroundImage: I(id), backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 10px 30px rgba(62,36,51,0.12)' }));
+  E(s, { left: '560px', top: '406px' }, 'Tohfa & Co. — Style guide', 'flabel');
+  const g = E(s, { left: '560px', top: '430px', width: '460px', height: '760px', background: '#fff', borderRadius: '6px', boxShadow: '0 20px 50px rgba(28,23,38,0.12)' });
+  g.innerHTML = `<div style="position:absolute;left:30px;top:28px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">WORDMARK</div><div class="glogo" style="position:absolute;left:30px;top:52px;font-size:46px">Tohfa<i>&</i>Co.</div><div style="position:absolute;left:32px;top:116px;font-size:13px;letter-spacing:.3em;color:#9a8478">GIFTS · MADE PERSONAL</div>
+    <div style="position:absolute;left:30px;top:160px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">PALETTE</div>
+    ${[[PLUM, 'Plum'], [TERRA, 'Terracotta'], [GOLD, 'Gold'], [ROSE, 'Blush'], [SAGE, 'Sage']].map(([c, n], i) => `<div style="position:absolute;left:${30 + i * 82}px;top:188px;width:70px"><div style="height:70px;border-radius:35px;background:${c}"></div><div style="font-size:12px;font-weight:800;margin-top:6px;text-align:center">${n}</div></div>`).join('')}
+    <div style="position:absolute;left:30px;top:300px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">TYPE</div>
+    <div class="script" style="position:absolute;left:30px;top:322px;font-size:52px;color:${TERRA}">Aa</div><div style="position:absolute;left:110px;top:334px;font-size:14px;line-height:1.5"><b class="serif" style="font-size:17px">Serif + script</b><br>Names & headlines</div>
+    <div style="position:absolute;left:260px;top:322px;font-size:52px;font-weight:800">Aa</div><div style="position:absolute;left:340px;top:334px;font-size:14px;line-height:1.5"><b style="font-size:17px">Inter</b><br>UI & body</div>
+    <div style="position:absolute;left:30px;top:420px;font-size:13px;font-weight:800;letter-spacing:.14em;color:#8f8896">COMPONENTS</div>
+    <div class="gbtn" style="position:absolute;left:30px;top:450px;width:190px;height:48px;background:${TERRA};color:#fff">✎ Personalise</div><div class="gbtn" style="position:absolute;left:236px;top:450px;width:190px;height:48px;border:1.5px solid ${PLUM};box-sizing:border-box">🎁 Gift wrap</div>
+    <div style="position:absolute;left:30px;top:520px;display:flex;gap:8px;flex-wrap:wrap;width:400px">${['🎂 Birthday', '💍 Anniversary', '🪔 Diwali', 'For Her', 'For Mom'].map((c, i) => `<span class="pill" style="background:${i ? ROSE : PLUM};color:${i ? PLUM : '#fff'};font-size:13px">${c}</span>`).join('')}</div>
+    <div style="position:absolute;left:30px;top:614px;width:400px;height:52px;border-radius:14px;box-shadow:0 0 0 2px ${TERRA};display:flex;align-items:center;padding:0 16px;box-sizing:border-box"><span class="script" style="font-size:22px;color:${TERRA}">Riya ❤</span><span style="margin-left:auto;font-size:12px;color:#9a8478">Name field · 6/12</span></div>
+    <div style="position:absolute;left:30px;top:690px;display:flex;gap:10px;align-items:center">${[TERRA, PLUM, GOLD].map((c, i) => `<i style="width:34px;height:34px;border-radius:17px;background:${c};display:block;box-shadow:${i ? 'none' : `0 0 0 3px #fff,0 0 0 5px ${PLUM}`}"></i>`).join('')}<span style="font-size:13px;font-weight:700;color:#9a8478">Ink colour</span></div>`;
+  sel(s, 560 + 30 - 6, 430 + 614 - 6, 412, 64); tag(s, 560 + 30, 430 + 614 - 36, '◇ Name Input', '#9747FF');
+  cursor(s, 380, 560, 'Client', '#0FA958'); comment(s, 280, 1110, 'Client', 'Cosy & premium — perfect for gifting 🎁', '#0FA958');
+  foot(s, '02'); }
+
+// 3 home: occasion + recipient
+{ const s = SS[3]; chrome(s, 'Mobile — Home');
+  head(s, 'HOME SCREEN', 'Shop by <span class="p">occasion</span><br>& who it’s for.');
+  const [x, y, w, h] = frame(s, 'home', 90, 450, 1.0, 'Home'); sel(s, x + 12, y + 34 + 46 + 4 + 250 + 14 + 26 - 4, 336, 94, 'Occasions');
+  comment(s, 500, 470, 'HeliosLabs', 'Emotional hero — real gifting moments');
+  comment(s, 500, 820, 'HeliosLabs', 'Occasions & recipients — Birthday, Diwali, For Her…');
+  comment(s, 500, 1060, 'HeliosLabs', '“Personalise it” products up front');
+  gc(s, 560, 1160, 400, `<div style="font-size:13px;font-weight:800;color:#9a8478;letter-spacing:.08em">WHY IT WORKS</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">Gift buyers know the <span style="color:${TERRA}">person & the date</span> — not the product.</div>`);
+  foot(s, '03'); }
+
+// 4 live personaliser (mug + photo frame)
+{ const s = SS[4]; chrome(s, 'Prototype — Personaliser');
+  head(s, 'LIVE PERSONALISATION', 'Type a name. Upload a photo.<br><span class="p">See it instantly.</span>');
+  frame(s, 'mug', 90, 450, 1.0, 'Name mug'); frame(s, 'frame', 630, 450, 1.0, 'Photo frame');
+  sel(s, 90 + 16, 450 + 34 + 46 + 250 + 12 + 30 + 22 + 22, 328, 46, 'Name input');
+  noodle(s, 90 + 344 + 8, 450 + 400, 630 - 6, 450 + 520); tag(s, 470, 960, 'Typing → updates preview');
+  gc(s, 380, 1190, 330, `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:34px">✨</div><div><div style="font-size:15px;font-weight:800">No back-and-forth DMs</div><div style="font-size:13px;color:#8a7468">Customer approves the design</div></div></div>`);
+  foot(s, '04'); }
+
+// 5 gift options
+{ const s = SS[5]; chrome(s, 'Mobile — Gift options');
+  head(s, 'MAKE IT A GIFT', 'Wrap, note, date —<br><span class="p">the surprise is ready.</span>');
+  const [x, y, w, h] = frame(s, 'giftopts', 90, 450, 1.0, 'Gift options'); sel(s, x + 16, y + 34 + 46 + 4 + 20 + 116 + 14 + 22, 328, 104, 'Handwritten note');
+  [['🎁', 'Premium gift wrap', 'Pick a wrap style'], ['✍', 'Handwritten note', 'Your words, their smile'], ['📅', 'Deliver on the date', 'Birthday-perfect timing'], ['🙈', 'Hide the price', 'Gift-safe invoice']].forEach(([ic, n, d], k) => gc(s, 500, 470 + k * 180, 520, `<div style="display:flex;gap:16px;align-items:center"><div style="width:70px;height:70px;border-radius:20px;background:${ROSE};font-size:34px;display:flex;align-items:center;justify-content:center">${ic}</div><div><div style="font-size:22px;font-weight:800">${n}</div><div style="font-size:16px;color:#8a7468;margin-top:2px">${d}</div></div></div>`));
+  cursor(s, 880, 1200, 'HeliosLabs', '#5A17E6');
+  foot(s, '05'); }
+
+// 6 tracking + the moment
+{ const s = SS[6]; chrome(s, 'Mobile — Tracking');
+  head(s, 'TRACK THE SURPRISE', 'From “being made”<br>to <span class="p">“she loved it.”</span>');
+  frame(s, 'track', 90, 450, 1.0, 'Order tracking');
+  E(s, { left: '520px', top: '470px', width: '480px', height: '600px', borderRadius: '30px', backgroundImage: I('5493208'), backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: '0 30px 70px rgba(62,36,51,0.25)', border: '8px solid #fff' });
+  gc(s, 560, 1000, 420, `<div style="display:flex;gap:12px;align-items:center"><div style="width:52px;height:52px;border-radius:26px;background:#25d366;color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center">✆</div><div><div style="font-size:16px;font-weight:800">Delivered 🥳</div><div style="font-size:14px;color:#8a7468">“She loved it!” — Aman</div></div></div>`);
+  E(s, { left: '540px', top: '1160px', display: 'flex', gap: '10px', zIndex: 28 }, ['★★★★★ review', '📸 Photo shared'].map(t => `<div style="padding:12px 16px;border-radius:16px;background:#FFFDF8;box-shadow:0 10px 26px rgba(28,23,38,0.12),0 0 0 2px #E2D8C6;font-weight:800;font-size:18px">${t}</div>`).join(''));
+  foot(s, '06'); }
+
+// 7 reminders + bulk / corporate
+{ const s = SS[7]; chrome(s, 'Growth features');
+  head(s, 'BUILT TO SELL AGAIN', 'Reminders & bulk orders<br>= <span class="p">repeat revenue.</span>');
+  gc(s, 60, 450, 460, `<div style="font-size:13px;font-weight:800;color:#9a8478;letter-spacing:.08em">🔔 OCCASION REMINDER</div><div style="display:flex;gap:14px;align-items:center;margin-top:14px"><div class="ph" style="width:90px;height:90px;border-radius:45px;background-image:${I('5910938')}"></div><div><div style="font-size:22px;font-weight:900">Mom’s birthday</div><div style="font-size:16px;color:#8a7468">in 5 days · 2 Dec</div></div></div><div style="margin-top:16px;display:flex;gap:10px">${['13292666', '12336392', '10520248'].map(id => `<div class="ph" style="width:122px;height:110px;border-radius:16px;background-image:${I(id)}"></div>`).join('')}</div><div class="gbtn" style="margin-top:16px;height:50px;background:${TERRA};color:#fff;font-size:17px">Pick a gift for Mom →</div>`);
+  gc(s, 560, 450, 460, `<div style="font-size:13px;font-weight:800;color:#9a8478;letter-spacing:.08em">🏢 CORPORATE & BULK</div><div style="font-size:24px;font-weight:900;margin-top:10px">Diwali hampers × 120</div><div style="font-size:15px;color:#8a7468;margin-top:4px">Upload logo · each name personalised</div><div class="ph" style="margin-top:14px;height:200px;border-radius:18px;background-image:${I('264771')}"></div><div style="display:flex;justify-content:space-between;margin-top:14px;font-size:16px;font-weight:800"><span>Bulk price</span><span style="color:${TERRA}">₹1,199 / box</span></div>`);
+  gc(s, 60, 960, 960, `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;text-align:center">${[['🔔', 'Occasion reminders'], ['🏢', 'Bulk & corporate'], ['💳', 'UPI · Card · COD'], ['📦', 'Pan-India delivery']].map(([e, n]) => `<div><div style="font-size:44px">${e}</div><div style="font-size:18px;font-weight:800;margin-top:6px">${n}</div></div>`).join('')}</div>`);
+  cursor(s, 470, 820, 'Kavya · Designer', '#F24E1E');
+  foot(s, '07'); }
+
+// 8 CTA
+{ const s = SS[8]; chrome(s, 'Your Gift Brand — v1');
+  E(s, { left: '140px', top: '120px', width: '800px', height: '800px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(200,85,61,0.2), rgba(200,85,61,0) 65%)' });
+  [['5493197', 90, 240, -8, 170, 210], ['13360742', 820, 230, 7, 170, 210], ['10520248', 30, 860, 6, 150, 180], ['13292666', 900, 860, -6, 150, 180]].forEach(([id, x, y, r, w, h]) => E(s, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', borderRadius: '22px', backgroundImage: I(id), backgroundSize: 'cover', backgroundPosition: 'center', transform: `rotate(${r}deg)`, boxShadow: '0 20px 40px rgba(62,36,51,0.2)', border: '6px solid #fff' }));
+  E(s, { left: '420px', top: '230px', width: '240px', height: '240px', filter: 'drop-shadow(0 26px 40px rgba(90,23,230,0.35))' }, '<img src="data:image/png;base64,LOGO" style="width:240px;height:240px">');
+  sel(s, 410, 220, 260, 260, 'Your brand');
+  E(s, { left: 0, top: '560px', width: '1080px', textAlign: 'center', fontSize: '60px', fontWeight: 800, letterSpacing: '-0.045em', lineHeight: 1.06 }, 'Sell gifts & custom<br>products? Get a store<br><span class="p">people love.</span>');
+  E(s, { left: 0, top: '800px', width: '1080px', textAlign: 'center', fontSize: '26px', fontWeight: 600, color: '#6a6270', lineHeight: 1.35 }, 'Live personalisation · gift wrap · reminders<br>— HeliosLabs Storefront');
+  E(s, { left: '290px', top: '895px', width: '500px', height: '70px', borderRadius: '35px', background: '#FFFDF8', boxShadow: '0 0 0 2px #E2D8C6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 800 }, 'Plans from <span class="p">&nbsp;₹999/month</span>');
+  E(s, { left: '190px', top: '1000px', width: '700px', height: '116px', borderRadius: '58px', background: '#5A17E6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '38px', fontWeight: 800, boxShadow: '0 26px 60px rgba(90,23,230,0.38)' }, 'DM “STORE” for your demo 💬');
+  cursor(s, 760, 1075, 'You', '#F24E1E');
+  E(s, { left: 0, top: '1170px', width: '1080px', textAlign: 'center', fontSize: '24px', fontWeight: 700, color: '#8A8172' }, '@helioslabs.store');
+  foot(s, '08', true); }
+</script>
