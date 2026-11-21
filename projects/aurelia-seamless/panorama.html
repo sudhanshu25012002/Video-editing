@@ -1,0 +1,126 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400;1,500&family=PT+Sans:wght@400;700&family=PT+Mono&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; }
+  #pano { position: relative; width: 7560px; height: 1350px; overflow: hidden; font-family: 'PT Sans', sans-serif; color: #2A1E17;
+    background: radial-gradient(ellipse at 15% 20%, rgba(184,146,74,0.10), rgba(184,146,74,0) 40%), radial-gradient(ellipse at 60% 80%, rgba(184,146,74,0.10), rgba(184,146,74,0) 40%), radial-gradient(ellipse at 95% 30%, rgba(184,146,74,0.12), rgba(184,146,74,0) 35%), #F5EEE3; }
+  #pano::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(rgba(42,30,23,0.06) 2px, transparent 2px); background-size: 40px 40px; }
+  .a { position: absolute; }
+  .serif { font-family: 'Cormorant', serif; }
+  .mono { font-family: 'PT Mono', monospace; }
+  .eyebrow { font-family: 'PT Mono', monospace; font-size: 20px; letter-spacing: 0.22em; color: #8a6a2c; text-transform: uppercase; }
+  .h { font-family: 'Cormorant', serif; font-weight: 500; letter-spacing: -0.01em; line-height: 0.98; color: #2A1E17; }
+  .h i { color: #9a7430; }
+  .phone { position: absolute; border-radius: 56px; background: #1d1612; padding: 13px; box-shadow: 0 50px 100px rgba(42,30,23,0.28), inset 0 0 0 2px #4a3b32; }
+  .phone .scr { border-radius: 44px; overflow: hidden; position: relative; }
+  .phone .scr img { display: block; width: 100%; }
+  .phone .isl { position: absolute; left: 50%; top: 10px; width: 96px; height: 28px; margin-left: -48px; border-radius: 14px; background: #000; z-index: 2; }
+  .browser { position: absolute; border-radius: 18px; background: #fff; overflow: hidden; box-shadow: 0 50px 110px rgba(42,30,23,0.22), 0 0 0 1.5px rgba(42,30,23,0.08); }
+  .browser .bar { height: 40px; background: #EDE4D6; display: flex; align-items: center; gap: 8px; padding-left: 18px; }
+  .browser .bar i { width: 12px; height: 12px; border-radius: 6px; display: block; background: #d3c6b3; }
+  .browser .bar span { margin-left: 18px; height: 24px; border-radius: 12px; background: #FBF7F1; padding: 0 16px; display: flex; align-items: center; font-family: 'PT Mono'; font-size: 13px; color: #8a7a68; }
+  .browser img { display: block; width: 100%; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 40px; background: rgba(253,249,243,0.92); backdrop-filter: blur(10px); box-shadow: 0 18px 40px rgba(42,30,23,0.14), 0 0 0 1px rgba(184,146,74,0.35); font-size: 22px; font-weight: 700; white-space: nowrap; z-index: 20; }
+  .chip b { width: 30px; height: 30px; border-radius: 15px; background: #2A1E17; color: #F5DED3; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
+  .step { position: absolute; z-index: 6; display: flex; align-items: center; gap: 14px; }
+  .step .d { width: 54px; height: 54px; border-radius: 27px; background: #2A1E17; color: #E7CF9A; font-family: 'PT Mono'; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 8px rgba(184,146,74,0.18); }
+  .step .t { font-family: 'Cormorant', serif; font-size: 34px; font-weight: 600; }
+  .brand { position: absolute; bottom: 42px; display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 700; z-index: 30; }
+  .brand img { width: 40px; height: 40px; }
+  .brand span { color: #8a7a68; font-weight: 400; }
+  .swipe { position: absolute; bottom: 48px; font-family: 'PT Mono'; font-size: 17px; letter-spacing: .18em; color: #8a6a2c; z-index: 30; }
+</style></head><body>
+<div id="pano">
+  <!-- giant watermark running across the whole carousel -->
+  <div class="a serif" style="left:-40px;top:860px;font-size:420px;font-weight:500;letter-spacing:.06em;color:rgba(42,30,23,0.045);white-space:nowrap">MAISON AURELIA · MAISON AURELIA · MAISON AURELIA</div>
+  <!-- continuous gold flow line -->
+  <svg class="a" style="left:0;top:0;z-index:5" width="7560" height="1350" viewBox="0 0 7560 1350">
+    <defs><linearGradient id="gl" x1="0" x2="1"><stop offset="0" stop-color="#B8924A" stop-opacity="0.2"/><stop offset="0.1" stop-color="#B8924A"/><stop offset="0.9" stop-color="#D4AF37"/><stop offset="1" stop-color="#B8924A" stop-opacity="0.5"/></linearGradient></defs>
+    <path d="M -20 1180 C 400 1240, 700 1120, 1080 1170 S 1700 1250, 2160 1180 S 2900 1110, 3240 1170 S 3900 1250, 4320 1180 S 5000 1110, 5400 1170 S 6100 1250, 6480 1190 S 7200 1150, 7580 1180" fill="none" stroke="url(#gl)" stroke-width="4"/>
+  </svg>
+
+  <!-- ============ SLIDE 1 ============ -->
+  <div class="a" style="left:80px;top:96px;z-index:10"><div class="eyebrow">UI / UX Case Study · HeliosLabs Storefront</div></div>
+  <div class="a h" style="left:76px;top:150px;font-size:132px;z-index:10">Maison<br><i>Aurelia</i></div>
+  <div class="a" style="left:82px;top:440px;width:520px;font-size:27px;line-height:1.45;color:#5c4d42;z-index:10">A luxury fine-jewellery store, designed end-to-end — from first scroll to <b style="color:#2A1E17">insured checkout.</b></div>
+  
+  <div class="phone" style="left:110px;top:590px;width:270px;z-index:12;transform:rotate(-4deg)"><div class="scr"><div class="isl"></div><img src="shots/m_hero.jpg"></div></div>
+  <div class="browser" style="left:500px;top:560px;width:1120px;z-index:9;transform:rotate(1.5deg)"><div class="bar"><i></i><i></i><i></i><span>maisonaurelia.com</span></div><img src="shots/d_hero.jpg"></div>
+  <div class="step" style="left:470px;top:1150px"><div class="d">01</div><div class="t">Homepage</div></div>
+
+  <!-- ============ SLIDE 2 ============ -->
+  <div class="a" style="left:1164px;top:96px;z-index:10"><div class="eyebrow">01 · First impression</div></div>
+  <div class="a h" style="left:1160px;top:150px;font-size:96px;z-index:10">Editorial,<br><i>quietly luxurious.</i></div>
+  <div class="chip" style="left:1440px;top:420px"><b>✦</b>Editorial hero & campaign</div>
+  <div class="chip" style="left:1180px;top:1040px"><b>✦</b>Insured-delivery promise up top</div>
+  <div class="phone" style="left:1780px;top:420px;width:320px;z-index:11;transform:rotate(3deg)"><div class="scr"><div class="isl"></div><img src="shots/m_feat.jpg"></div></div>
+  <div class="phone" style="left:2120px;top:500px;width:300px;z-index:10;transform:rotate(-2deg)"><div class="scr"><div class="isl"></div><img src="shots/m_best.jpg"></div></div>
+  <div class="step" style="left:2180px;top:1210px"><div class="d">02</div><div class="t">Collections</div></div>
+
+  <!-- ============ SLIDE 3 ============ -->
+  <div class="a" style="left:2560px;top:96px;z-index:10"><div class="eyebrow">02 · Collections & bestsellers</div></div>
+  <div class="a h" style="left:2556px;top:150px;font-size:96px;z-index:10">Curated<br><i>universes.</i></div>
+  <div class="browser" style="left:2560px;top:470px;width:1060px;z-index:9;transform:rotate(-1.2deg)"><div class="bar"><i></i><i></i><i></i><span>maisonaurelia.com / collections</span></div><img src="shots/d_feat.jpg"></div>
+  <div class="chip" style="left:2470px;top:1060px"><b>✦</b>Metal swatches & Quick Add</div>
+  <div class="chip" style="left:2980px;top:400px"><b>✦</b>4 curated collections</div>
+
+  <!-- ============ SLIDE 4 ============ -->
+  <div class="a" style="left:3700px;top:96px;z-index:10"><div class="eyebrow">03 · Brand system</div></div>
+  <div class="a h" style="left:3696px;top:150px;font-size:96px;z-index:10">Gold, cream<br><i>& Cormorant.</i></div>
+  <div class="a" style="left:3700px;top:460px;width:560px;height:560px;border-radius:30px;background:rgba(253,249,243,0.94);box-shadow:0 40px 90px rgba(42,30,23,0.16),0 0 0 1px rgba(184,146,74,0.3);z-index:12;padding:34px 36px;box-sizing:border-box">
+    <div class="eyebrow" style="font-size:15px">Palette</div>
+    <div style="display:flex;gap:16px;margin-top:16px">
+      <div><div style="width:80px;height:80px;border-radius:40px;background:#2A1E17"></div><div class="mono" style="font-size:12px;margin-top:6px">#2A1E17</div></div>
+      <div><div style="width:80px;height:80px;border-radius:40px;background:#B8924A"></div><div class="mono" style="font-size:12px;margin-top:6px">#B8924A</div></div>
+      <div><div style="width:80px;height:80px;border-radius:40px;background:#FDF9F3;box-shadow:inset 0 0 0 1px #e3d8c7"></div><div class="mono" style="font-size:12px;margin-top:6px">#FDF9F3</div></div>
+      <div><div style="width:80px;height:80px;border-radius:40px;background:#C89D84"></div><div class="mono" style="font-size:12px;margin-top:6px">#C89D84</div></div>
+      <div><div style="width:80px;height:80px;border-radius:40px;background:#D8D6D2"></div><div class="mono" style="font-size:12px;margin-top:6px">#D8D6D2</div></div>
+    </div>
+    <div class="eyebrow" style="font-size:15px;margin-top:28px">Typography</div>
+    <div style="display:flex;align-items:baseline;gap:18px;margin-top:8px"><span class="serif" style="font-size:86px;line-height:1">Aa</span><span><b class="serif" style="font-size:28px">Cormorant</b><br><span style="font-size:16px;color:#7a6a5c">Display & headlines</span></span></div>
+    <div style="display:flex;gap:40px;margin-top:10px;font-size:16px;color:#7a6a5c"><span><b style="color:#2A1E17;font-size:20px">PT Sans</b><br>Body & UI</span><span><b class="mono" style="color:#2A1E17;font-size:18px">PT Mono</b><br>Labels & refs</span></div>
+    <div style="display:flex;gap:10px;margin-top:22px"><div style="padding:12px 22px;background:#2A1E17;color:#fff;font-size:14px;font-weight:700;letter-spacing:.14em">ADD TO BAG</div><div style="padding:11px 20px;border:1.5px solid #2A1E17;font-size:14px;font-weight:700;letter-spacing:.14em">EXPLORE</div></div>
+  </div>
+  <div class="phone" style="left:3340px;top:440px;width:300px;z-index:11;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/m_herit.jpg"></div></div>
+  <div class="step" style="left:3860px;top:1170px"><div class="d">03</div><div class="t">Brand story</div></div>
+
+  <!-- ============ SLIDE 5 ============ -->
+  <div class="a" style="left:4700px;top:96px;z-index:10"><div class="eyebrow">04 · Shopping bag</div></div>
+  <div class="a h" style="left:4696px;top:150px;font-size:96px;z-index:10">A bag that<br><i>feels like a gift.</i></div>
+  <div class="browser" style="left:4380px;top:480px;width:1000px;z-index:9;transform:rotate(1.2deg)"><div class="bar"><i></i><i></i><i></i><span>maisonaurelia.com / bag</span></div><img src="shots/bag_d.jpg"></div>
+  <div class="phone" style="left:5230px;top:430px;width:310px;z-index:11;transform:rotate(-3deg)"><div class="scr"><div class="isl"></div><img src="shots/bag_m.jpg"></div></div>
+  <div class="chip" style="left:4420px;top:1080px"><b>✦</b>Complimentary gift presentation</div>
+  <div class="step" style="left:4900px;top:1220px"><div class="d">04</div><div class="t">Bag</div></div>
+
+  <!-- ============ SLIDE 6 ============ -->
+  <div class="a" style="left:5484px;top:96px;z-index:10"><div class="eyebrow">05 · Private checkout</div></div>
+  <div class="a h" style="left:5480px;top:150px;font-size:96px;z-index:10">Engraving, gift note<br><i>& insured delivery.</i></div>
+  <div class="phone" style="left:5640px;top:470px;width:300px;z-index:11;transform:rotate(2deg)"><div class="scr"><div class="isl"></div><img src="shots/c2.jpg"></div></div>
+  <div class="phone" style="left:5980px;top:520px;width:300px;z-index:12;transform:rotate(-2deg)"><div class="scr"><div class="isl"></div><img src="shots/c3.jpg"></div></div>
+  <div class="browser" style="left:6250px;top:600px;width:520px;z-index:9;transform:rotate(-1.4deg)"><div class="bar"><i></i><i></i><i></i><span>maisonaurelia.com / checkout</span></div><img src="shots/c_desk.jpg"></div>
+  <div class="chip" style="left:5560px;top:1110px"><b>✦</b>Free engraving · 16 characters</div>
+  <div class="chip" style="left:6150px;top:470px"><b>🔒</b>Encrypted payment</div>
+  <div class="step" style="left:6050px;top:1240px"><div class="d">05</div><div class="t">Checkout</div></div>
+
+  <!-- ============ SLIDE 7 ============ -->
+  <div class="a" style="left:7280px;top:620px;width:240px;border-radius:26px;background:#2A1E17;color:#F5DED3;padding:28px 30px;box-sizing:border-box;z-index:14;box-shadow:0 40px 90px rgba(42,30,23,0.3)">
+    <div class="mono" style="font-size:14px;letter-spacing:.2em;color:#D4AF37">ORDER CONFIRMED</div><div class="serif" style="font-size:30px;margin-top:8px;line-height:1.05">Thank you,<br>Camille.</div><div class="mono" style="font-size:14px;margin-top:10px;opacity:.75">#MA-2026-4812 · insured dispatch</div></div>
+  <div class="a" style="left:6824px;top:96px;z-index:10"><div class="eyebrow">Built on HeliosLabs Storefront</div></div>
+  <img class="a" src="data:image/png;base64,SFLOGO" style="left:6824px;top:170px;width:170px;height:170px;z-index:10;filter:drop-shadow(0 20px 40px rgba(90,23,230,0.3))">
+  <div class="a h" style="left:6820px;top:380px;width:700px;font-size:78px;z-index:10">Your brand,<br><i>this premium.</i></div>
+  <div class="a" style="left:6824px;top:580px;width:430px;font-size:23px;line-height:1.5;color:#5c4d42;z-index:10">Design, build, hosting & maintenance — a store your customers will remember.</div>
+  <div class="a" style="left:6824px;top:760px;padding:16px 28px;border-radius:40px;background:#FDF9F3;box-shadow:0 0 0 1.5px #B8924A;font-size:26px;font-weight:700;z-index:10">Plans from <span style="color:#5A17E6">₹999/month</span></div>
+  <div class="a" style="left:6824px;top:870px;width:430px;height:100px;border-radius:50px;background:#5A17E6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;z-index:10;box-shadow:0 24px 50px rgba(90,23,230,0.35)">DM “STORE” 💬</div>
+  <div class="a mono" style="left:6824px;top:1000px;font-size:18px;color:#8a6a2c;z-index:10">@helioslabs.store</div>
+  <div class="step" style="left:7120px;top:1180px"><div class="d">06</div><div class="t">Delivered ✦</div></div>
+
+  <!-- per-slide brand + swipe -->
+  <div id="marks"></div>
+</div>
+<script>
+const m = document.getElementById('marks');
+for (let k = 0; k < 7; k++) { const x = k * 1080;
+  m.insertAdjacentHTML('beforeend', `<div class="brand" style="left:${x + 60}px"><img src="data:image/png;base64,SFLOGO">HeliosLabs Storefront <span>· ${k + 1}/7</span></div>` + (k < 6 ? `<div class="swipe" style="left:${x + 880}px">SWIPE →</div>` : '')); }
+</script>
+</body></html>
