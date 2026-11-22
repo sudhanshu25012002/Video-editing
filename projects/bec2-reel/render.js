@@ -23,8 +23,8 @@ fs.writeFileSync(path.join(tmp, 'page.html'), html);
     while (next < times.length) {
       const i = next++;
       if (mode === 'full' && (times[i] < FROM || times[i] > +(process.env.TO || 1e9))) continue;
-      await p.evaluate(t => window.seek(t), times[i]);
-      await p.screenshot({ path: path.join(outDir, String(i).padStart(5, '0') + '.jpg'), type: 'jpeg', quality: 92 });
+      for (let tries = 0; ; tries++) { try { await p.evaluate(t => window.seek(t), times[i]);
+        await p.screenshot({ path: path.join(outDir, String(i).padStart(5, '0') + '.jpg'), type: 'jpeg', quality: 92 }); break; } catch (e) { if (tries > 4) throw e; await new Promise(r => setTimeout(r, 1500)); } }
       if (++done % 500 === 0) console.log(done, '/', times.length);
     }
   }));
