@@ -1,9 +1,9 @@
 const { chromium } = require('playwright'); const fs = require('fs'), path = require('path');
-const html = fs.readFileSync(path.join(__dirname, 'carousel.html'), 'utf8')
+const html = fs.readFileSync(path.join(__dirname, process.env.SRC||'carousel.html'), 'utf8')
   .replace(/STOREB64/g, fs.readFileSync(path.join(__dirname, 'logo_big.b64'), 'utf8').trim())
   .replace(/HELIOSB64/g, fs.readFileSync(path.join(__dirname, 'helios.b64'), 'utf8').trim());
 fs.writeFileSync(path.join(__dirname, 'page.html'), html);
-const out = path.join(__dirname, '..', '..', 'output', 'storefront-pinned-carousel'); fs.mkdirSync(out, { recursive: true });
+const out = path.join(__dirname, '..', '..', 'output', process.env.OUT||'storefront-pinned-carousel'); fs.mkdirSync(out, { recursive: true });
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1080, height: 1350 }, deviceScaleFactor: 2 });
   p.on('pageerror', e => console.log('ERR', e.message));
