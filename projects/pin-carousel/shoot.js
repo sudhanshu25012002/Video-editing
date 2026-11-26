@@ -1,0 +1,14 @@
+const { chromium } = require('playwright');
+(async () => { const b = await chromium.launch();
+  const m = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const go = async (p, u) => { await p.goto(u, { waitUntil: 'networkidle', timeout: 90000 }); await p.waitForTimeout(1200); const H = await p.evaluate(() => document.body.scrollHeight); for (let y = 0; y < H; y += 600) { await p.evaluate(y => scrollTo(0, y), y); await p.waitForTimeout(120); } await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(800); };
+  const at = async (p, sel, name, off = 90) => { await p.evaluate(([s, o]) => { const e = [...document.querySelectorAll('h1,h2,h3,p,span,div')].find(x => x.children.length < 3 && x.textContent.trim() === s); if (e) scrollTo(0, e.getBoundingClientRect().top + scrollY - o); }, [sel, off]); await p.waitForTimeout(700); await p.screenshot({ path: 'shots/' + name + '.png' }); };
+  await go(m, 'https://store.helioslabs.in/'); await m.screenshot({ path: 'shots/st_m_home.png' });
+  await at(m, 'Best Sellers', 'st_m_best', 20);
+  await go(m, 'https://shop.helioslabs.in/'); await m.screenshot({ path: 'shots/sh_m_home.png' });
+  await at(m, 'Atelier Bestsellers', 'sh_m_best', 20);
+  const d = await b.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.5 });
+  await go(d, 'https://store.helioslabs.in/'); await d.screenshot({ path: 'shots/st_d_home.png' });
+  await at(d, 'Best Sellers', 'st_d_best', 40);
+  await go(d, 'https://shop.helioslabs.in/'); await d.screenshot({ path: 'shots/sh_d_home.png' });
+  await b.close(); })();
