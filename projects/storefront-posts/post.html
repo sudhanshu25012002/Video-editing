@@ -144,12 +144,12 @@ T.push(`<div class="a" style="left:0;top:20px;width:${RW}px;text-align:center"><
  <div class="mut" style="font-size:8.5px;margin-top:5px">${b.tSub}</div></div>`);
 b.tests.forEach((t,i)=>{ const x = 12 + i*124;
  T.push(`<div class="a" style="left:${x}px;top:128px;width:116px;height:176px;border-radius:13px;background:var(--soft);padding:10px">
-  <div style="font-size:26px;line-height:.8;color:var(--acc2);font-family:Georgia,serif">“</div>
+  ${t[3]?`<div style="margin:2px 0 6px">${ic(t[3],20,'var(--acc2)',1.8)}</div><div style="font-size:9.5px;font-weight:700;margin-bottom:4px">${t[1]}</div>`:`<div style="font-size:26px;line-height:.8;color:var(--acc2);font-family:Georgia,serif">“</div>`}
   <div style="font-size:8.3px;line-height:1.5;margin-top:2px">${t[0]}</div>
-  <div class="stars" style="position:absolute;left:10px;bottom:44px">★★★★★</div>
+  ${t[3]?'':`<div class="stars" style="position:absolute;left:10px;bottom:44px">★★★★★</div>
   <div style="position:absolute;left:10px;right:8px;bottom:10px;display:flex;align-items:center;gap:6px">
    <div style="width:24px;height:24px;border-radius:50%;background:${['var(--acc)','var(--ink)','var(--acc2)'][i]};color:${i==0?'var(--onacc)':'#fff'};display:grid;place-items:center;font-size:9px;font-weight:700">${t[1].split(' ').map(w=>w[0]).join('')}</div>
-   <div><div style="font-size:8.5px;font-weight:700">${t[1]}</div><div style="font-size:7.5px;color:var(--mut)">${t[2]}</div></div></div></div>`); });
+   <div><div style="font-size:8.5px;font-weight:700">${t[1]}</div><div style="font-size:7.5px;color:var(--mut)">${t[2]}</div></div></div>`}</div>`); });
 T.push(`<div class="a" style="left:0;top:314px;width:${RW}px;display:flex;justify-content:center;gap:5px">${[0,1,2,3].map(i=>`<span style="width:${i?6:16}px;height:6px;border-radius:3px;background:${i?'#ddd':'var(--ink)'}"></span>`).join('')}</div>`);
 add(`<div class="pan" style="left:${RX}px;top:706px;width:${RW}px;height:336px"><div style="position:relative;height:100%">${T.join('')}</div></div>`);
 

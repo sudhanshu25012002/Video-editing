@@ -215,5 +215,36 @@ tailor: {
           ['Finally a blazer that fits my shoulders. Worth every rupee.', 'Karan Bedi', 'Amritsar']],
   footBg: '#F3F1EC', footTag: 'Bespoke and made-to-measure tailoring since 1972.', fcol: ['Suits', 'Blazers', 'Shirts'],
   footPos: '50% 25%', wmSize: 70, wmW: 400, wmTrack: '-.04em', wmTop: 104
+},
+shop: {
+  name: 'AURELIA', wordmark: 'AURELIA', navIcon: 'spark', navTrack: '.16em', nav: ['Coats', 'Knitwear'], navBtn: 'Bag (0)',
+  c: { ink: '#141414', mut: '#8A857C', acc: '#D9CFC0', acc2: '#7A6A52', onacc: '#141414', soft: '#F5F2EC', dark: '#141414', wm: '#141414' },
+  heroBg: '#EDEAE4', heroX: 150, heroPos: '78% 50%', h1w: 300, h1s: 40,
+  img: { hero: 'shop_hero_main.jpg', tall: 'shop_cashmere_wool_coat.jpg', banner: 'shop_ribbed_knit_sweater.jpg', dark: 'shop_structured_wool_blazer.jpg', foot: 'shop_silk_slip_dress.jpg' },
+  heroChip: 'SS26 Haute Ready-to-Wear', h1: 'A Study in Pure<br>Monolith &amp;<br>Tailoring.', heroSub: 'Architectural coats, featherlight heavy silks, and fluid trousers crafted in Florence.',
+  heroCta: 'Explore Collection', heroCta2: 'The Florence Coat',
+  float1: { x: 404, y: 88, img: 'shop_cashmere_wool_coat.jpg', k: 'Save 23%', v: 'Florence Coat', p: '$890' },
+  float2: { x: 300, y: 302, icon: 'shield', k: 'Atelier Standard', cols: [['100%', 'Virgin'], ['Biella', 'Mills'], ['30D', 'Returns']] },
+  s2chip: 'Artisanal provenance', s2a: 'Woven in Tuscany,', s2b: 'Engineered for a Lifetime.', s2sub: 'Every coat and blazer begins at century-old watermills along the Cervo river in Biella.',
+  stats: [['100%', 'Pure Natural Fibers', 'Grade-A cashmere, 22mm mulberry silk.', 'leaf'], ['18h', 'Hand-padded Collars', 'Shaped by steam over natural horsehair canvas.', 'clock'],
+          ['$150', 'Free Global Delivery', 'Insured express on orders over $150.', 'truck'], ['30D', 'Atelier Returns', 'Plus lifetime button & seam care.', 'gift']],
+  tallT: 'The Florence<br>Coat.', tallS: '100% Mongolian cashmere, hand-finished in Tuscany.', tallPos: '50% 20%',
+  s3side: 'Coats, blazers, silk, trousers, knitwear and evening dresses in one curated wardrobe.', s3tabs: ['Outerwear', 'Blazers', 'Silk & Tops'],
+  s3chip: 'Curated wardrobe', s3a: 'Explore by Category.', s3b: '<span class="acc">Quiet Luxury.</span>', bannerPos: '50% 36%', miniX: 338,
+  miniSearch: 'Search the atelier…', mini: [['shop_linen_wide_trousers.jpg', 'Como Trousers', '$380'], ['shop_structured_wool_blazer.jpg', 'Wool Blazer', '$620']],
+  s3cap: 'Alpine Ribbed Turtleneck', s3capS: '4-ply Scottish cashmere with an architectural collar. $460',
+  pChip: 'Iconic silhouettes', pA: 'Atelier', pB: 'Bestsellers.', pSub: 'Code WELCOME10 for 10% off your first order.',
+  plans: [
+    { n: 'Silk Shirt', p: '$320', u: 'save 16%', img: 'shop_silk_blouse.jpg', f: ['22mm mulberry silk', 'Pearl buttons', 'In stock'], b: 'Add to Bag' },
+    { n: 'Long Coat', p: '$890', u: 'save 23%', img: 'shop_cashmere_wool_coat.jpg', f: ['Mongolian cashmere', 'Hand-finished', 'New season'], b: 'Add to Bag' },
+    { n: 'Slip Dress', p: '$490', u: 'save 17%', img: 'shop_silk_slip_dress.jpg', f: ['Heavy silk satin', 'Cowl neckline', 'In stock'], b: 'Add to Bag' }],
+  dA: 'An Architectural Study', dB: 'of Quiet Luxury.', darkPos: '50% 25%',
+  dStats: [['5.0★', 'Rated by atelier clients'], ['Super 130s', 'Italian virgin wool'], ['3 Cities', 'New York · Milan · Paris']],
+  tA: 'Client Reflections.', tB: 'The Atelier Promise.', tSub: 'Words from our clients and the care behind every piece.',
+  tests: [['The Florence Cashmere Coat is sublime. The clean white tailoring turns heads wherever I walk.', 'Lady Eleanor', 'New York & London'],
+          ['Complimentary insured express delivery with discreet bespoke packaging.', 'Global Delivery', '', 'truck'],
+          ['Hand-cut and finished by generational artisans in Florence and Biella, Italy.', 'Tuscan Craft', '', 'spark']],
+  footBg: '#F5F2EC', footTag: 'An architectural exploration of quiet luxury.', fcol: ['Overcoats', 'Blazers', 'Silk'],
+  footPos: '50% 18%', wmSize: 54, wmW: 300, wmTrack: '.16em', wmTop: 104
 }
 };
