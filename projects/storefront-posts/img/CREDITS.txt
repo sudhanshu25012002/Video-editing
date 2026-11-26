@@ -75,5 +75,6 @@ Photos from Pexels (free to use, pexels.com/license). IDs = pexels.com/photo/<id
 9509032.jpg
 9594677.jpg
 CUFF.png
-shop_*.jpg: product/hero images from shop.helioslabs.in (HeliosLabs demo store)
+shop_*.jpg: images from shop.helioslabs.in (HeliosLabs demo store)
+st_*.jpg: images from store.helioslabs.in (Madhuram & Co. HeliosLabs demo store), used unedited
 CUFF.png: generated in aurelia-seamless project

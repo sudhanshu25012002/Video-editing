@@ -61,10 +61,10 @@ const L = [];
 const l = s => L.push(s);
 // hero
 l(`<div class="a" style="left:0;top:0;width:592px;height:404px;background:${b.heroBg}"></div>`);
-l(`<div class="a ph" style="left:${b.heroX||200}px;top:0;width:${592-(b.heroX||200)}px;height:404px;background-image:${I(b.img.hero)};background-position:${b.heroPos||'center'};-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 34%)"></div>`);
+if (b.heroFull) l(`<div class="a ph" style="left:0;top:0;width:592px;height:404px;background-image:${I(b.img.hero)};background-position:${b.heroPos||'center'}"></div><div class="a" style="left:0;top:0;width:592px;height:404px;background:${b.heroOverlay}"></div>`); else l(`<div class="a ph" style="left:${b.heroX||200}px;top:0;width:${592-(b.heroX||200)}px;height:404px;background-image:${I(b.img.hero)};background-position:${b.heroPos||'center'};-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 34%)"></div>`);
 // nav pill
 l(`<div class="a" style="left:86px;top:16px;width:420px;height:36px;background:rgba(255,255,255,.88);border-radius:20px;display:flex;align-items:center;padding:0 6px 0 14px;gap:14px;font-size:9.5px;font-weight:500;box-shadow:0 4px 14px -8px rgba(0,0,0,.3)">
- <b style="font-size:12px;font-weight:800;letter-spacing:${b.navTrack||'-.01em'};color:var(--ink);display:flex;align-items:center;gap:5px">${ic(b.navIcon,13,'var(--acc2)',2.4)}${b.name}</b>
+ <b style="font-size:12px;font-weight:800;letter-spacing:${b.navTrack||'-.01em'};color:var(--ink);display:flex;align-items:center;gap:5px">${b.logo?`<img src="img/${b.logo}" style="width:22px;height:22px;border-radius:50%">`:ic(b.navIcon,13,'var(--acc2)',2.4)}${b.name}</b>
  <span style="background:var(--soft);padding:4px 9px;border-radius:12px;font-weight:600">Shop</span><span>${b.nav[0]}</span><span>${b.nav[1]}</span><span>About</span>
  <span class="btn" style="margin-left:auto;padding:6px 12px;font-size:9px">${b.navBtn}</span></div>`);
 l(`<div class="a" style="left:34px;top:94px"><span class="chip"><i></i>${b.heroChip}</span></div>`);
@@ -155,7 +155,7 @@ add(`<div class="pan" style="left:${RX}px;top:706px;width:${RW}px;height:336px">
 
 // footer
 add(`<div class="pan" style="left:${RX}px;top:1054px;width:${RW}px;height:340px;background:${b.footBg}">
- <div class="a" style="left:18px;top:18px;width:130px"><div style="font-size:11px;font-weight:800;display:flex;gap:5px;align-items:center;letter-spacing:${b.navTrack||'-.01em'}">${ic(b.navIcon,12,'var(--acc2)',2.4)}${b.name}</div>
+ <div class="a" style="left:18px;top:18px;width:130px"><div style="font-size:11px;font-weight:800;display:flex;gap:5px;align-items:center;letter-spacing:${b.navTrack||'-.01em'}">${b.logo?`<img src="img/${b.logo}" style="width:20px;height:20px;border-radius:50%">`:ic(b.navIcon,12,'var(--acc2)',2.4)}${b.name}</div>
    <div class="mut" style="font-size:7.5px;line-height:1.5;margin-top:5px">${b.footTag}</div>
    <div style="margin-top:7px;display:flex;gap:4px"><span style="flex:1;background:#fff;border-radius:10px;font-size:7px;padding:5px 7px;color:#999">Your email</span><span class="btn l" style="font-size:7px;padding:5px 8px">Join</span></div></div>
  ${[['Shop',b.fcol],['Company',['About','Stores','Careers']],['Help',['Delivery','Returns','Contact']]].map((c,i)=>`<div class="a" style="left:${170+i*72}px;top:20px;font-size:7.5px;line-height:1.75"><b style="font-size:8.5px">${c[0]}</b>${c[1].map(x=>`<div class="mut">${x}</div>`).join('')}</div>`).join('')}

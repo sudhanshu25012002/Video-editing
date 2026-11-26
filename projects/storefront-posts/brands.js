@@ -246,5 +246,37 @@ shop: {
           ['Hand-cut and finished by generational artisans in Florence and Biella, Italy.', 'Tuscan Craft', '', 'spark']],
   footBg: '#F5F2EC', footTag: 'An architectural exploration of quiet luxury.', fcol: ['Overcoats', 'Blazers', 'Silk'],
   footPos: '50% 18%', wmSize: 54, wmW: 300, wmTrack: '.16em', wmTop: 104
+},
+madhuram: {
+  name: 'Madhuram & Co.', wordmark: 'Madhuram', logo: 'st_madhuram-logo.jpg', navIcon: 'spark', nav: ['Sweets', 'Bakes'], navBtn: 'Cart (0)',
+  c: { ink: '#2A1A10', mut: '#8A7360', acc: '#E8B04B', acc2: '#D4471C', onacc: '#2A1A10', soft: '#FBF3E4', dark: '#1B130D', wm: '#2A1A10' },
+  heroBg: '#120C08', heroFull: 1, heroOverlay: 'linear-gradient(90deg,rgba(14,9,5,.9) 0%,rgba(14,9,5,.72) 45%,rgba(14,9,5,.25) 100%)', heroPos: '50% 50%',
+  heroInk: '#F2C46A', heroMut: 'rgba(255,255,255,.8)', h1w: 600, h1s: 44,
+  img: { hero: 'st_hero-banner.jpg', tall: 'st_maldon-sea-salt-fudgy-brownies.jpg', banner: 'st_croissant-roll.jpg', dark: 'st_cat-sweets.jpg', foot: 'st_cat-savouries.jpg' },
+  heroChip: 'Est. 1968 · Royal Tamil Confectionery', h1: 'The Royal Taste<br>of Madurai', heroSub: 'Handcrafted in 100% pure cultured A2 ghee, wood-fired brass kadhais and artisanal sourdough ovens.',
+  heroCta: 'Shop The Royal Menu', heroCta2: 'WhatsApp Order',
+  float1: { x: 404, y: 88, img: 'st_cat-sweets.jpg', k: '14% off', v: 'Ghee Gulab Jamun', p: 'Rs. 120' },
+  float2: { x: 412, y: 318, icon: 'truck', k: 'Fresh Every Dawn', cols: [['7 AM', 'Fresh batch'], ['₹500', 'Free ship'], ['3', 'Cities']] },
+  s2chip: 'Legacy of taste', s2a: 'Since 1968.', s2b: 'The Royal Heritage of Madhuram.', s2sub: 'Authentic South Indian sweets, crunchy savoury crisps and artisan bakery delights near Meenakshi Amman Temple.',
+  stats: [['1968', 'Heirloom Legacy', '58 years of culinary mastery in Madurai.', 'heart'], ['100%', 'Pure Desi Ghee', 'Cultured A2 cow ghee in every sweet.', 'leaf'],
+          ['0', 'Preservatives', 'Honest ingredients, always.', 'shield'], ['₹500', 'Free Shipping', 'Express nationwide courier above ₹500.', 'truck']],
+  tallT: 'Fudgy<br>Brownies.', tallS: 'Maldon sea-salt brownies, box of 6. Rs. 399', tallPos: '50% 50%',
+  s3side: 'Savouries, sweets, bakes and rolls, freshly prepared and dispatched daily across Tamil Nadu.', s3tabs: ['Savouries', 'Sweets', 'Bakes'],
+  s3chip: 'Fresh from our ovens', s3a: 'Our Heritage', s3b: '<span class="acc">Bakes &amp; Sweets.</span>', bannerPos: '50% 50%', miniX: 338,
+  miniSearch: 'Search sweets, bakes…', mini: [['st_cat-bakes.jpg', 'Truffle Cake', 'Rs. 350'], ['st_cat-rolls.jpg', 'Lava Croissant', 'Rs. 65']],
+  s3cap: 'Croissant Roll · 4.9★', s3capS: 'Wood-fired European bakes, Rs. 50 for 250 g.',
+  pChip: 'Best sellers', pA: 'Best Sellers', pB: 'Fresh Every Dawn.', pSub: 'Vegetarian, eggless and gluten-free picks.',
+  plans: [
+    { n: 'Macaroons', p: '₹80', u: 'gluten-free · 250 g', img: 'st_tuticorin-macaroons.jpg', f: ['Tuticorin cashew', '4.8 rating', '10% off'], b: 'Add to Cart' },
+    { n: 'Cheesecake', p: '₹950', u: 'eggless · whole', img: 'st_new-york-blueberry-compote-cheesecake.jpg', f: ['Blueberry compote', '4.8 rating', '14% off'], b: 'Add to Cart' },
+    { n: 'Kamar Kattu', p: '₹80', u: 'vegetarian · 250 g', img: 'st_kamar-kattu.jpg', f: ['Jaggery classic', '4.8 rating', '10% off'], b: 'Add to Cart' }],
+  dA: 'Royal South Indian', dB: 'Sweets Since 1968.', darkPos: '50% 50%',
+  dStats: [['58+', 'Years of culinary mastery'], ['100%', 'Pure A2 cultured ghee'], ['4.9★', 'Rated by food lovers']],
+  tA: 'Customer Love.', tB: 'What Food Lovers Say.', tSub: 'Verified reviews from our regular patrons.',
+  tests: [['The Tuticorin Macaroons and Croissant Rolls are out of this world! Ordering via WhatsApp was effortless.', 'Meenakshi Sundaram', 'Madurai'],
+          ['Hands down the crispiest Banana Chips and Kamar Kattu I’ve tasted. True traditional taste.', 'Karthik Rajan', 'Chennai'],
+          ['Ordered the Ghee Gulab Jamun and Chocolate Cake for Diwali. Delivered right on time.', 'Dr. Sangeetha Priya', 'Coimbatore']],
+  footBg: '#FBF3E4', footTag: 'Royal South Indian sweets & artisanal bakes. Preservative-free always.', fcol: ['Sweets', 'Savouries', 'Bakes'],
+  footPos: '50% 55%', wmSize: 64, wmW: 600, wmTrack: '-.04em', wmTop: 104
 }
 };
