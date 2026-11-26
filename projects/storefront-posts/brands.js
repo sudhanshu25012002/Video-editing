@@ -91,5 +91,36 @@ jewellery: {
           ['The hoops are my everyday favourite. Light, elegant and so well finished.', 'Zoya Khan', 'Lucknow']],
   footBg: '#F7F2EA', footTag: 'Handcrafted fine jewellery since 1998.', fcol: ['Rings', 'Earrings', 'Bridal'],
   footPos: '50% 45%', wmSize: 56, wmW: 300, wmTrack: '.12em', wmTop: 104
+},
+ethnic: {
+  name: 'Resham', wordmark: 'Resham', navIcon: 'spark', nav: ['Sarees', 'Lehengas'], navBtn: 'Shop Festive',
+  c: { ink: '#2A1216', mut: '#8A6E66', acc: '#E8A93B', acc2: '#8E2335', onacc: '#2A1216', soft: '#FBF2E6', dark: '#3A0F18', wm: '#5E1424' },
+  heroBg: 'linear-gradient(120deg,#FCF1E2,#F4D9B8)', heroX: 230, heroPos: '50% 22%',
+  img: { hero: '12792004.jpg', tall: '35108807.jpg', banner: '10317127.jpg', dark: '13661845.jpg', foot: '27575174.jpg' },
+  heroChip: 'Handwoven in India', h1: 'Ethnic Wear<br>Made Easy', h1s: 50, heroSub: 'Sarees, lehengas and kurtas from master weavers, delivered across India with free alterations.',
+  heroCta: 'Shop Festive', heroCta2: 'Bridal Edit',
+  float1: { x: 404, y: 88, img: '16651974.jpg', k: 'New arrival', v: 'Haldi Lehenga', p: '₹18,900' },
+  float2: { x: 300, y: 302, icon: 'truck', k: 'Wedding Ready', cols: [['48h', 'Dispatch'], ['Free', 'Alteration'], ['7D', 'Returns']] },
+  s2chip: 'Why Resham', s2a: 'Handwoven Elegance.', s2b: 'Delivered to Your Door.', s2sub: 'Pure silks and cottons sourced directly from weavers in Banaras, Kanchipuram and Jaipur.',
+  stats: [['100%', 'Pure Silk Mark', 'Certified silk on every saree we sell.', 'shield'], ['1.2K+', 'Weaver Families', 'Paid fairly, sourced directly.', 'heart'],
+          ['48h', 'Fast Dispatch', 'Ready-to-ship festive and bridal wear.', 'truck'], ['Free', 'Alterations', 'Perfect fit for blouses and kurtas.', 'spark']],
+  tallT: 'Banarasi<br>Silk Sarees.', tallS: 'Zari woven by hand, made to be treasured.', tallPos: '50% 25%',
+  s3side: 'Shop by occasion, fabric or region, with video calls to see every drape live.', s3tabs: ['Wedding', 'Festive', 'Everyday'],
+  s3chip: 'From the loom', s3a: 'Ethnic Wear for Every Occasion.', s3b: '<span class="acc">Woven with Love.</span>', bannerPos: '50% 50%', miniX: 338,
+  miniSearch: 'Search sarees, kurtas…', mini: [['2723623.jpg', 'Checked Saree', '₹4,290'], ['13222257.jpg', 'Nehru Jacket', '₹3,490']],
+  s3cap: 'Kanchipuram & Banarasi Silks', s3capS: 'Silk Mark certified, with weaver details on every tag.',
+  pChip: 'Shop the edits', pA: 'Curated Edits for', pB: 'Every Celebration.', pSub: 'Free shipping and alterations on orders above ₹2,999.',
+  plans: [
+    { n: 'Sarees', p: '₹2.9K+', u: 'silk & cotton', img: '27575174.jpg', f: ['Kanjivaram', 'Banarasi', 'Blouse stitching'], b: 'Shop Edit' },
+    { n: 'Bridal', p: '₹24.9K+', u: 'lehengas', img: '13022612.jpg', f: ['Hand embroidery', 'Custom fit', 'Stylist call'], b: 'Bestseller' },
+    { n: 'Men', p: '₹1.9K+', u: 'kurtas & jackets', img: '34423732.jpg', f: ['Kurta sets', 'Nehru jackets', 'Easy returns'], b: 'Shop Edit' }],
+  dA: 'Dressing India for', dB: 'Every Celebration.', darkPos: '50% 40%',
+  dStats: [['40,000+', 'Brides & families dressed'], ['2.5L+', 'Handwoven pieces sold'], ['4.8★', 'Average customer rating']],
+  tA: 'Real Customers.', tB: 'Unforgettable Days.', tSub: 'Stories from weddings and festivals across India.',
+  tests: [['My bridal lehenga fit perfectly after the free alteration. Truly a dream.', 'Pooja Nair', 'Kochi'],
+          ['Ordered a Banarasi for Diwali on the site, delivered in two days. Stunning.', 'Aditi Sharma', 'Indore'],
+          ['Matching kurtas for the whole family, easy sizes and fast delivery.', 'Rohan Gupta', 'Kolkata']],
+  footBg: '#FBF2E6', footTag: 'Handwoven ethnic wear from India’s finest weavers.', fcol: ['Sarees', 'Lehengas', 'Menswear'],
+  footPos: '50% 30%', wmSize: 86, wmTop: 100
 }
 };
